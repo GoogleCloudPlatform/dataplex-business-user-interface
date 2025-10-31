@@ -1,0 +1,167 @@
+.MuiAutocomplete-paper {
+    border-radius: 0px 0px 24px 24px !important;
+    box-shadow: none !important;
+    border: 1px solid #E0E0E0 !important;
+    border-top: none !important;
+    padding: 6px 0px 8px !important;
+    background-color: #ffffff !important;
+    margin-top: 0px !important;
+    width: calc(100% + 0.9375rem + 0.5rem + 0.5rem) !important;
+    max-width: none !important;
+    position: absolute !important;
+    left: calc(-0.9375rem - 0.5rem - 0.5rem) !important;
+    top: 100% !important;
+    z-index: 1000 !important;
+}
+
+
+
+/* Additional adjustment for browse-by-annotation route in navbar */
+.navbar-variant[data-route="browse-by-annotation"] .MuiAutocomplete-paper,
+.navbar-variant[data-route="browse-by-annotation"] .autocomplete-dropdown.navbar-dropdown {
+    width: 100% !important; /* Extend width accordingly */
+}
+
+.MuiAutocomplete-listbox {
+    padding: 0px !important;
+}
+
+.MuiAutocomplete-listbox li {
+    padding: 8px 11px !important;
+    gap: 11px !important;
+    font-family: 'Google Sans Text', sans-serif !important;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    line-height: 1.4285714285714286em !important;
+    color: #1F1F1F !important;
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.MuiAutocomplete-listbox li:hover,
+.MuiAutocomplete-listbox li.Mui-focused {
+    background-color: #F8FAFD !important;
+}
+
+.recent-search-item {
+    transition: background-color 0.2s ease !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 8px 11px !important;
+    gap: 11px !important;
+    width: 100% !important;
+    font-family: 'Google Sans Text', sans-serif !important;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    line-height: 1.4285714285714286em !important;
+    color: #1F1F1F !important;
+}
+
+.recent-search-item:hover {
+    background-color: #F8FAFD !important;
+}
+
+#search-bar .MuiOutlinedInput-root {
+    padding: 0rem 0.5625rem 0rem 0.5625rem !important;
+    border: none !important;
+}
+
+/* Navbar variant specific padding */
+#search-bar.navbar-variant .MuiOutlinedInput-root {
+    padding: 0rem 0.5625rem 0rem 0rem !important;
+}
+
+#search-bar .MuiOutlinedInput-root fieldset {
+    border: none !important;
+}
+
+#search-bar .MuiOutlinedInput-root:hover fieldset {
+    border: none !important;
+}
+
+#search-bar .MuiOutlinedInput-root.Mui-focused fieldset {
+    border: none !important;
+}
+
+#seach-select-span > div {
+    border: none !important;
+    width: 8.75rem;
+    text-align: space-between;
+}
+
+#seach-select-span > div fieldset {
+    border: none !important;
+}
+
+#seach-select-span > div:hover fieldset {
+    border: none !important;
+}
+
+#seach-select-span > div.Mui-focused fieldset {
+    border: none !important;
+}
+
+#search-default-type{
+    padding: 0.8rem 0rem !important;
+}
+
+/* Ensure check icon only appears in dropdown, not in main display */
+#search-default-type .MuiSelect-select {
+    display: flex !important;
+    align-items: center !important;
+}
+
+#search-default-type .MuiSelect-select .MuiSvgIcon-root {
+    display: none !important;
+}
+
+/* Ensure proper dropdown positioning */
+.MuiAutocomplete-root {
+    position: relative !important;
+}
+
+.MuiAutocomplete-paper {
+    transform: none !important;
+    margin: 0 !important;
+}
+
+/* Search bar styling when dropdown is open */
+#search-bar {
+    transition: none !important;
+}
+
+#search-bar.dropdown-open {
+    background: #ffffff !important;
+    border-radius: 24px 0px 0px 0px !important;
+    box-shadow: 0px 2px 3px 1px rgba(0, 0, 0, 0.12), 0px 2px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 5px 0px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Create a pseudo-element to cover the select menu area with original background */
+#search-bar.dropdown-open::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: calc(9.375rem + 2px); /* Width of the select menu + padding for gaps */
+    height: calc(100% + 2px);
+    background: #E9EEF6;
+    border-top-right-radius: 3.125rem;
+    border-bottom-right-radius: 3.125rem;
+    border-left: 0.0625rem solid #C5C7C5;
+    z-index: 1;
+    pointer-events: none;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    height: 16px;
+    width: 16px;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%23575757" d="M8 6.586L3.707 2.293a1 1 0 00-1.414 1.414L6.586 8l-4.293 4.293a1 1 0 001.414 1.414L8 9.414l4.293 4.293a1 1 0 001.414-1.414L9.414 8l4.293-4.293a1 1 0 00-1.414-1.414L8 6.586z"/></svg>') no-repeat center;
+    cursor: pointer;
+}
+
+

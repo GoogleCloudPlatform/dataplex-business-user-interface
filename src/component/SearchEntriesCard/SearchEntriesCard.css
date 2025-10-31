@@ -1,0 +1,4 @@
+.entriesHoverEffect:hover {
+  background-color: rgb(237, 242, 252) !important;
+  border-radius: 0.625rem !important;
+}

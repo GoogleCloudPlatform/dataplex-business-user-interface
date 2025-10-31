@@ -1,0 +1,30 @@
+{
+  "name": "catalog-studio-api",
+  "version": "1.0.0",
+  "description": "Backend api for catalog studio to communicate with dataplex api's",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env.test server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Suman Kumar Thakur",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
+    "@google-cloud/datacatalog": "^5.2.0",
+    "@google-cloud/dataplex": "^4.1.0",
+    "@google-cloud/lineage": "^2.1.0",
+    "@google-cloud/resource-manager": "^6.2.0",
+    "axios": "^1.12.2",
+    "cookie-session": "^2.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.1",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
+    "google-auth-library": "^10.1.0",
+    "googleapis": "^150.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0"
+  }
+}

@@ -1,0 +1,68 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: 'us-central1'
+  SERVICE_NAME: 'cs-app'
+  REPOSITORY: 'data-studio-repo'
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        id: build-and-push
+        run: |-
+          gcloud builds submit --tag ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} .
+          echo "IMAGE_NAME=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GAR_LOCATION }}
+          image: ${{ steps.build-and-push.outputs.IMAGE_NAME }}
+          
+          env_vars: |
+            VITE_API_URL=/api
+            VITE_API_VERSION=v1
+            VITE_ADMIN_EMAIL=YOUR_ADMIN_EMAIL
+            VITE_GOOGLE_PROJECT_ID=YOUR-GCP_PROJECT_ID
+            VITE_GOOGLE_CLIENT_ID=YOUR-GOOGLE-CLIENT-ID.apps.googleusercontent.com
+            VITE_GOOGLE_REDIRECT_URI=/auth/google/callback
+            GOOGLE_CLOUD_PROJECT_ID=YOUR-GCP_PROJECT_ID
+            GCP_LOCATION=global
+            GCP_REGION=global
+
+          secrets:
+            VITE_GOOGLE_CLIENT_SECRET=VITE_GOOGLE_CLIENT_SECRET:latest
+        
+      - name: Show Cloud Run URL
+        run: echo "Deployment successful! Visit your service at ${{ steps.deploy.outputs.url }}"

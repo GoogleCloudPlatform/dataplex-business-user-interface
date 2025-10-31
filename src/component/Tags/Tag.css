@@ -1,0 +1,3 @@
+.capitalizeTag::first-letter {
+    text-transform: capitalize;
+}
