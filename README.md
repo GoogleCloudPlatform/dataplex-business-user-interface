@@ -1,4 +1,4 @@
-# Dataplex Universal Catalog Buisness Interface
+# Dataplex Universal Catalog Business Interface
 
 An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the Dataplex Universal Catalog (formerly Data Catalog).
 ## Key objectives of the application include:
@@ -54,8 +54,8 @@ An active Google Cloud account
 Clone the repository and install the necessary npm packages.
 
 ```cmd
-git clone <your-repository-url>
-cd <your-project-directory>
+git clone https://github.com/GoogleCloudPlatform/dataplex-business-user-interface
+cd dataplex-business-user-interface
 npm install
 ```
 
@@ -107,7 +107,7 @@ A GCP project with billing enabled.
 You should have access to cloud run, and api enable permissions in the project.
 Assumption that dataplex api is enabled and you have sufficient permissions
 
-Create a outh client using google auth platform as it is used for authentication
+Create a OAuth client using google auth platform as it is used for authentication
 Visit here https://console.cloud.google.com/auth/clients
 The steps are already mentioned above as **step 2 in Running locally**
 In this step you would get client id and secret save it some where secure 
@@ -118,7 +118,7 @@ Login with the account in which you have access of the project for deployment
 gcloud auth login
 ```
 #### Step 2: Set the project in which you are going to deploy this application
-Replace YOUR_PROJECT_ID with the actuall Project id in the below command before running it 
+Replace YOUR_PROJECT_ID with the actual Project id in the below command before running it 
 ```shell
 gcloud config set project YOUR_PROJECT_ID
 ```
@@ -130,20 +130,20 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 
 #### Step 4: Clone the repo into you Cloud shell or in case of Google cloud SDK clone it into the installed computer 
 ```shell
-git clone https://github.com/link-to-this-repo-for-clonning
+git clone https://github.com/GoogleCloudPlatform/dataplex-business-user-interface
 ```
-After clonning go inside the clonned repo
+After cloning go inside the cloned repo
 ```shell
-cd dataplex-buisness-user-ui
+cd dataplex-business-user-interface
 ```
 now before building the container if we want to do any default configs setting for ui change we can do that
 via changing the configData.json inside the backend folder or you can leave it 
 vi backend/configData.json // or use any code/text editor
 
 #### Step 5: Create the artifact repository to store the container artifact, this command require to run only once for the deployment if you are re-deplying skip this step
-Replace `[REPO_NAME]` with the name you want to give like (dataplex-buisness-ui-artifact, etc.) and set up your preferred region by setting that in --location flag below command is using `us-central1` but you can replace it but make sure if you replace it then use the same region in below steps by replacing `us-central1` with the the used value.
+Replace `[REPO_NAME]` with the name you want to give like (dataplex-business-ui-artifact, etc.) and set up your preferred region by setting that in --location flag below command is using `us-central1` but you can replace it but make sure if you replace it then use the same region in below steps by replacing `us-central1` with the the used value.
 ```shell
-gcloud artifacts repositories create `[REPO_NAME]` --repository-format=docker --location=us-central1 --description="Docker repository for dataplex-buisness-ui project"
+gcloud artifacts repositories create `[REPO_NAME]` --repository-format=docker --location=us-central1 --description="Docker repository for dataplex-business-ui project"
 ```
 
 #### Step 6 Build the Docker Image with Cloud Build
@@ -158,7 +158,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the OAuth credentials you created in earlier steps.
 
 Deploy the container image you just built to Cloud Run using the below command after replacing the mentioned values.
-After successfull deployment it will return a url to access the application.
+After successful deployment it will return a url to access the application.
 
 ```shell
 gcloud run deploy [SERVICE_NAME] \
@@ -209,7 +209,7 @@ git pull
 
 #### Step 2: Modify the backend/configData.json if required
 if you want any changes in your backend/configData.json for the browse experience, you can do so or if you don't want the changes in that use the same file. 
-for modificatio of the configData.json file run the command below.
+for modification of the configData.json file run the command below.
 ```shell
 vi backend/configData.json
 ```
@@ -226,7 +226,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the OAuth credentials you created in earlier steps.
 
 Deploy the container image you just built to Cloud Run using the below command after replacing the mentioned values.
-After successfull deployment it will return a url to access the application.
+After successful deployment it will return a url to access the application.
 
 ```shell
 gcloud run deploy [SERVICE_NAME] \
