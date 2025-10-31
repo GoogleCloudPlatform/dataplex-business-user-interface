@@ -2,7 +2,7 @@
   "name": "dataplex-buisness-user-interface",
   "private": true,
   "version": "1.0.0",
-  "type": "project",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
