@@ -139,30 +139,14 @@ const UserGuide: React.FC = () => {
     content: (
       <Box sx={{ color: '#193c98' }}>
         <Typography paragraph sx={{ color: 'inherit' }}>
-          This is a preview launch of a feature for Dataplex.
+          This is a preview launch of a feature.
         </Typography>
         <Typography paragraph sx={{ color: 'inherit' }}>
-          This feature is subject to the "Pre-GA Offerings Terms" in the General Service Terms
-          section of the <Link
-                href="https://cloud.google.com/terms/service-terms#1" 
-                target="_blank"
-                rel="noopener"
-                sx={{ color: '#193c98', textDecoration: 'underline' }}
-              >Service Specific Terms</Link>. Pre-GA features are available "as is" and
-          might have limited support. For more information, see the <Link
-                href="https://cloud.google.com/products#product-launch-stages" 
-                target="_blank"
-                rel="noopener"
-                sx={{ color: '#193c98', textDecoration: 'underline' }}
-              >launch stage descriptions</Link>.
-          We strongly recommend that for this preview you set up or use only non-production
-          projects that are dedicated solely for the purpose of testing the features under this Preview.
+          We strongly recommend that for this preview you set up or use only non-production projects 
+          that are dedicated solely for the purpose of testing the features under this Preview.
         </Typography>
         <Typography paragraph sx={{ color: 'inherit' }}>
-          This feature and its API may be changed in backward-incompatible ways and are not
-          subject to any SLA. It is not guaranteed to move forward to Public Preview or General
-          Availability. This feature is intended for testing only and must not be used in
-          production or in critical applications.
+          This feature and its API may be changed in backward-incompatible ways and are not subject to any SLA.
         </Typography>
       </Box>
     ),

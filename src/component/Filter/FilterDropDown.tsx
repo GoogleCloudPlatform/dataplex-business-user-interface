@@ -447,7 +447,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
   const [currentFilterType, setCurrentFilterType] = useState<string>('');
   const [multiselectPosition, setMultiselectPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedSubAnnotations, setSelectedSubAnnotations] = useState<any[]>([]);
-  const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | undefined>(undefined);
+  const [clickPosition, setClickPosition] = useState<{ top: number; right: number } | undefined>(undefined);
   const [subAnnotationData, setSubAnnotationData] = useState<any[]>([]);
   const [subAnnotationsloaded, setSubAnnotationsloaded] = useState(false);
 
@@ -712,7 +712,9 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
     // In a real app, you might want to load previously selected sub-annotations from an API
     setSelectedSubAnnotations(isParentSelected ? [] : []); // For now, always start empty
     
-    setClickPosition({ x: event.clientX, y: event.clientY });
+    const rect = event.currentTarget.getBoundingClientRect();
+    setClickPosition({ top: rect.top, right: rect.right });
+
     setShowSubAnnotationsPanel(true);
   };
 

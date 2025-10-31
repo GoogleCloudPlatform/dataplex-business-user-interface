@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const GOOGLE_TOKEN_INFO_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo';
-const GOOGLE_CLIENT_ID = '1069578231809-h4d3arsd9narlpd5it6isnkjlfcek2id.apps.googleusercontent.com'; // replace with your client ID
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // replace with your client ID
 
 const authMiddleware = async (req, res, next) => {
   try {

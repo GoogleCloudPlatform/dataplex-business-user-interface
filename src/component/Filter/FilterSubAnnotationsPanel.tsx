@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -88,7 +88,7 @@ interface FilterSubAnnotationsPanelProps {
   onSubAnnotationsApply: (appliedSubAnnotations: FilterValue[]) => void;
   onClose: () => void;
   isOpen: boolean;
-  clickPosition?: { x: number; y: number };
+  clickPosition?: { top: number; right: number };
 }
 
 const FilterSubAnnotationsPanel: React.FC<FilterSubAnnotationsPanelProps> = ({
@@ -103,6 +103,11 @@ const FilterSubAnnotationsPanel: React.FC<FilterSubAnnotationsPanelProps> = ({
   clickPosition
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [panelPosition, setPanelPosition] = useState({ 
+    top: '50%', 
+    left: '50%', 
+    transform: 'translate(-50%, -50%)' 
+  });
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedFieldForMenu, setSelectedFieldForMenu] = useState<string | null>(null);
@@ -112,6 +117,58 @@ const FilterSubAnnotationsPanel: React.FC<FilterSubAnnotationsPanelProps> = ({
     message: '',
     severity: 'error'
   });
+
+  useEffect(() => {
+    if (isOpen && clickPosition) {
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+
+      // Get panel dimensions from sx prop (approximate from rem)
+      const rem = 16;
+      const panelMaxHeight = 32 * rem; 
+      const panelWidth = 42 * rem;
+      const margin = 16; // 1rem margin from viewport edges
+
+      // --- Calculate Left Position ---
+      let left = clickPosition.right + margin;
+
+      // Check if it overflows the right edge
+      if (left + panelWidth + margin > viewportWidth) {
+        left = viewportWidth - panelWidth - margin;
+      }
+      // Ensure it doesn't go off-screen left (in case of weird calcs)
+      if (left < margin) {
+        left = margin;
+      }
+
+      // --- Calculate Top Position ---
+      // Desired top: align with the top of the clicked icon
+      let top = clickPosition.top;
+
+      // Check if it overflows the bottom edge
+      if (top + panelMaxHeight + margin > viewportHeight) {
+        top = viewportHeight - panelMaxHeight - margin;
+      }
+      // Ensure it doesn't go off-screen top
+      if (top < margin) {
+        top = margin;
+      }
+
+      setPanelPosition({
+        top: `${top}px`,
+        left: `${left}px`,
+        transform: 'none' // Remove the centering transform
+      });
+
+    } else if (!isOpen) {
+      // Reset to default when closed
+      setPanelPosition({ 
+        top: '50%', 
+        left: '50%', 
+        transform: 'translate(-50%, -50%)' 
+      });
+    }
+  }, [isOpen, clickPosition]);
 
   const filteredSubAnnotations = useMemo(() => {
     return subAnnotations;
@@ -653,8 +710,9 @@ const FilterSubAnnotationsPanel: React.FC<FilterSubAnnotationsPanelProps> = ({
       ref={containerRef}
       sx={{
         position: 'fixed',
-        top: clickPosition ? `${clickPosition.y - 60}px` : '6.25rem',
-        left: '13.75rem',
+        top: panelPosition.top,
+        left: panelPosition.left,
+        transform: panelPosition.transform,
         zIndex: 1400,
         backgroundColor: '#FFFFFF',
         borderRadius: '1rem',
