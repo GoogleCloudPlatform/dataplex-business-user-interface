@@ -16,6 +16,7 @@ import ShimmerLoader from '../Shimmer/ShimmerLoader'
 import type { AppDispatch } from '../../app/store'
 import { getSampleData } from '../../features/sample-data/sampleDataSlice'
 import { popFromHistory } from '../../features/entry/entrySlice'
+import { fetchAllDataScans, selectAllScans, selectAllScansStatus } from '../../features/dataScan/dataScanSlice';
 import { useAuth } from '../../auth/AuthProvider'
 import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink  } from '../../utils/resourceUtils'
 // import { useFavorite } from '../../hooks/useFavorite'
@@ -70,11 +71,15 @@ const ViewDetails = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const id_token = user?.token || '';
+  const allScans = useSelector(selectAllScans);
+  const allScansStatus = useSelector(selectAllScansStatus);
   const [tabValue, setTabValue] = React.useState(0);
   const [sampleTableData, setSampleTableData] = React.useState<any>();
   const [filteredEntry, setFilteredEntry] = useState<any>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set());
+  const [dqScanName, setDqScanName] = useState<string | null>(null);
+  const [dpScanName, setDpScanName] = useState<string | null>(null);
 
   //const [showSidePanel, setShowSidePanel] = React.useState(true);
 
@@ -112,12 +117,6 @@ const ViewDetails = () => {
     };
   }
 
-//   const getFormatedDate = (date: any) =>{
-//     const myDate = new Date(date * 1000);
-//     const formatedDate = new Intl.DateTimeFormat('en-US', { month: "short" , day: "numeric", year: "numeric" }).format(myDate);
-//     return (formatedDate);
-//   }
-
   const goBack = () => {
     // Check if we have entry history to go back to
     if (entryHistory && entryHistory.length > 0) {
@@ -150,6 +149,45 @@ let annotationTab = <PreviewAnnotation
 //   }, []);
 
   useEffect(() => {
+    // Only fetch if we have a token and haven't fetched yet
+    if (id_token && allScansStatus === 'idle') {
+      dispatch(fetchAllDataScans({ id_token: id_token }));
+    }
+  }, [dispatch, id_token, allScansStatus]);
+
+useEffect(() => {
+    if (
+      entryStatus === 'succeeded' &&
+      allScansStatus === 'succeeded' &&
+      entry?.entrySource?.resource &&
+      allScans
+    ) {
+      // console.log("All data scans from API:", allScans);
+
+      const resourceName = entry.entrySource.resource;
+
+      // Find the Data Quality scan
+      const dqScan = allScans.find(
+        (scan: any) =>
+          scan.data.resource.includes(resourceName) && scan.type === 'DATA_QUALITY'
+      );
+      setDqScanName(dqScan ? dqScan.name : null);
+
+      // Find the Data Profile scan
+      const dpScan = allScans.find(
+        (scan: any) =>
+          scan.data.resource.includes(resourceName) && scan.type === 'DATA_PROFILE'
+      );
+      setDpScanName(dpScan ? dpScan.name : null);
+      
+      // console.log(`For resource [${resourceName}], found DQ scan: ${dqScan ? dqScan.name : 'None'}`);
+      // console.log(`For resource [${resourceName}], found DP scan: ${dpScan ? dpScan.name : 'None'}`);
+
+    }
+  }, [entry, entryStatus, allScans, allScansStatus, entry?.entrySource?.resource]);
+
+
+  useEffect(() => {
     if(sampleDataStatus === 'succeeded') {
         // schema = <Schema entry={entry} css={{width:"100%"}} />;
         if(entry.entrySource?.system.toLowerCase() === 'bigquery'){
@@ -169,7 +207,7 @@ let annotationTab = <PreviewAnnotation
       if(getEntryType(entry.name, '/') == 'Tables' && entry.entrySource?.system.toLowerCase() === 'bigquery') {
           dispatch(getSampleData({fqn: entry.fullyQualifiedName, id_token: id_token}));
       }
-      console.log("loader:", loading);
+      // console.log("loader:", loading);
   }
 }, [entryStatus]);
 
@@ -483,10 +521,10 @@ let annotationTab = <PreviewAnnotation
                             {lineageTab}
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={3}>
-                            <DataProfile entry={entry}/>
+                            <DataProfile scanName={dpScanName} />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={4}>
-                            <DataQuality entry={entry}/>
+                            <DataQuality scanName={dqScanName} />
                         </CustomTabPanel>
                       </>
                     ) : getEntryType(entry.name, '/') === 'Datasets' ? (

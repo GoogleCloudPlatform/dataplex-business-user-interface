@@ -415,7 +415,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
   };
   if(annotations && user?.appConfig && user?.appConfig.aspects && Array.isArray(user?.appConfig.aspects)){
     annotations.items = user?.appConfig.aspects.map((aspect:any) => ({
-      name: aspect.dataplexEntry.entrySource.displayName,
+      name: aspect.dataplexEntry.entrySource.displayName || (aspect.dataplexEntry.name ? aspect.dataplexEntry.name.split('/').pop() : ''),
       type: "aspectType",
       data: aspect.dataplexEntry
     }));

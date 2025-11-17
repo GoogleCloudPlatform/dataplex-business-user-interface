@@ -57,6 +57,23 @@ export const fetchDataScan = createAsyncThunk(
   }
 );
 
+export const fetchAllDataScans = createAsyncThunk(
+  'dataScan/fetchAllDataScans',
+  async (requestData: { id_token: string }, { rejectWithValue }) => {
+    try {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${requestData.id_token}`;
+      const response = await axios.get(URLS.API_URL + URLS.GET_ALL_DATA_SCANS);
+      const data = await response.data;
+      return data;
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        return rejectWithValue(error.response?.data || error.message);
+      }
+      return rejectWithValue('An unknown error occurred');
+    }
+  }
+);
+
 type ScanData = {
   data: any;
   lastFetched: number;
@@ -68,12 +85,16 @@ type DataScanState = {
   scans: { [scanName: string]: ScanData };
   loadingScans: string[];
   globalStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  allScans: any[];
+  allScansStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
 };
 
 const initialState: DataScanState = {
   scans: {},
   loadingScans: [],
   globalStatus: 'idle',
+  allScans: [],
+  allScansStatus: 'idle',
 };
 
 // createSlice generates actions and reducers for a slice of the Redux state.
@@ -164,6 +185,19 @@ export const dataScanSlice = createSlice({
         if (state.loadingScans.length === 0) {
           state.globalStatus = 'failed';
         }
+      })
+      .addCase(fetchAllDataScans.pending, (state) => {
+        state.allScansStatus = 'loading';
+      })
+      .addCase(fetchAllDataScans.fulfilled, (state, action) => {
+        state.allScansStatus = 'succeeded';
+        console.log('allScans: ', action.payload);
+        state.allScans = action.payload || [];
+      })
+      .addCase(fetchAllDataScans.rejected, (state, action) => {
+        state.allScansStatus = 'failed';
+        // You might want to log the error: state.error = action.payload;
+        console.log('dataScan payload: ', action.payload);
       });
   },
 });
@@ -173,6 +207,9 @@ export const selectScanData = (scanName: string) => (state: any) => state.dataSc
 export const selectScanStatus = (scanName: string) => (state: any) => state.dataScan.scans[scanName]?.status || 'idle';
 export const selectScanError = (scanName: string) => (state: any) => state.dataScan.scans[scanName]?.error;
 export const selectIsScanLoading = (scanName: string) => (state: any) => state.dataScan.loadingScans.includes(scanName);
+export const selectAllScans = (state: any) => state.dataScan.allScans;
+export const selectAllScansStatus = (state: any) => state.dataScan.allScansStatus;
+
 
 export const { clearScanData, clearAllScanData, updateScanLastFetched } = dataScanSlice.actions;
 export default dataScanSlice.reducer;

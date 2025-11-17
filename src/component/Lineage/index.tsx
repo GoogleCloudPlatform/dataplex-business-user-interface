@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Box, ToggleButton, ToggleButtonGroup, IconButton, Typography, CircularProgress } from '@mui/material';
+import { Box, ToggleButton, ToggleButtonGroup, CircularProgress, Tooltip } from '@mui/material';
 import SideDetailsPanel from './SideDetailsPanel';
 import QueryPanel from './QueryPanel';
 import ListView from './ListView.tsx';
-import LineageChartView from './LineageChartView.tsx';
-import zoomInIcon from '../../assets/svg/zoomIn.svg';
-import zoomOutIcon from '../../assets/svg/zoomOut.svg';
-import pipIcon from '../../assets/svg/pip.svg';
+// import LineageChartView from './LineageChartView.tsx';
+// import zoomInIcon from '../../assets/svg/zoomIn.svg';
+// import zoomOutIcon from '../../assets/svg/zoomOut.svg';
+// import pipIcon from '../../assets/svg/pip.svg';
 //import lineageGraphBg from '../../assets/svg/Lineage Graph.svg';
 import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../../auth/AuthProvider.tsx';
@@ -15,6 +15,9 @@ import { fetchLineageSearchLinks } from '../../features/lineage/lineageSlice.ts'
 import { fetchLineageEntry } from '../../features/entry/entrySlice.ts';
 import { URLS } from '../../constants/urls.ts';
 import axios from 'axios';
+import LineageChartViewNew from './LineageChartViewNew.tsx';
+import { OpenInFull } from '@mui/icons-material';
+import useFullScreenStatus from '../../hooks/useFullScreenStatus';
 
 /**
  * @file index.tsx
@@ -62,10 +65,13 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
   const id_token = user?.token || '';
   const dispatch = useDispatch<AppDispatch>();
 
+  const { elementRef, isFullscreen, toggleFullscreen } = useFullScreenStatus();
+
   const [showSidePanel, setShowSidePanel] = useState(false);
+  const [openSchemaInSidePanel, setOpenSchemaInSidePanel] = useState(false);
   const [showQueryPanel, setShowQueryPanel] = useState(false);
   const [viewMode, setViewMode] = useState<'graph' | 'list'>('graph');
-  const [zoomLevel, setZoomLevel] = useState(100);
+  //const [zoomLevel, setZoomLevel] = useState(100);
   const [graphData, setGraphData] = useState<any|null>(null);
   const [listData, setListData] = useState<any|null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -112,45 +118,8 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
       let sourceLinks:any = lineageSearchLinks.sourceLinks;
       let targetLinks:any = lineageSearchLinks.targetLinks;
       let count = 0;
-      sourceLinks.forEach((link: any) => {
-        list.push({
-          id: count++,
-          sourceSystem: link.source.fullyQualifiedName.split(':')[0],
-          sourceProject: link.source.fullyQualifiedName.split(':')[1].split('.')[0],
-          source: link.source.fullyQualifiedName.split('.').pop(),
-          sourceFQN: link.source.fullyQualifiedName,
-          target: link.target.fullyQualifiedName.split('.').pop(),
-          targetProject: link.target.fullyQualifiedName.split(':')[1].split('.')[0],
-          targetSystem: link.target.fullyQualifiedName.split(':')[0],
-          targetFQN: link.target.fullyQualifiedName,
-        });
-        sourceGraph.push({
-          name: `query-${link.target.fullyQualifiedName.split('.').pop()}`,
-          linkData:link, 
-          type:"queryNode",
-          entryData:{},
-          isSource:true,
-          isRoot:false,
-          children:[{
-            name: link.target.fullyQualifiedName.split('.').pop(),
-            linkData:link,
-            entryData:{}, 
-            type:"assetNode",
-            isSource:true,
-            isRoot:false,
-            children:[]
-          }],
-        });
-      });
-      let data = {
-        name: entry.fullyQualifiedName.split('.').pop(),
-        linkData:null,
-        entryData:entry,
-        type:"assetNode",
-        isSource:false,
-        isRoot:true,
-        children:sourceGraph.length > 0 ? sourceGraph : []
-      };
+      let levelCounter = 1;
+
       targetLinks.forEach((link: any) => {
         list.push({
           id: count++,
@@ -164,28 +133,91 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
           targetFQN: link.target.fullyQualifiedName,
         });
         graph.push({
+          id: `node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
           name: link.source.fullyQualifiedName.split('.').pop(),
           linkData:link, 
           type:"assetNode",
           entryData:{},
           isRoot:false,
           isSource:false,
-          children:[{
-            name: `query-${entry.fullyQualifiedName.split('.').pop()}`,
-            linkData:link, 
-            type:"queryNode",
-            entryData:{},
-            isSource:false,
-            isRoot:false,
-            children:[data],
-          }]
+          level:0,
+          count:levelCounter,
         });
+        graph.push({
+          name: `query-${entry.fullyQualifiedName.split('.').pop()}`,
+          linkData:link, 
+          source:`node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          target:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+          id: `node-query-${entry.fullyQualifiedName.split('.').pop()}${count}`,
+          type:"queryNode",
+          entryData:{},
+          isSource:false,
+          isRoot:false,
+          level:1,
+          count:levelCounter,
+        });
+        levelCounter += 1;
       });
 
-      setGraphData(graph.length > 0 ? 
-        (graph.length == 1 ? graph[0] : 
-          {name:"Virtual Root", children:graph, type:"assetNode"}
-        ) : data);
+      let data = {
+        id: `node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+        name: entry.fullyQualifiedName.split('.').pop(),
+        linkData:null,
+        entryData:entry,
+        type:"assetNode",
+        isSource:false,
+        isRoot:true,
+        level:2,
+        count:1,
+      };
+
+      // Reset level counter for source links to start from 1 again so the graph of source links is balanced
+      levelCounter=1;
+
+      sourceLinks.forEach((link: any) => {
+        list.push({
+          id: count++,
+          sourceSystem: link.source.fullyQualifiedName.split(':')[0],
+          sourceProject: link.source.fullyQualifiedName.split(':')[1].split('.')[0],
+          source: link.source.fullyQualifiedName.split('.').pop(),
+          sourceFQN: link.source.fullyQualifiedName,
+          target: link.target.fullyQualifiedName.split('.').pop(),
+          targetProject: link.target.fullyQualifiedName.split(':')[1].split('.')[0],
+          targetSystem: link.target.fullyQualifiedName.split(':')[0],
+          targetFQN: link.target.fullyQualifiedName,
+        });
+        sourceGraph.push({
+          id: `node-query-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          name: `query-${link.target.fullyQualifiedName.split('.').pop()}`,
+          source:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+          target:`node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          linkData:link, 
+          type:"queryNode",
+          entryData:{},
+          isSource:true,
+          isRoot:false,
+          level:3,
+          count:levelCounter,
+        });
+        sourceGraph.push({
+          id: `node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          name: link.target.fullyQualifiedName.split('.').pop(),
+          linkData:link,
+          entryData:{}, 
+          type:"assetNode",
+          isSource:true,
+          isRoot:false,
+          children:[],
+          level:4,
+          count:levelCounter,
+        });
+        levelCounter += 1;
+      });
+      
+
+      graph = [...graph, ...[data], ...sourceGraph];
+
+      setGraphData(graph);
       setListData(
         list.length > 0 ? 
         list : 
@@ -205,7 +237,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
     }   
   }, [lineageSearchLinksStatus]);
 
-  const handleToggleSidePanel = (data:any) => {
+  const handleToggleSidePanel = (data:any, showSchema:boolean = false) => {
     console.log("node data", data);
     if(data.name === selectedNode && showSidePanel) {
       setShowSidePanel(false);
@@ -219,6 +251,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
     } else {
       setSelectedNode(null);
     }
+    setOpenSchemaInSidePanel(showSchema);
     let fqn = null;
     if(data?.isRoot === true){
       fqn = data?.entryData?.fullyQualifiedName || null;
@@ -289,13 +322,13 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
     setShowQueryPanel(false);
   };
 
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 5, 200)); // Max zoom 200%
-  };
+  // const handleZoomIn = () => {
+  //   setZoomLevel(prev => Math.min(prev + 5, 200)); // Max zoom 200%
+  // };
 
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 5, 25)); // Min zoom 25%
-  };
+  // const handleZoomOut = () => {
+  //   setZoomLevel(prev => Math.max(prev - 5, 25)); // Min zoom 25%
+  // };
 
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: 'graph' | 'list' | null) => {
     if (newViewMode !== null) {
@@ -304,6 +337,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
   };
 
   return (
+    <Box>
     <Box sx={{ 
       height: 'calc(100vh - 200px)', 
       display: 'flex', 
@@ -404,8 +438,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
             </ToggleButtonGroup>
         </Box>
         
-        {/* Zoom Controls - Only show in graph mode */}
-        {viewMode === 'graph' && (
+        
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -413,64 +446,19 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
             flex: '0 0 auto',
             minWidth: 0
           }}>
-            <Typography
-              sx={{
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                color: '#575757',
-                marginRight: '0.5rem',
-                fontStyle: 'Bold',
-                flexShrink: 0
+            <Tooltip title={"View Fullscreen"}>
+            <OpenInFull sx={{ 
+                fontSize: '1.25rem', 
+                color: '#575757', 
+                cursor: 'pointer', 
+                backgroundColor: '#F5F5F5',
+                borderRadius: '4px',
+                padding: '0.125rem',
               }}
-            >
-              {zoomLevel}%
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={handleZoomOut}
-              sx={{
-                width: '1.75rem',
-                height: '1.75rem',
-                padding: '0.25rem',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                  borderColor: '#0B57D0'
-                }
-              }}
-            >
-              <img src={zoomOutIcon} alt="Zoom Out" style={{ width: '16px', height: '16px' }} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={handleZoomIn}
-              sx={{
-                width: '1.75rem',
-                height: '1.75rem',
-                padding: '0.25rem',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                  borderColor: '#0B57D0'
-                }
-              }}
-            >
-              <img src={zoomInIcon} alt="Zoom In" style={{ width: '16px', height: '16px' }} />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{
-                width: '1.75rem',
-                height: '1.75rem',
-                padding: '0.25rem',
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                  borderColor: '#0B57D0'
-                }
-              }}
-            >
-              <img src={pipIcon} alt="PIP" style={{ width: '16px', height: '16px' }} />
-            </IconButton>
+              onClick={toggleFullscreen}
+            />
+            </Tooltip>
           </Box>
-        )}
       </Box>
 
         {/* Main Content Area */}
@@ -482,10 +470,10 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
           border: '1px solid #e0e0e0',
           borderBottomLeftRadius: '0.5rem',
           borderBottomRightRadius: '0.5rem',
-          backgroundImage: `radial-gradient(circle, #DADCE0 1px, transparent 1px)`,
-          backgroundSize: '7.5px 7.5px', // Doubled density - twice as many dots
-          backgroundPosition: '0 0',
-          backgroundRepeat: 'repeat',
+          // backgroundImage: `radial-gradient(circle, #DADCE0 1px, transparent 1px)`,
+          // backgroundSize: '7.5px 7.5px', // Doubled density - twice as many dots
+          // backgroundPosition: '0 0',
+          // backgroundRepeat: 'repeat',
           minWidth: 0 // Allow shrinking
         }}>
           {/* Content based on view mode */}
@@ -506,8 +494,22 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
               }}>
                 {
                   (lineageSearchLinksStatus === 'succeeded' && graphData) ? (
-                    <div id="lineageChartContainer">
-                      <LineageChartView graphData={graphData} handleSidePanelToggle={(data:any) => handleToggleSidePanel(data)} handleQueryPanelToggle={(data:any) => handleToggleQueryPanel(data)} zoomLevel={zoomLevel} isSidePanelOpen={showSidePanel} selectedNode={selectedNode}/>
+                    <div id="lineageChartContainer" ref={elementRef} style={{
+                        minHeight: "calc(100vh - 220px)",
+                        // Fullscreen style: take up the entire viewport
+                        ...(isFullscreen && {
+                          position: 'fixed',
+                          top: 0,
+                          left: 0,
+                          width: '100vw', // 100% of viewport width
+                          height: '100vh', // 100% of viewport height
+                          minHeight:'100vh',
+                          zIndex: 9999,
+                          backgroundColor: '#fff',
+                        })
+                      }}>
+                      {/* <LineageChartView graphData={graphData} handleSidePanelToggle={(data:any) => handleToggleSidePanel(data)} handleQueryPanelToggle={(data:any) => handleToggleQueryPanel(data)} zoomLevel={zoomLevel} isSidePanelOpen={showSidePanel} selectedNode={selectedNode}/> */}
+                      <LineageChartViewNew graphData={graphData} handleSidePanelToggle={(data:any, showSchema:boolean) => handleToggleSidePanel(data, showSchema)} handleQueryPanelToggle={(data:any) => handleToggleQueryPanel(data)} isSidePanelOpen={showSidePanel} selectedNode={selectedNode} isFullScreen={isFullscreen} toggleFullScreen={toggleFullscreen}/> 
                     </div>
                   ):(
                     <Box sx={{
@@ -546,6 +548,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
           <SideDetailsPanel 
             sidePanelData={sidePanelData}
             sidePanelDataStatus={sidePanelDataStatus}
+            openSchemaInSidePanel={openSchemaInSidePanel}
             onClose={handleCloseSidePanel}
             css={{ 
               height: '100%',
@@ -580,6 +583,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
           />
         </Box>
       )}
+    </Box>
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Typography,
   Grid,
@@ -8,6 +8,7 @@ import {
   Chip,
   Tabs,
   Tab,
+  Skeleton
 } from '@mui/material';
 import {ContentCopy, Close } from '@mui/icons-material';
 import PreviewAnnotation from '../Annotation/PreviewAnnotation';
@@ -72,15 +73,16 @@ interface EntryData {
 interface SideDetailsPanelProps {
   sidePanelData?: any;
   sidePanelDataStatus?: string;
+  openSchemaInSidePanel?: boolean;
   onClose?: () => void;
   css?: React.CSSProperties;
 }
 
-const SideDetailsPanel: React.FC<SideDetailsPanelProps> = ({ sidePanelData, sidePanelDataStatus, onClose, css }) => {
+const SideDetailsPanel: React.FC<SideDetailsPanelProps> = ({ sidePanelData, sidePanelDataStatus, openSchemaInSidePanel, onClose, css }) => {
   const { showNotification } = useNotification();
   const entry = sidePanelData as EntryData;
   const entryStatus = sidePanelDataStatus;
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(openSchemaInSidePanel ? 2 : 0);
   const [filteredSchemaEntry, setFilteredSchemaEntry] = useState<any>(null);
   const [filteredAnnotationEntry, setFilteredAnnotationEntry] = useState<any>(null);
   const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set());
@@ -133,6 +135,9 @@ const SideDetailsPanel: React.FC<SideDetailsPanelProps> = ({ sidePanelData, side
 
 const { date: createDate, time: createTime } = getFormattedDateTimeParts(entry?.createTime?.seconds);
 const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.updateTime?.seconds);
+useEffect(() => {
+  setActiveTab(openSchemaInSidePanel == true ? 2 : 0);
+}, [openSchemaInSidePanel]);
 
 
 
@@ -147,16 +152,155 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
   if (entryStatus === 'loading') {
     return (
       <Box sx={{ 
-        width: '400px', 
+        width: '23.75rem', 
         background: '#ffffff', 
-        borderLeft: '1px solid #e0e0e0',
-        height: 'calc(100vh - 200px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        border: '1px solid #DADCE0',
+        borderRadius: '0.5rem',
+        height: 'calc(100vh - 12.5rem)',
+        overflow: 'hidden', // Hide scrollbar during load
+        flex: '0 0 auto',
         ...css 
       }}>
-        <Typography variant="body2" color="text.secondary">Loading...</Typography>
+        {/* Panel Header (Skeleton) */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '1.25rem',
+          background: '#fafafa'
+        }}>
+          {/* Skeleton for title */}
+          <Skeleton variant="text" sx={{ fontSize: '1.125rem' }} width="60%" />
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {onClose && (
+              <IconButton 
+                onClick={onClose} 
+                size="small"
+                sx={{ 
+                  color: '#666',
+                  '&:hover': { 
+                    background: '#f0f0f0',
+                    color: '#333'
+                  }
+                }}
+              >
+                <Close sx={{ fontSize: 20 }} />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+
+        {/* Tabs Navigation (Real but disabled) */}
+        <Box sx={{ borderBottom: "1px solid #DADCE0", background: "#ffffff" }}>
+          <Tabs
+            value={0} // Default to first tab
+            sx={{
+              minHeight: "48px",
+              lineHeight: "20px",
+              "& .MuiTabs-flexContainer": {
+                justifyContent: "space-evenly",
+              },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "transparent",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  left: "20px",
+                  right: "20px",
+                  bottom: "-2px",
+                  height: "5px",
+                  backgroundColor: "#ffffff",
+                  borderTop: "4px solid #0B57D0",
+                  borderRadius: "2.5px 2.5px 0 0",
+                },
+              },
+              "& .MuiTab-root": {
+                fontFamily: "Google sans text, sans-serif",
+                fontSize: "14px",
+                fontWeight: "500",
+                color: "#575757",
+                textTransform: "none",
+                minHeight: "48px",
+                padding: "12px 20px",
+                "&.Mui-selected": {
+                  color: "#0B57D0",
+                  fontWeight: "500",
+                },
+              },
+            }}
+          >
+            <Tab label="Asset Info" disabled />
+            <Tab label="Aspects" disabled />
+            <Tab label="Schema" disabled />
+          </Tabs>
+        </Box>
+
+        {/* Content Container (Skeleton for Asset Info) */}
+        <Box sx={{ padding: '1rem' }}>
+          <Box>
+              <Grid container spacing={0}>
+                {/* Row 1: Name / System */}
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    Name
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '13px' }} width="80%" />
+                </Grid>
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    System
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '13px' }} width="50%" />
+                </Grid>
+
+                {/* Row 2: Rows / Columns */}
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    Rows
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '13px' }} width="40%" />
+                </Grid>
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    Columns
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '13px' }} width="40%" />
+                </Grid>
+
+                {/* Row 3: Creation Time / Last Modification */}
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    Creation Time
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '14px' }} width="70%" />
+                  <Skeleton variant="text" sx={{ fontSize: '14px' }} width="50%" />
+                </Grid>
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ color: '#666', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>
+                    Last Modification
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '14px' }} width="70%" />
+                  <Skeleton variant="text" sx={{ fontSize: '14px' }} width="50%" />
+                </Grid>
+
+                {/* Row 4: Identifiers / Labels */}
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>
+                    Identifiers
+                  </Typography>
+                  <Skeleton variant="text" sx={{ fontSize: '14px' }} width="100px" />
+                  <Skeleton variant="text" sx={{ fontSize: '14px', mt: 1 }} width="70px" />
+                </Grid>
+                <Grid size={6} sx={{ padding: '12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography variant="caption" sx={{ fontFamily: '"Google Sans Text", sans-serif', color: '#575757', fontSize: '11px', fontWeight: 500, letterSpacing: '0.5px', marginBottom: '8px', display: 'block' }}>
+                    Labels
+                  </Typography>
+                  <Skeleton variant="rounded" width={120} height={28} sx={{ borderRadius: '8px' }} />
+                </Grid>
+              </Grid>
+          </Box>
+        </Box>
       </Box>
     );
   }
@@ -164,13 +308,15 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
   if (entryStatus === 'failed') {
     return (
       <Box sx={{ 
-        width: '400px', 
+        width: '23.75rem', 
         background: '#ffffff', 
-        borderLeft: '1px solid #e0e0e0',
-        height: 'calc(100vh - 200px)',
+        border: '1px solid #DADCE0',
+        borderRadius: '0.5rem',
+        height: 'calc(100vh - 12.5rem)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        flex: '0 0 auto',
         ...css 
       }}>
         <Typography variant="body2" color="text.secondary">You don't have access to this data.</Typography>

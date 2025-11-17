@@ -101,7 +101,7 @@ interface NavBarProps {
 }
 
 const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = true }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { name, picture } = user ?? {name: '', picture:''};
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,6 +116,23 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const [isNotificationVisible, setIsNotificationVisible] = React.useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = React.useState<string>('');
 
+  const handleLogoClick = () => {
+    if (user) {
+      const userData = {
+        name: user.name,
+        email: user.email,
+        picture: user.picture,
+        token: user.token,
+        hasRole: user.hasRole,
+        roles: user.roles,
+        permissions: user.permissions,
+        appConfig: {}
+      };
+      updateUser(user.token, userData);
+    }
+    navigate('/home');
+  };
+  
   useEffect(() => {
     dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token}));   
   }, []);
@@ -214,7 +231,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
           gap: 0,
         }}>
           {/* Left Section - Logo */}
-          <Box onClick={()=>{navigate('/home')}} sx={{
+          <Box onClick={handleLogoClick} sx={{
             display: { xs: 'none', md: 'flex' }, 
             flex: "0 0 auto",
             width: "11.75rem", 
@@ -325,7 +342,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
           </Box>
           
           {/* Mobile Logo */}
-          <Box onClick={()=>{handleCloseNavMenu(); navigate('/home')}} sx={{
+          <Box onClick={handleLogoClick} sx={{
             display: { xs: 'flex', md: 'none' },
             flex: "1 1 auto",
             justifyContent: "center",
@@ -464,7 +481,10 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   </Box>
                 </MenuItem>
               ))}
-              <MenuItem key="SignOut" onClick={logout}>
+              <MenuItem key="SignOut" onClick={() => {
+                  sessionStorage.removeItem('welcomeShown');
+                  logout();
+              }}>
                 <Box sx={{ 
                   display: 'flex', 
                   alignItems: 'center', 

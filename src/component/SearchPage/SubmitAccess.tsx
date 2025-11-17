@@ -523,15 +523,16 @@ return ((previewData != null || previewData != undefined) && entry) ?(
           sx={{
             fontSize: '14px',
             fontWeight: '500',
-            backgroundColor: '#0E4DCA',
+            backgroundColor: extractContacts(entry).length > 0 ? '#0E4DCA' : '#A0A0A0',
             color: '#FFFFFF',
             textTransform: 'none',
             borderRadius: '100px',
             padding: '8px 16px',
             opacity: extractContacts(entry).length > 0 ? 1 : 0.6,
             '&:hover': {
-              backgroundColor: '#0B3DA8'
-            }
+              backgroundColor: extractContacts(entry).length > 0 ? '#0B3DA8' : '#909090'
+            },
+            cursor: extractContacts(entry).length > 0 ? 'pointer' : 'not-allowed',
           }}
         >
           Submit

@@ -124,7 +124,7 @@ describe('DataProfile', () => {
   };
 
   const defaultProps = {
-    entry: mockEntry
+    scanName: mockEntry
   };
 
   beforeEach(() => {

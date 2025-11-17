@@ -8,9 +8,11 @@ import {
   DialogTitle,
   DialogContent,
   Tabs,
-  Tab
+  Tab,
+  Skeleton
 } from '@mui/material';
 import { ContentCopy, Close, Check, Schedule } from '@mui/icons-material';
+import { Highlight, themes } from 'prism-react-renderer';
 // import { useAppSelector } from '../../app/store';
 
 /**
@@ -107,7 +109,7 @@ const QueryPanel: React.FC<QueryPanelProps> = ({ queryPanelDataStatus, queryPane
         cost: ''
       });
 
-      setSqlQuery(queryPanelData?.jobDetails[1]?.configuration?.query.query);
+      setSqlQuery(queryPanelData?.jobDetails[1]?.configuration?.query?.query);
 
       let count = 0;
       let d : any[] = [];
@@ -144,16 +146,170 @@ const QueryPanel: React.FC<QueryPanelProps> = ({ queryPanelDataStatus, queryPane
 
   return queryPanelDataStatus === 'loading' ? (
       <Box sx={{ 
-        width: '400px', 
+        width: '23.75rem', 
         background: '#ffffff', 
-        borderLeft: '1px solid #e0e0e0',
-        height: 'calc(100vh - 200px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        border: '1px solid #DADCE0',
+        borderRadius: '0.5rem',
+        height: 'calc(100vh - 12.5rem)',
+        overflow: 'hidden', // Hide scrollbars during load
+        flex: '0 0 auto',
         ...css 
       }}>
-        <Typography variant="body2" color="text.secondary">Loading...</Typography>
+        {/* Panel Header (REAL) */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '1.25rem',
+          background: '#F8FAFD'
+        }}>
+          <Typography variant="h5" sx={{ 
+            fontWeight: 500, 
+            color: '#1a1a1a',
+            fontSize: '20px',
+            lineHeight: '28px'
+          }}>
+            Query
+          </Typography>
+          {onClose && (
+            <IconButton 
+              onClick={onClose} 
+              size="small"
+              sx={{ 
+                color: '#666',
+                '&:hover': { 
+                  background: '#f0f0f0',
+                  color: '#333'
+                }
+              }}
+            >
+              <Close sx={{ fontSize: 20 }} />
+            </IconButton>
+          )}
+        </Box>
+
+        {/* Content Container (REAL) */}
+        <Box sx={{ paddingLeft: '0.75rem', paddingRight: '1.25rem' }}>
+          {/* Tabs (REAL, but disabled) */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: '16px' }}>
+            <Tabs 
+              value={0} // Default to the first tab
+              sx={{
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  minHeight: '48px',
+                  color: '#666',
+                  minWidth: 0,
+                  marginRight: '16px',
+                  '&:last-child': {
+                    marginRight: 0
+                  },
+                  padding: '12px 16px',
+                  '&.Mui-selected': {
+                    color: '#1976d2',
+                    fontWeight: 600
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: 'transparent',
+                  height: '5px',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    left: '16px',
+                    right: '16px',
+                    bottom: '-2px',
+                    height: '5px',
+                    backgroundColor: '#ffffff',
+                    borderTop: '4px solid #1976d2',
+                    borderRadius: '2.5px 2.5px 0 0'
+                  }
+                }
+              }}
+            >
+              <Tab label="Details" disabled />
+              <Tab label="Runs" disabled />
+            </Tabs>
+          </Box>
+
+          {/* Tab Content (SKELETON with REAL LABELS) */}
+          {/* This part is new */}
+          <Box sx={{ background: '#ffffff' }}>
+            {/* General Details Section */}
+            <Box sx={{ marginBottom: '24px' }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'flex-start',
+                padding: '12px 12px',
+                borderBottom: '1px solid #f0f0f0',
+              }}>
+                <Typography variant="caption" sx={{ 
+                  color: '#1F1F1F', 
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  minWidth: '120px',
+                  flexShrink: 0
+                }}>
+                  Name
+                </Typography>
+                {/* Skeleton for the value */}
+                <Skeleton variant="text" sx={{ fontSize: '14px', lineHeight: '18px' }} width="60%" />
+              </Box>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 12px',
+                borderBottom: '1px solid #f0f0f0',
+              }}>
+                <Typography variant="caption" sx={{ 
+                  color: '#1F1F1F', 
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  minWidth: '120px',
+                  flexShrink: 0
+                }}>
+                  Process type
+                </Typography>
+                {/* Skeleton for the value */}
+                <Skeleton variant="text" sx={{ fontSize: '13px', lineHeight: '18px' }} width="40%" />
+              </Box>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 12px',
+                borderBottom: '1px solid #f0f0f0'
+              }}>
+                <Typography variant="caption" sx={{ 
+                  color: '#1F1F1F', 
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  minWidth: '120px',
+                  flexShrink: 0
+                }}>
+                  BigQuery_Job_ID
+                </Typography>
+                {/* Skeleton for the value */}
+                <Skeleton variant="text" sx={{ fontSize: '13px', lineHeight: '18px' }} width="70%" />
+              </Box>
+            </Box>
+
+            {/* Query Section Skeleton */}
+            <Skeleton 
+              variant="rectangular" 
+              width="100%" 
+              height={150} 
+              sx={{ 
+                borderRadius: '8px', 
+                padding: '16px' 
+              }} 
+            />
+          </Box>
+        </Box>
       </Box>
     ) :(
     <>
@@ -214,13 +370,31 @@ const QueryPanel: React.FC<QueryPanelProps> = ({ queryPanelDataStatus, queryPane
                   fontWeight: 500,
                   minHeight: '48px',
                   color: '#666',
+                  minWidth: 0,
+                  marginRight: '16px',
+                  '&:last-child': {
+                    marginRight: 0
+                  },
+                  padding: '12px 16px',
                   '&.Mui-selected': {
                     color: '#1976d2',
                     fontWeight: 600
                   }
                 },
                 '& .MuiTabs-indicator': {
-                  backgroundColor: '#1976d2'
+                  backgroundColor: 'transparent',
+                  height: '5px',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    left: '16px',  // <-- This matches the padding
+                    right: '16px', // <-- This matches the padding
+                    bottom: '-2px', // From your reference file's logic
+                    height: '5px',
+                    backgroundColor: '#ffffff', // Covers the grey border
+                    borderTop: '4px solid #1976d2', // Your color
+                    borderRadius: '2.5px 2.5px 0 0'
+                  }
                 }
               }}
             >
@@ -317,45 +491,59 @@ const QueryPanel: React.FC<QueryPanelProps> = ({ queryPanelDataStatus, queryPane
               </Box>
 
               {/* Query Section */}
-              <Box sx={{ 
-                background: '#f5f5f5', 
-                borderRadius: '8px',
-                padding: '16px',
-                position: 'relative'
-              }}>
-                <IconButton
-                  size="small"
-                  onClick={() => navigator.clipboard.writeText(sqlQuery)}
-                  sx={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #e0e0e0',
-                    width: '24px',
-                    height: '24px',
-                    '&:hover': {
-                      background: '#f0f0f0'
-                    }
-                  }}
-                >
-                  <ContentCopy sx={{ fontSize: 14, color: '#666' }} />
-                </IconButton>
-                <Typography
-                  component="pre"
-                  sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                    lineHeight: '1.5',
-                    color: '#333',
-                    margin: 0,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
-                  }}
-                >
-                  {sqlQuery}
-                </Typography>
-              </Box>
+              {queryPanelData?.processDetails?.displayName === 'Query' && (
+                <Box sx={{ 
+                  position: 'relative'
+                }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => navigator.clipboard.writeText(sqlQuery)}
+                    sx={{
+                      position: 'absolute',
+                      top: '8px', 
+                      right: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #e0e0e0',
+                      width: '24px',
+                      height: '24px',
+                      '&:hover': {
+                        background: '#f0f0f0'
+                      },
+                      zIndex: 1
+                    }}
+                  >
+                    <ContentCopy sx={{ fontSize: 14, color: '#666' }} />
+                  </IconButton>
+                  
+                  <Highlight theme={themes.nightOwlLight} code={sqlQuery || ''} language="sql">
+                    {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                      <Box
+                        component="pre"
+                        className={className}
+                        sx={{
+                          ...style, 
+                          padding: '16px',
+                          margin: 0,
+                          borderRadius: '8px',
+                          overflow: 'auto',
+                          fontSize: '12px',
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {tokens.map((line, i) => (
+                          <div {...getLineProps({ line, key: i })}>
+                            {line.map((token, key) => (
+                              <span {...getTokenProps({ token, key })} />
+                            ))}
+                          </div>
+                        ))}
+                      </Box>
+                    )}
+                  </Highlight>
+                </Box>
+              )}
             </Box>
           )}
 

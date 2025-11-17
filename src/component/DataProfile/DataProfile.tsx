@@ -82,7 +82,7 @@ interface ProfileData {
   nullPercentage: string;
   uniquePercentage: string;
   statistics: {
-    [key: string]: string| Number;
+    [key: string]: string| number;
   };
   topValues: Array<{
     value: string;
@@ -90,28 +90,16 @@ interface ProfileData {
   }>;
 }
 interface DataProfileProps {
-  entry: any;
+  scanName: any;
 }
 
-const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
+const DataProfile: React.FC<DataProfileProps> = ({ scanName }) => {
 
   const { user } = useAuth();
   const id_token = user?.token || '';
   const dispatch = useDispatch<AppDispatch>();
   const [loading, setLoading] = useState<boolean>(true);
   const [dataProfileAvailable, setDataProfileAvailable] = useState<boolean>(false);
-
-  // Get the scan name for this component
-  const scanName = useMemo(() => {
-    const labels: Object = entry?.entrySource?.labels;
-    if (entry && labels && labels.hasOwnProperty('dataplex-dp-published-scan')) {
-      const dpScanProject = entry.entrySource.labels['dataplex-dp-published-project'];
-      const dpScanLocation = entry.entrySource.labels['dataplex-dp-published-location'];
-      const dpScanId = entry.entrySource.labels['dataplex-dp-published-scan'];
-      return `projects/${dpScanProject}/locations/${dpScanLocation}/dataScans/${dpScanId}`;
-    }
-    return null;
-  }, [entry]);
 
   // Use selectors to get data for this specific scan
   const dataProfileScan = useSelector(selectScanData(scanName || ''));
@@ -140,8 +128,7 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
     }
   };
 
-  useEffect(() => {
-    // Only fetch if we have a scan name and token, and don't already have the data
+ useEffect(() => {
     if (scanName && id_token && !dataProfileScan && !isScanLoading) {
       console.log("Data Profile Scan Name:", scanName);
       dispatch(fetchDataScan({ name: scanName, id_token: id_token }));
@@ -150,7 +137,7 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
       setDataProfileAvailable(true);
       setLoading(false);
     } else if (!scanName) {
-      // No scan available
+      setDataProfileAvailable(false);
       setLoading(false);
     }
   }, [scanName, id_token, dataProfileScan, isScanLoading, dispatch]);
@@ -966,7 +953,11 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
                               fontWeight: 400,
                               color: '#1F1F1F',
                               lineHeight: '1.33em',
-                              letterSpacing: '0.1px'
+                              letterSpacing: '0.1px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%'
                             }}>
                               {row.columnName}
                             </Typography>
@@ -981,7 +972,11 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
                               fontWeight: 400,
                               color: '#1F1F1F',
                               lineHeight: '1.33em',
-                              letterSpacing: '0.1px'
+                              letterSpacing: '0.1px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%'
                             }}>
                               {row.type}
                             </Typography>
@@ -996,7 +991,11 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
                               fontWeight: 400,
                               color: '#1F1F1F',
                               lineHeight: '1.33em',
-                              letterSpacing: '0.1px'
+                              letterSpacing: '0.1px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%'
                             }}>
                               {row.nullPercentage}
                             </Typography>
@@ -1011,7 +1010,11 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
                               fontWeight: 400,
                               color: '#1F1F1F',
                               lineHeight: '1.33em',
-                              letterSpacing: '0.1px'
+                              letterSpacing: '0.1px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%'
                             }}>
                               {row.uniquePercentage}
                             </Typography>
@@ -1048,7 +1051,9 @@ const DataProfile: React.FC<DataProfileProps> = ({ entry }) => {
                                     lineHeight: '1.33em',
                                     letterSpacing: '0.1px'
                                   }}>
-                                    {value as string}
+                                    {typeof value === 'number' 
+                                      ? (Math.floor(value * 100) / 100).toString() 
+                                      : value}
                                   </Typography>
                                 </Box>
                               ))}

@@ -14,6 +14,7 @@ export const URLS = {
     LINEAGE_SEARCH: '/lineage',
     ENTRY_DATA_QUALITY: '/entry-data-quality',
     GET_DATA_SCAN: '/get-data-scan',
+    GET_ALL_DATA_SCANS: '/data-scans',
     GET_ASPECT_DETAIL: '/get-aspect-detail',
     GET_PROCESS_AND_JOB_DETAILS : '/get-process-and-job-details',
     ACCESS_REQUEST : '/access-request',

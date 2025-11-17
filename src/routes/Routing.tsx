@@ -34,6 +34,7 @@ const Routing = () => {
   const navigate = useNavigate()
 
   const handleSignOut = () => {
+    sessionStorage.removeItem('welcomeShown');
     logout();
   };
 
