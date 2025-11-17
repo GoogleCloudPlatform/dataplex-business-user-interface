@@ -1,4 +1,4 @@
-# Dataplex Universal Catalog Business Interface
+# Dataplex Universal Catalog Business Interface - 1.0.1
 
 An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Dataplex** Universal Catalog (formerly Data Catalog).
 ## Key objectives of the application include:
@@ -105,7 +105,7 @@ if you are running your backend on other port make sure to set the api url accor
 You should have access to **GCP Cloud Shell** or **Google Cloud SDK (gcloud)** installed and authenticated.
 A GCP project with billing enabled.
 You should have access to cloud run, and api enable permissions in the project.
-Assumption that dataplex api is enabled and you have sufficient permissions
+Assumption that dataplex api and BigQuery API is enabled and you have sufficient permissions
 
 Create a OAuth client using google auth platform as it is used for authentication
 Visit here https://console.cloud.google.com/auth/clients
@@ -125,7 +125,7 @@ gcloud config set project YOUR_PROJECT_ID
 
 #### Step 3: Enable Cloud run and artifact API's for deployment
 ```shell
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com cloudresourcemanager.googleapis.com
 ```
 
 #### Step 4: Clone the repo into you Cloud shell or in case of Google cloud SDK clone it into the installed computer 
@@ -136,9 +136,81 @@ After cloning go inside the cloned repo
 ```shell
 cd dataplex-business-user-interface
 ```
+
 now before building the container if we want to do any default configs setting for ui change we can do that
-via changing the configData.json inside the backend folder or you can leave it 
+via changing the **configData.json** inside the backend folder 
+
+### This is manadotory if you want to use **Browse by aspects** functionality in the UI, if you don't want to use **Browse by aspects** functionality you can skip this and move on to Step 5 of deployment steps .
+
+```shell
 vi backend/configData.json // or use any code/text editor
+```
+Once you open this file you will see the json structure as mentioned below.
+
+```json
+{
+  "aspectType": {},
+  "assets": {},
+  "products": []
+}
+```
+
+Now to use browse by aspects we have to set the aspectType here in the below format.
+
+```json
+{
+  "aspectType": {
+    // this is the format to put full name as the key and fields of aspects as value
+    "projects/{replace-project-number}/locations/{replace-location-here}/entryGroups/@dataplex/entries/{replace-aspect-id-here}_aspectType":[
+      //the below fields are just samples, please use the fields name which exists in your aspect you have mentioned in the name
+      "sales",
+      "hr",
+    ],
+    "projects/{replace-project-number}/locations/{replace-location-here}/entryGroups/@dataplex/entries/{replace-aspect-id-here}_aspectType":[
+      //the below fields are just samples, please use the fields name which exists in your aspect you have mentioned in the name
+      "marketing",
+      "domainname",
+    ],
+
+  },
+  "assets": {},
+  "products": []
+}
+```
+
+To populate the aspects name you need project-number, location of the apsects, and aspect type id
+Folllow these steps to get the values for configuration:
+1. Open the **GCP Console**
+2. Open the sidebar **cloud overview** and the select **Dashboard**.
+3. Here you can see the project number.
+4. Copy the project number and replace it in the name.
+  `projects/1069*****1809/locations/{replace-location-here}/entryGroups/@dataplex/entries/{replace-aspect-id-here}_aspectType`
+5. Now go to **Dataplex Universal Catalog**.
+6. Search for the name of the aspect and open the detail view.
+7. In here you can find the aspect type id, location and we already have the project number from the previous steps using that our name would be.
+  `projects/1069*****1809/locations/us-central1/entryGroups/@dataplex/entries/aspecttype3_aspectType`.
+8. Now to get the field values we can see in the same details screen we have the fields mentioned.
+9. Copy the names create the string array with the name and use all small cases in here.
+10. Now the json file would look like this.
+```json
+{
+  "aspectType": {
+    "projects/1069*****1809/locations/us-central1/entryGroups/@dataplex/entries/aspecttype3_aspectType":[
+      "sales",
+      "finance",
+      "marketing",
+    ],
+    //you can add more aspects here 
+  },
+  "assets": {},
+  "products": []
+}
+```
+11. You can add as many aspects you want in the same manner.
+12. And save this in configData.json under backend folder.
+
+
+**Now you are done with the aspects configuration for browse by funationality**
 
 #### Step 5: Create the artifact repository to store the container artifact, this command require to run only once for the deployment if you are redeplying skip this step
 Replace `[REPO_NAME]` with the name you want to give like (dataplex-business-ui-artifact, etc.) and set up your preferred region by setting that in --location flag below command is using `us-central1` but you can replace it but make sure if you replace it then use the same region in below steps by replacing `us-central1` with the the used value.
@@ -248,3 +320,15 @@ gcloud run deploy [SERVICE_NAME] \
 ```
 
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
+
+
+## Release Note : 1.0.1
+This is a minor release with identified bug/fixes and some user interface changes.
+1. Data profile and Data Quality were not visible for few of the entries where the jobs are in different locations then entries.
+2. Lineage Graph Interface changes with some small additional features.
+3. Legacy Aspects were not visible properly in filters which are fixed now.
+4. Readme file update with browse by aspects configurations steps and other things.
+5. Query Panel in lineage syntax highlighter for query added. 
+6. Bug fixes related to UI and data representation.
+
+

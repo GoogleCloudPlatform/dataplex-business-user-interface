@@ -41,10 +41,10 @@ import { fetchDataScan, selectScanData, selectScanStatus, selectIsScanLoading } 
  */
 
 interface DataQualityProps {
-  entry: any;
+  scanName: any;
 }
 
-const DataQuality: React.FC<DataQualityProps> = ({ entry }) => {
+const DataQuality: React.FC<DataQualityProps> = ({ scanName }) => {
 
   const { user } = useAuth();
   const id_token = user?.token || '';
@@ -52,25 +52,12 @@ const DataQuality: React.FC<DataQualityProps> = ({ entry }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [dataQualityAvailable, setDataQualityAvailable] = useState<boolean>(false);
 
-  // Get the scan name for this component
-  const scanName = React.useMemo(() => {
-    const labels: Object = entry?.entrySource?.labels;
-    if (entry && labels && labels.hasOwnProperty('dataplex-dq-published-scan')) {
-      const dqScanProject = entry.entrySource.labels['dataplex-dq-published-project'];
-      const dqScanLocation = entry.entrySource.labels['dataplex-dq-published-location'];
-      const dqScanId = entry.entrySource.labels['dataplex-dq-published-scan'];
-      return `projects/${dqScanProject}/locations/${dqScanLocation}/dataScans/${dqScanId}`;
-    }
-    return null;
-  }, [entry]);
-
   // Use selectors to get data for this specific scan
   const dataQualityScan = useSelector(selectScanData(scanName || ''));
   const dataQualityScanStatus = useSelector(selectScanStatus(scanName || ''));
   const isScanLoading = useSelector(selectIsScanLoading(scanName || ''));
 
   useEffect(() => {
-    // Only fetch if we have a scan name and token, and don't already have the data
     if (scanName && id_token && !dataQualityScan && !isScanLoading) {
       console.log("Data Quality Scan Name:", scanName);
       dispatch(fetchDataScan({ name: scanName, id_token: id_token }));
@@ -79,7 +66,7 @@ const DataQuality: React.FC<DataQualityProps> = ({ entry }) => {
       setDataQualityAvailable(true);
       setLoading(false);
     } else if (!scanName) {
-      // No scan available
+      setDataQualityAvailable(false);
       setLoading(false);
     }
   }, [scanName, id_token, dataQualityScan, isScanLoading, dispatch]);

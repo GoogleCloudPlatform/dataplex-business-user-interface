@@ -195,7 +195,7 @@ app.post('/api/v1/search', async (req, res) => {
 
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     // Construct the request for the Dataplex API
@@ -334,7 +334,7 @@ app.get('/api/v1/aspect-types', async (req, res) => {
     });
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     const parent = `projects/${projectId}/locations/${location}`;
@@ -369,7 +369,7 @@ app.get('/api/v1/entry-list', async (req, res) => {
     });
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     const parent = `projects/${projectId}/locations/${location}`;
@@ -404,7 +404,7 @@ app.get('/api/v1/entry-types', async (req, res) => {
     });
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     const parent = `projects/${projectId}/locations/${location}`;
@@ -476,7 +476,7 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
 
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     // Construct the request for the Dataplex API
@@ -833,11 +833,11 @@ app.get('/api/v1/projects', async (req, res) => {
  */
 app.get('/api/v1/tag-templates', async (req, res) => {
   try {
-    const projectId = process.env.GCP_PROJECT_ID;
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.GCP_LOCATION;
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     // The parent for Data Catalog resources includes the project and location.
@@ -927,7 +927,7 @@ app.get('/api/v1/app-configs', async (req, res) => {
     });
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
     const parent = `projects/${projectId}/locations/${location}`;
@@ -939,6 +939,7 @@ app.get('/api/v1/app-configs', async (req, res) => {
       name: parent,
       query: aspectQuery,
       pageSize:999, // Limit the number of results returned
+      pageToken:'',
     };
 
     
@@ -966,8 +967,7 @@ app.get('/api/v1/app-configs', async (req, res) => {
         projects: projects.map(({ projectId, name, displayName }) => ({ projectId, name, displayName })),
         defaultSearchProduct: configData.products || 'All',
         defaultSearchAssets: configData.assets || '',
-        browseByAspectTypes: configData.aspectName || [],
-        browseByAspectTypesLabels: configData.aspectType || [],
+        browseByAspectTypes: configData.aspectType || []
     };
 
     res.json(configs);
@@ -1095,7 +1095,7 @@ app.get('/api/v1/get-projects', async (req, res) => {
     });
 
     if (!projectId || !location) {
-        return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
     
     let projects = [];
@@ -1114,20 +1114,20 @@ app.get('/api/v1/get-projects', async (req, res) => {
 });
 
 /**
- * GET /api/data-quality-scans
+ * GET /api/data-scans
  * A protected endpoint to list all data quality scans in the configured location.
  */
-app.get('/api/v1/data-quality-scans', async (req, res) => {
+app.get('/api/v1/data-scans', async (req, res) => {
     try {
         const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
         const location = process.env.GCP_LOCATION;
 
         if (!projectId || !location) {
-            return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+            return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
         }
 
-        const parent = `projects/${projectId}/locations/${location}`;
-        console.log(`Listing data quality scans for parent: ${parent}`);
+        const parent = `projects/${projectId}/locations/-`;
+        console.log(`Listing data scans for parent: ${parent}`);
 
         const accessToken = req.headers.authorization?.split(' ')[1]; // Expect
 
@@ -1162,7 +1162,7 @@ app.get('/api/v1/data-quality-scan-jobs/:scanId', async (req, res) => {
         const location = process.env.GCP_LOCATION;
 
         if (!projectId || !location) {
-            return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+            return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
         }
 
         const parent = `projects/${projectId}/locations/${location}/dataScans/${scanId}`;
@@ -1202,7 +1202,7 @@ app.post('/api/v1/entry-data-quality', async (req, res) => {
         // const location = process.env.GCP_LOCATION;
 
         // if (!projectId || !location) {
-        //     return res.status(500).json({ message: 'Server Configuration Error: GCP_PROJECT_ID and GCP_LOCATION must be set.' });
+        //     return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set.' });
         // }
 
         const accessToken = req.headers.authorization?.split(' ')[1]; // Expect

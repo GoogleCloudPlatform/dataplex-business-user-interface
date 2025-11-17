@@ -117,8 +117,8 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({dataQualtyScan}) => {
       ruleType: rule.ruleType,
       evaluation: rule.evaluation,
       dimensions: rule.dimension,
-      parameters: rule[rule.ruleType] ? JSON.stringify(rule[rule.ruleType]) : '',
-      threshold: (rule.threshold*100)+'%' || 'N/A'
+      parameters: rule[rule.ruleType] && Object.keys(rule[rule.ruleType]).length > 0 ? JSON.stringify(rule[rule.ruleType]) : '',
+      threshold: rule.threshold != null ? `${Math.floor(rule.threshold * 10000) / 100}%` : 'N/A'
     });
   });
 

@@ -52,6 +52,7 @@ const Home = () => {
   //const searchTerm = useSelector((state:any) => state.search.term);
 
   useEffect(() => {
+    setLoader(true);
     if(!projectsLoaded) {
       dispatch(getProjects({ id_token: user?.token }));
     }
@@ -75,17 +76,22 @@ const Home = () => {
           };
           updateUser(user?.token, userData);
           setLoader(false);
-          showSuccess("Welcome " + user?.name + "!", 2000);
+          const welcomeShown = sessionStorage.getItem('welcomeShown');
+          if (!welcomeShown) {
+            showSuccess("Welcome " + user?.name + "!", 2000);
+            sessionStorage.setItem('welcomeShown', 'true');
+          }
         }).catch((err)=>{
           console.log(err);
           showError("Access token expired or you do not have enough permissions", 2000);
           setLoader(false);
+          sessionStorage.removeItem('welcomeShown');
           logout();
         });
       }else{
         setLoader(false);
       }
-  }, []);
+  }, [user, projectsLoaded, dispatch, updateUser, logout, showSuccess, showError]);
 
   const handleSearch = (text:string) => {
     console.log("Search Term:", text);

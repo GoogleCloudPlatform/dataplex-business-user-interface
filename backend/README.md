@@ -1,4 +1,4 @@
-# Dataplex buisness interface - backend
+# Dataplex Universal Catalog Buisness Interface - backend
 built on node js and express to communicate with GCP Dataplex
 
 Just open this directory to terminal

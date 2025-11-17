@@ -145,7 +145,7 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({dataQualityScan}) 
                 color: '#1F1F1F',
                 lineHeight: 1.43
               }}>
-                {`${dataQualityScanPublishedJob?.dataQualityResult?.score}%`}
+                {`${Math.floor(dataQualityScanPublishedJob.dataQualityResult.score * 100) / 100}%`}
               </Typography>
             </Box>
             <Box sx={{ 
@@ -256,9 +256,12 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({dataQualityScan}) 
                   color: '#1F1F1F',
                   lineHeight: 1.43
                 }}>
-                  {dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'COMPLETENESS')?.score ? 
-                    `${dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'COMPLETENESS')?.score}%` : 
-                    '-'}
+                  {(() => {
+                    const score = dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'COMPLETENESS')?.score;
+                    return typeof score === 'number'
+                      ? `${Math.floor(score * 100) / 100}%`
+                      : '-';
+                  })()}
                 </Typography>
               </Box>
             </Box>
@@ -351,9 +354,12 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({dataQualityScan}) 
                   color: '#1F1F1F',
                   lineHeight: 1.43
                 }}>
-                  {dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'VALIDITY')?.score ? 
-                    `${dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'VALIDITY')?.score}%` : 
-                    '-'}
+                  {(() => {
+                    const score = dataQualityScanPublishedJob?.dataQualityResult?.dimensions.find((d:any) => d.dimension.name === 'VALIDITY')?.score;
+                    return typeof score === 'number'
+                      ? `${Math.floor(score * 100) / 100}%`
+                      : '-';
+                  })()}
                 </Typography>
               </Box>
             </Box>

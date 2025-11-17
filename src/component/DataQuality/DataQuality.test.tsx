@@ -136,7 +136,7 @@ describe('DataQuality Components', () => {
         entrySource: {}
       };
 
-      renderWithStore(<DataQuality entry={entryWithoutLabels} />);
+      renderWithStore(<DataQuality scanName={entryWithoutLabels} />);
 
       expect(screen.getByText('Data Quality information is not published for this entry')).toBeInTheDocument();
     });
