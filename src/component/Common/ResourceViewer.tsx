@@ -9,7 +9,7 @@ import SearchTableView from '../SearchPage/SearchTableView';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
-import { fetchEntry } from '../../features/entry/entrySlice';
+// import { fetchEntry } from '../../features/entry/entrySlice';
 import FilterChips from './FilterChips';
 
 /**
@@ -189,12 +189,14 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
 }) => {
   // Navigation and auth hooks
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
-  const id_token = user?.token || '';
+  const { logout } = useAuth();
+  // const id_token = user?.token || '';
 
   const dispatch = useDispatch<AppDispatch>();
   const searchFilters = useSelector((state: any) => state.search.searchFilters);
-  
+  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
+  const entryStatus = useSelector((state: any) => state.entry.status);
+
   // Sort state
   const [sortBy, setSortBy] = useState<'name' | 'lastModified'>('lastModified');
   const [sortMenuAnchor, setSortMenuAnchor] = useState<null | HTMLElement>(null);
@@ -277,7 +279,14 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
 
   // Utility functions
   const getFormatedDate = (date: any) => {
-    const myDate = new Date(date * 1000);
+    if (!date) return '-';
+    
+    const myDate = new Date(date);
+
+    if (isNaN(myDate.getTime())) {
+      return '-';
+    }
+
     const formatedDate = new Intl.DateTimeFormat('en-US', { month: "short", day: "numeric", year: "numeric" }).format(myDate);
     return (formatedDate);
   };
@@ -357,10 +366,15 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
     onPreviewDataChange(entry);
   };
 
-  const handleSearchEntriesDoubleClick = (entry: any) => {
-    // Use the existing approach: fetch full entry data and navigate
-    dispatch(fetchEntry({ entryName: entry.name, id_token: id_token }));
-    navigate('/view-details');
+  const handleSearchEntriesDoubleClick = (clickedEntry: any) => {
+    const isCurrentlyPreviewed = previewData && previewData.name === clickedEntry.name;
+    const isAccessGranted = entryStatus === 'succeeded';
+
+    if (isCurrentlyPreviewed && isAccessGranted) {
+      navigate('/view-details');
+    } else {
+      onPreviewDataChange(clickedEntry);
+    }
   };
 
   const handleFavoriteClick = (entry: any) => {
@@ -579,6 +593,16 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                   ))}
                 </Select>
               </span> */}
+              {semanticSearch === true ? (<>
+                <span style={{
+                  fontFamily: '"Google Sans Text", sans-serif',
+                  fontWeight: "500",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                }}>
+                  Top 100 results
+                </span>
+              </>) : (<>
               <IconButton
                 style={{padding: '0px', fontFamily: '"Google Sans Text", sans-serif',}}
                 disabled={requestItemStore.length > 0 && startIndex > 0 ? false : true}
@@ -605,6 +629,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               >
                 <ChevronRightOutlined style={{ color: '#0E4DCA' , opacity: (startIndex + pageSize >= resourcesTotalSize) ? 0.5 : 1 }} />
               </IconButton>
+              </>)}
+
               {/* View Mode Toggle */}
               <ToggleButtonGroup
                 value={viewMode}

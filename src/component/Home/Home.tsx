@@ -108,7 +108,6 @@ const Home = () => {
     navigate('/browse-by-annotation');
   };
 
-
   return (
     <div className="home">
       <div className='home-body'>
@@ -136,18 +135,40 @@ const Home = () => {
                 <div style={{fontSize: "1.75rem",color:"#1F1F1F",fontWeight: "500", marginBottom:"1.25rem", fontStyle:"Medium", fontFamily: '"Google Sans", sans-serif'}}>
                   <span>What would you like to discover?</span>
                 </div>
-                <SearchBar handleSearchSubmit={handleSearch} variant="default" dataSearch={[
-                    { name: 'BigQuery' },
-                    { name: 'Data Warehouse' },
-                    { name: 'Data Lake' },
-                    { name: 'Data Pipeline' },
-                    { name: 'GCS' }
-                  ]}/>
-                <div style={{marginTop:"12px", fontSize:"14px", color:"#0B57D0", fontWeight:"600", width:"700px", fontStyle:"Medium", marginLeft: "-18px",}}>
-                  <a className='home-browse-button' onClick={handleBrowse} style={{color:"#0B57D0", fontFamily: '"Roboto","Google Sans", sans-serif'}}>
-                    Browse 
-                    <ChevronRight style={{ top:"7px", position:"relative", color:"#0B57D0" }} />
-                  </a>
+                <div className="home-search-container">
+                    <SearchBar handleSearchSubmit={handleSearch} variant="default" dataSearch={[
+                        { name: 'BigQuery' },
+                        { name: 'Data Warehouse' },
+                        { name: 'Data Lake' },
+                        { name: 'Data Pipeline' },
+                        { name: 'GCS' }
+                    ]}/>
+                    
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        marginTop: "0.5rem",
+                        paddingRight: "10px"
+                    }}>
+                        <div style={{ 
+                            fontSize:"14px", 
+                            color:"#0B57D0", 
+                            fontWeight:"600", 
+                            fontStyle:"Medium",
+                        }}>
+                            <a className='home-browse-button' onClick={handleBrowse} style={{
+                                color:"#0B57D0", 
+                                fontFamily: '"Roboto","Google Sans", sans-serif',
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center'
+                            }}>
+                                Browse 
+                                <ChevronRight style={{ color:"#0B57D0" }} />
+                            </a>
+                        </div>
+                    </div>
                 </div>
               </Grid>
             </div>

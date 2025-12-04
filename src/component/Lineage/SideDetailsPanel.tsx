@@ -365,7 +365,7 @@ useEffect(() => {
           color: '#1F1F1F',
           fontSize: '1.125rem',
           lineHeight: 1.4,
-          textTransform:"capitalize",
+          //textTransform:"capitalize",
           width:"300px",
           textOverflow:"ellipses",
           overflow:"hidden"
@@ -484,7 +484,7 @@ useEffect(() => {
                     color: '#333',
                     lineHeight: '18px',
                     width:"150px",
-                    textTransform:"capitalize",
+                    // textTransform:"capitalize",
                     textOverflow:"ellipsis",
                     overflow:"hidden"
                   }}>

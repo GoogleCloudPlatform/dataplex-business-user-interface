@@ -155,7 +155,8 @@ const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelPro
             gap: '4px',
             padding: '14px 20px 14px 0px',
             flex: 1,
-            borderBottom: '1px solid #DADCE0'
+            borderBottom: '1px solid #DADCE0',
+            minWidth: 0
           }}>
             <Typography sx={{
               fontSize: '11px',
@@ -170,7 +171,11 @@ const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelPro
               fontSize: '14px',
               fontWeight: 400,
               color: '#1F1F1F',
-              lineHeight: '1.43em'
+              lineHeight: '1.43em',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block'
             }}>
               { dataProfileScan.scan?.dataProfileSpec?.rowFilter != "" ? dataProfileScan.scan?.dataProfileSpec?.rowFilter : '-'}
             </Typography>
@@ -283,7 +288,8 @@ const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelPro
             gap: '4px',
             padding: '14px 20px 14px 0px',
             flex: 1,
-            borderBottom: '1px solid #DADCE0'
+            borderBottom: '1px solid #DADCE0',
+            minWidth: 0
           }}>
             <Typography sx={{
               fontSize: '11px',
@@ -298,7 +304,11 @@ const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelPro
               fontSize: '14px',
               fontWeight: 400,
               color: '#1F1F1F',
-              lineHeight: '1.43em'
+              lineHeight: '1.43em',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block'
             }}>
               {dataProfileScan.scan?.resultsTable ?? '-'}
             </Typography>
@@ -382,7 +392,7 @@ const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelPro
                 fontWeight: 400,
                 color: '#0E4DCA',
                 lineHeight: '1.43em',
-                textDecoration: 'underline'
+                // textDecoration: 'underline'
               }}>
                 {capitalizeFirstLetter(dataProfileScan.jobs[0]?.state)}
               </Typography>

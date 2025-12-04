@@ -1,7 +1,7 @@
-import { Box, Typography } from '@mui/material';
-import { memo } from 'react';
+import { Box, CircularProgress, Typography } from '@mui/material';
+import { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-//import { ChevronLeftOutlined, ChevronRightOutlined } from '@mui/icons-material';
+import { ChevronLeftOutlined, ChevronRightOutlined } from '@mui/icons-material';
 
 /**
  * @file LineageNode.tsx
@@ -19,7 +19,8 @@ export default memo(({ data, isConnectable } : any) => {
     const nodeData = data.nodeData;
     const number = nodeData.isRoot ? nodeData.entryData.entryType.split('/')[1] : null;
     const schema = nodeData.isRoot ? nodeData.entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values : [];
-  
+    const [lineageLoader, setLineageLoader] = useState<boolean>(false); 
+
     return (
     <>
       <Handle
@@ -36,19 +37,31 @@ export default memo(({ data, isConnectable } : any) => {
           }}
           sx={{
             // height: (nodeData.isRoot && schema.length > 0 ? "185px" : "36px"),
-            width: '13.75rem',//'18.1rem',
-            borderRadius: '0.5rem'
-          }}>
+            width: '18.3rem',
+            borderRadius: '0.5rem',
+            backgroundColor: '#FFFFFF',
+            padding:'3px 2px 0px 2px',
+          }}
+          >
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'row', 
               gap: '0.3rem', 
               padding: '0px',//'0.2rem' 
               }}>
-              {/* <Box >
-                <ChevronLeftOutlined sx={{
+              <Box >
+                { nodeData.showDownStreamIcon && (<>
+                {(!lineageLoader || nodeData.isUpStreamFetched) && (<ChevronLeftOutlined 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLineageLoader(true);
+                  //onNodeClick(nodeData.name);
+                  data.fetchLineageDownStream(nodeData);
+                }}
+                sx={{
                   transition: 'transform 0.3s ease',
-                  cursor: 'pointer',
+                  transform: nodeData.isRoot || nodeData.isDownStreamFetched ? `rotate(180deg)` : `rotate(0deg)`,
+                  cursor: nodeData.isRoot ? 'not-allowed' :'pointer',
                   fontSize: "2.2rem",
                   color: '#0B57D0',
                   border: '2px solid #efefef',
@@ -56,19 +69,21 @@ export default memo(({ data, isConnectable } : any) => {
                   padding: '2px',
                   zIndex:2,
                   "&:hover": { 
-                    background: '#0B57D0',
-                    color: '#FFFFFF',
+                    background: nodeData.isRoot ? '#a6a6a6' : '#0B57D0',
+                    color: nodeData.isRoot ? '#0B57D0' : '#FFFFFF',
                     transition: "background-color 150ms linear"
                   }
-                }}/>
-              </Box> */}
+                }}/>)}
+                {(lineageLoader && !nodeData.isUpStreamFetched )&& (<CircularProgress style={{width:'30px', height:'30px', margin:'5px 2px 3px 5px'}}/>)}
+                </>)}
+              </Box>
             <Box sx={{
               ...nodeContentStyles,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               height: '2.25rem',
-              width: '13.75rem',
+              width:nodeData.isRoot ? "13.75rem" :'15.3rem',
               // borderRadius: '0.5rem',
               // border: '1px solid #DADCE0',
             }}>
@@ -94,18 +109,26 @@ export default memo(({ data, isConnectable } : any) => {
                       whiteSpace: 'nowrap', 
                       textOverflow: 'ellipsis',
                       maxWidth: '100%',
-                      textTransform: 'capitalize',
-                      width:"10rem"
+                      // textTransform: 'capitalize',
+                      width: nodeData.isRoot ? "10rem" : "12.5rem"
                     }}
                   >
                       {nodeData.name}
                   </Typography>
               </Box>
             </Box>
-            {/* <Box >
-              <ChevronRightOutlined sx={{
-                transition: 'transform 0.3s ease',
-                  cursor: 'pointer',
+            <Box >
+              { nodeData.showUpStreamIcon && (<>
+                {(!lineageLoader || nodeData.isDownStreamFetched) && (<ChevronRightOutlined 
+              onClick={(e) => {
+                e.stopPropagation();
+                //onNodeClick(nodeData.name);
+                data.fetchLineageUpStream(nodeData);
+              }}
+              sx={{
+                  transition: 'transform 0.3s ease',
+                  transform: nodeData.isRoot || nodeData.isUpStreamFetched ? `rotate(180deg)` : `rotate(0deg)`,
+                  cursor: nodeData.isRoot ? 'not-allowed' :'pointer',
                   fontSize: "2.2rem",
                   color: '#0B57D0',
                   border: '2px solid #efefef',
@@ -113,12 +136,14 @@ export default memo(({ data, isConnectable } : any) => {
                   padding: '2px',
                   zIndex:2,
                   "&:hover": { 
-                    background: '#0B57D0',
-                    color: '#FFFFFF',
+                    background: nodeData.isRoot ? '#a6a6a6' : '#0B57D0',
+                    color: nodeData.isRoot ? '#0B57D0' : '#FFFFFF',
                     transition: "background-color 150ms linear"
                   }
-              }}/>
-            </Box> */}
+              }}/>)}
+                {(lineageLoader && !nodeData.isDownStreamFetched )&& (<CircularProgress style={{width:'30px', height:'30px', margin:'5px 2px 3px 5px'}}/>)}
+                </>)}
+            </Box>
             </Box>
             
           {
@@ -126,7 +151,7 @@ export default memo(({ data, isConnectable } : any) => {
               <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                width: '13.75rem',//'18.1rem',
+                width: '18.1rem',
                 padding: '0.5rem',
                 borderRadius: '0.5rem',
               }}>

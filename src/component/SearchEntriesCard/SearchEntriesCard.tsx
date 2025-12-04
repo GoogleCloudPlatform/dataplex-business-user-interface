@@ -4,18 +4,33 @@ import Tag from '../Tags/Tag';
 import { AccessTime, LocationOnOutlined } from '@mui/icons-material';
 import './SearchEntriesCard.css';
 import { type SxProps, type Theme } from '@mui/material/styles';
-import BigQueryIcon from '../../assets/svg/BigQuery.svg';
-import AnalyticsHubIcon from '../../assets/svg/analytics-hub.svg';
-import CloudSQLIcon from '../../assets/svg/cloud-sql.svg';
-import DataformIcon from '../../assets/svg/dataform_logo.svg';
-import OthersIcon from '../../assets/svg/others.svg';
-import CloudBigTableIcon from '../../assets/svg/CloudBigTable.svg';
-import CloudPubSubIcon from '../../assets/svg/cloudpub_sub.svg';
-import CloudSpannerIcon from '../../assets/svg/CloudSpanner.svg';
-import CloudStorageIcon from '../../assets/svg/CloudStorage.svg';
-import DataplexIcon from '../../assets/svg/Dataplex.svg';
-import DataprocIcon from '../../assets/svg/Dataproc.svg';
-import VertexIcon from '../../assets/svg/vertex.svg';
+import DatabaseIcon from '../../assets/svg/database_icon.svg';
+import BucketIcon from '../../assets/svg/bucket_icon.svg';
+import ClusterIcon from '../../assets/svg/cluster_icon.svg';
+import CodeAssetIcon from '../../assets/svg/code_asset_icon.svg';
+import ConnectionIcon from '../../assets/svg/connection_icon.svg';
+import DashboardIcon from '../../assets/svg/dashboard_icon.svg';
+import DashboardElementIcon from '../../assets/svg/dashboard_element_icon.svg';
+import DataExchangeIcon from '../../assets/svg/data_exchange_icon.svg';
+import DataStreamIcon from '../../assets/svg/data_stream_icon.svg';
+import DatabaseSchemaIcon from '../../assets/svg/database_schema_icon.svg';
+import DatasetIcon from '../../assets/svg/dataset_icon.svg';
+import ExploreIcon from '../../assets/svg/explore_icon.svg';
+import FeatureGroupIcon from '../../assets/svg/feature_group_icon.svg';
+import FeatureOnlineStoreIcon from '../../assets/svg/feature_online_store_icon.svg';
+import ViewIcon from '../../assets/svg/view_icon.svg';
+import FilesetIcon from '../../assets/svg/fileset_icon.svg';
+import FolderIcon from '../../assets/svg/folder_icon.svg';
+import FunctionIcon from '../../assets/svg/function_icon.svg';
+import GlossaryIcon from '../../assets/svg/glossary_icon.svg';
+import GlossaryCategoryIcon from '../../assets/svg/glossary_category_icon.svg';
+import ListingIcon from '../../assets/svg/listing_icon.svg';
+import LookIcon from '../../assets/svg/look_icon.svg';
+import ModelIcon from '../../assets/svg/model_icon.svg';
+import RepositoriesIcon from '../../assets/svg/repositories_icon.svg';
+import GenericIcon from '../../assets/svg/generic_icon.svg';
+import SchedulerIcon from '../../assets/svg/scheduler_icon.svg';
+import TableIcon from '../../assets/svg/table_icon.svg';
 
 /**
  * @file SearchEntriesCard.tsx
@@ -67,37 +82,103 @@ interface SearchEntriesCardProps {
   index?: number;
 }
 
-const getProductIcon = (productName: string) => {
-  switch (productName) {
-    case 'ANALYTICS_HUB':
-      return AnalyticsHubIcon;
-    case 'BIGQUERY':
-      return BigQueryIcon;
-    case 'CLOUD_BIGTABLE':
-      return CloudBigTableIcon;
-    case 'CLOUD_PUBSUB':
-      return CloudPubSubIcon;
-    case 'CLOUD_SPANNER':
-      return CloudSpannerIcon;
-    case 'CLOUD_STORAGE':
-      return CloudStorageIcon;
-    case 'CLOUD_SQL':
-      return CloudSQLIcon;
-    case 'DATAFORM':
-      return DataformIcon;
-    case 'DATAPLEX':
-      return DataplexIcon;
-    case 'DATAPLEX_UNIVERSAL_CATALOG':
-      return DataplexIcon;
-    case 'DATAPROC_METASTORE':
-      return DataprocIcon;
-    case 'VERTEX_AI':
-      return VertexIcon;
+// const getProductIcon = (productName: string) => {
+//   switch (productName) {
+//     case 'ANALYTICS_HUB':
+//       return AnalyticsHubIcon;
+//     case 'BIGQUERY':
+//       return BigQueryIcon;
+//     case 'CLOUD_BIGTABLE':
+//       return CloudBigTableIcon;
+//     case 'CLOUD_PUBSUB':
+//       return CloudPubSubIcon;
+//     case 'CLOUD_SPANNER':
+//       return CloudSpannerIcon;
+//     case 'CLOUD_STORAGE':
+//       return CloudStorageIcon;
+//     case 'CLOUD_SQL':
+//       return CloudSQLIcon;
+//     case 'DATAFORM':
+//       return DataformIcon;
+//     case 'DATAPLEX':
+//       return DataplexIcon;
+//     case 'DATAPLEX_UNIVERSAL_CATALOG':
+//       return DataplexIcon;
+//     case 'DATAPROC_METASTORE':
+//       return DataprocIcon;
+//     case 'VERTEX_AI':
+//       return VertexIcon;
+//     default:
+//       return OthersIcon;
+//   }
+// };
+
+const getAssetIcon = (assetName: string) => {
+  switch (assetName) {
+    case 'Bucket':
+      return BucketIcon;
+    case 'Cluster':
+      return ClusterIcon;
+    case 'Code asset':
+      return CodeAssetIcon;
+    case 'Connection':
+      return ConnectionIcon;
+    case 'Dashboard':
+      return DashboardIcon;
+    case 'Dashboard element':
+      return DashboardElementIcon;
+    case 'Data exchange':
+      return DataExchangeIcon;
+    case 'Data source connection':
+      return ConnectionIcon;
+    case 'Data stream':
+      return DataStreamIcon;
+    case 'Database':
+      return DatabaseIcon;
+    case 'Database schema':
+      return DatabaseSchemaIcon;
+    case 'Dataset':
+      return DatasetIcon;
+    case 'Explore':
+      return ExploreIcon;
+    case 'Feature group':
+      return FeatureGroupIcon;
+    case 'Feature online store':
+      return FeatureOnlineStoreIcon;
+    case 'Feature view':
+      return ViewIcon;
+    case 'Fileset':
+      return FilesetIcon;
+    case 'Folder':
+      return FolderIcon;
+    case 'Function':
+      return FunctionIcon;
+    case 'Glossary':
+      return GlossaryIcon;
+    case 'Glossary Category':
+      return GlossaryCategoryIcon;
+    case 'Glossary Term':
+      return GlossaryIcon;
+    case 'Listing':
+      return ListingIcon;
+    case 'Look':
+      return LookIcon;
+    case 'Model':
+      return ModelIcon;
+    case 'Repository':
+      return RepositoriesIcon;
+    case 'View':
+      return ViewIcon;
+    case 'Resource':
+      return GenericIcon;
+    case 'Routine':
+      return SchedulerIcon;
+    case 'Table':
+      return TableIcon;
     default:
-      return OthersIcon;
+      return GenericIcon;
   }
 };
-
 const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSelected = false, onDoubleClick, disableHoverEffect = false, hideTopBorderOnHover = false, index}) => {
   const entryData = entry;//useState<any>(entry);
   //const [parentName, setParentName] = useState<string>('');
@@ -145,7 +226,10 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
   //   const newStatus = toggleFavorite();
   //   console.log('Favorite toggled for:', name, 'New state:', newStatus);
   // };
-
+  const capitalizeFirstLetter = (string: string) => {
+    if (!string) return string;
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
   useEffect(() => {
     // getNames(entry.name, '/');
     // setName(entry.entrySource.displayName.length > 0 ? entry.entrySource.displayName : getNames(entry.name || '', '/'));
@@ -159,11 +243,10 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
     setName(calculatedName);
     setSystemName(entry.entrySource.system);
     setEntryType(entry.entryType.split('-').length > 1 ? entry.entryType.split('-').pop() : entry.name.split('/').at(-2).charAt(0).toUpperCase() + entry.name.split('/').at(-2).slice(1));
-
-    const myDate = new Date(entry.updateTime.seconds * 1000);
+    const myDate = (typeof entry.updateTime !== 'string') ? new Date(entry.updateTime.seconds * 1000) : new Date(entry.updateTime);
     const formattedDate = new Intl.DateTimeFormat('en-US', { month: "short" , day: "numeric", year: "numeric" }).format(myDate);
     setModifiedDate(formattedDate);
-    setDescription(entry.entrySource.description);
+    setDescription(entry.entrySource.description ?? '');
     
     // Generate random avatar colors for this card
     //setAvatarColors(generateRandomColors());
@@ -242,10 +325,10 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 minWidth: 0, // Allow content to shrink and wrap
                 gap: '0.75rem' // Uniform spacing between title, tags, dates, location
               }}>
-                {getProductIcon(systemName) && (
+                {getAssetIcon(capitalizeFirstLetter(entryType)) && (
                         <img 
-                          src={getProductIcon(systemName)!} 
-                          alt={systemName} 
+                          src={getAssetIcon(capitalizeFirstLetter(entryType))!} 
+                          alt={capitalizeFirstLetter(entryType)} 
                           style={{
                             width: '1.25rem',
                             height: '1.25rem',
@@ -264,7 +347,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                   overflow: 'hidden',
                   maxWidth: '300px',
                   textOverflow: 'ellipsis',
-                  textTransform:'capitalize',
+                  // textTransform:'capitalize',
                   whiteSpace: 'nowrap'
                 }}>
                   {name}
@@ -314,7 +397,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                   <span>{modifiedDate}</span>
                 </span>
                 </Tooltip>
-                <Tooltip title={`Location - ${entryData.entrySource.labels["dataplex-dq-published-location"] ?? entryData.entrySource.location}`} arrow placement='top'>
+                <Tooltip title={`Location - ${entryData.entrySource.location}`} arrow placement='top'>
                 <span style={{ 
                   color: "#575757", 
                   fontSize: "0.875rem", 
@@ -331,7 +414,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
                   }}>
-                    {entryData.entrySource.labels["dataplex-dq-published-location"] ?? entryData.entrySource.location}
+                    {entryData.entrySource.location}
                   </span>
                 </span>
                 </Tooltip>

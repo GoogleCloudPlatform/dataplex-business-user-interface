@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CheckIcon from '@mui/icons-material/Check';
-import { Autocomplete, MenuItem, Select, TextField } from '@mui/material';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { Autocomplete, TextField } from '@mui/material';
 import './SearchBar.css'
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
@@ -54,7 +54,7 @@ interface SearchProps {
 const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, variant = 'default' }) => {
   const dispatch = useDispatch<AppDispatch>();
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
-  const searchType = useSelector((state:any) => state.search.searchType);
+  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const { user } = useAuth();
   const location = useLocation();
   const [searchData, setSearchData] = useState([
@@ -62,11 +62,15 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   ]);
   const [recentSearches, setRecentSearches] = useState<Array<{ id: number, term: string, timestamp: number }>>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isSelectDropdownOpen, setIsSelectDropdownOpen] = useState(false);
   const [blurTimeoutId, setBlurTimeoutId] = useState<(ReturnType<typeof setTimeout>) | null>(null);
   const [hoveredSearchId, setHoveredSearchId] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   // Local storage key for recent searches
   const getStorageKey = (userId: string) => `recentSearches_${userId}`;
+  
+  const handleSemanticSearchToggle = () => {
+    dispatch({ type: 'search/setSemanticSearch', payload: { semanticSearch: !semanticSearch } });
+  };
 
   // Load recent searches from localStorage on component mount
   useEffect(() => {
@@ -156,25 +160,25 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
     });
   };
 
-  const handleSearchChange = (event : any) => {
-    // Dispatch the setSearchTerm action with the new value
-    const trimmedValue = event.target.value.trim();
-    dispatch({ type: 'search/setSearchTerm', payload: {searchTerm : trimmedValue }});
-    console.log("Search Term:", trimmedValue);
+  // const handleSearchChange = (event : any) => {
+  //   // Dispatch the setSearchTerm action with the new value
+  //   const trimmedValue = event.target.value.trim();
+  //   dispatch({ type: 'search/setSearchTerm', payload: {searchTerm : trimmedValue }});
+  //   console.log("Search Term:", trimmedValue);
     
     
-    if (event.key === 'Enter') {
-        // Check if search term meets minimum requirements
-        if (trimmedValue && trimmedValue.length >= 3) {
-            // Call the search submit function with the current search term
-            handleSearchSubmit(trimmedValue);
-            // Add to recent searches
-            addToRecentSearches(trimmedValue);
-        } else if (trimmedValue && trimmedValue.length > 0 && trimmedValue.length < 3) {
-            alert('Please type at least 3 characters to search');
-        }
-    }   
-  };
+  //   if (event.key === 'Enter') {
+  //       // Check if search term meets minimum requirements
+  //       if (trimmedValue && trimmedValue.length >= 3) {
+  //           // Call the search submit function with the current search term
+  //           handleSearchSubmit(trimmedValue);
+  //           // Add to recent searches
+  //           addToRecentSearches(trimmedValue);
+  //       } else if (trimmedValue && trimmedValue.length > 0 && trimmedValue.length < 3) {
+  //           alert('Please type at least 3 characters to search');
+  //       }
+  //   }   
+  // };
 
   const handleSelectOption = (option: string) => {
     // Sanitize input to prevent XSS
@@ -189,11 +193,6 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
       }
     }
     setIsDropdownOpen(false);
-  };
-
-  const handleSearchDefaultChange = (event: any) => {
-    console.log(isSelectDropdownOpen);
-    dispatch({ type: 'search/setSearchType', payload: { searchType: event.target.value } });
   };
 
   const handleDeleteRecentSearch = (searchId: number, event: React.MouseEvent) => {
@@ -232,6 +231,21 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
     setIsDropdownOpen(false);
   };
 
+  const handleInputChange = (_event: React.SyntheticEvent, newInputValue: string) => {
+        dispatch({ type: 'search/setSearchTerm', payload: { searchTerm: newInputValue } });
+  };
+  
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter') {
+            const trimmedValue = searchTerm?.toString().trim();
+            if (trimmedValue && trimmedValue.length >= 3) {
+                handleSearchSubmit(trimmedValue);
+                addToRecentSearches(trimmedValue);
+            } else if (trimmedValue && trimmedValue.length > 0 && trimmedValue.length < 3) {
+                alert('Please type at least 3 characters to search');
+            }
+        }
+  };
   const handleInputFocus = () => {
     // Clear any pending blur timeout
     if (blurTimeoutId) {
@@ -273,29 +287,28 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   const isAnyDropdownOpen = isDropdownOpen;
 
   return (
-    <div >
         <div 
             id="search-bar" 
-            className={`${variant === 'navbar' ? 'navbar-variant' : ''}`}
+            className={`${variant === 'navbar' ? 'navbar-variant' : ''} ${isAnimating ? 'google-glow-animation' : ''}`}
             data-route={location.pathname === '/browse-by-annotation' ? 'browse-by-annotation' : ''}
             style={{ 
                 height:  '3.09rem',
                 display: 'flex', 
                 alignItems: 'center', 
-                justifyContent: variant === 'navbar' ? 'space-between' : 'center', 
-                borderRadius: isAnyDropdownOpen ? '4.0625rem 4.0625rem 4.0625rem 0rem' : '4.0625rem', 
+                justifyContent: 'space-between',
+                borderRadius: isAnyDropdownOpen ? '24px 24px 0 0' : '24px', 
                 background: isAnyDropdownOpen ? '#ffffff' : '#E9EEF6', 
-                padding: '0rem 0rem 0rem 1.125rem',
-                width: variant === 'navbar' ? (location.pathname === '/browse-by-annotation'? '828px': '820px') : 'calc(100% - 0.9375rem)',
-                marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '1.5rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
+                padding: '0rem 0.5rem 0rem 1.125rem',
+                width: variant === 'navbar' ? 'calc(100%)' : 'calc(100% - 0.9375rem)',
+                maxWidth: '820px',
+                marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
-                zIndex: 1,
-                transition: 'all 0s',
-                borderLeft: isAnyDropdownOpen ? '0.0625rem solid #E0E0E0' : '0rem',
-                borderTop: isAnyDropdownOpen ? '0.02rem solid #E0E0E0' : '0rem',
-                boxShadow: isAnyDropdownOpen && variant !== 'navbar' ? '-1.5px 1px 3px 0px rgba(0,0,0,0.25)' : 'none',
-                clipPath: isAnyDropdownOpen && variant !== 'navbar' ? 'polygon(-20px 0, 100% 0, 100% 100%, -15px calc(100% + 4px))' : 'none',
+                zIndex: 150,
+                transition: 'all 0.2s ease',
+                boxShadow: isAnyDropdownOpen ? '0 1px 6px rgba(32,33,36,.28)' : 'none',
+                 border: '1px solid transparent',
+                 boxSizing: 'border-box'
             }}>
             <SearchIcon style={{
                 color: '#5F6368', 
@@ -304,11 +317,14 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 height:"1.25rem",
                 width:"1.25rem",
                 marginLeft: variant === 'navbar' ? '0px' : "5px",
+                flexShrink: 0
             }}/>
             <Autocomplete
                 freeSolo
-                value={searchTerm || ''}
+                disablePortal
+                inputValue={searchTerm || ''}
                 disableClearable
+                onInputChange={handleInputChange}
                 open={isDropdownOpen && ((searchTerm && searchTerm.length >= 3) || recentSearches.length > 0)}
                 onOpen={() => {
                     // Clear any pending blur timeout when opening
@@ -422,40 +438,55 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 }}
 
                 renderInput={(params) => (
+                    <div style={{ position: 'relative', width: '100%' }}>
+                        {!searchTerm && (
+                            <span 
+                                key={semanticSearch ? 'semantic-mode' : 'keyword-mode'} 
+                                className="animated-placeholder"
+                                style={{ 
+                                    left: variant === 'navbar' ? '7px' : '16px' 
+                                }}
+                            >
+                                {semanticSearch ? "Ask anything" : "Search for assets"}
+                            </span>
+                        )}
+
                         <TextField
-                        {...params}
-                        onKeyDown={handleSearchChange}
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
-                        placeholder="Search for assets"
-                        slotProps={{
-                        input: {
-                            ...params.InputProps,
-                            type: 'search',
-                        },
-                        }}
-                        style={{
-                            fontFamily: '"Google Sans Text", sans-serif',
-                            color: '#1F1F1F',
-                            width: variant === 'navbar' ? "100%" : "31.25rem",
-                            background: isAnyDropdownOpen ? "#ffffff" : "#E9EEF6",
-                            fontWeight:"500",
-                            fontSize:"0.875rem",
-                        }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                '& input': {
-                                    fontFamily: '"Google Sans Text", sans-serif',
-                                    fontSize:"0.875rem",
-                                    fontWeight:"500",
-                                    opacity:"0.8",
-                                    color: '#1F1F1F',
-                                    fontStyle:"normal",
-                                    padding:"0rem 0.5625rem"
+                            {...params}
+                            onKeyDown={handleKeyDown}
+                            onFocus={handleInputFocus}
+                            onBlur={handleInputBlur}
+                            placeholder=""
+                            slotProps={{
+                                input: {
+                                    ...params.InputProps,
+                                    type: 'search',
                                 },
-                            },
-                        }}
-                    />
+                            }}
+                            style={{
+                                fontFamily: '"Google Sans Text", sans-serif',
+                                color: '#1F1F1F',
+                                width: "100%",
+                                flex: 1,
+                                background: isAnyDropdownOpen ? "#ffffff" : "#E9EEF6",
+                                fontWeight: "500",
+                                fontSize: "0.875rem",
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    '& input': {
+                                        fontFamily: '"Google Sans Text", sans-serif',
+                                        fontSize: "0.875rem",
+                                        fontWeight: "500",
+                                        opacity: "0.8",
+                                        color: '#1F1F1F',
+                                        fontStyle: "normal",
+                                        padding: "0rem 0.5625rem"
+                                    },
+                                },
+                            }}
+                        />
+                    </div>
                 )}
                 PaperComponent={(props) => (
                     <div
@@ -463,166 +494,81 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                         className={`autocomplete-dropdown ${variant === 'navbar' ? 'navbar-dropdown' : ''}`}
                         style={{
                         ...props.style,
-                        borderRadius: '0px 0px 1.5rem 1.5rem',
-                        borderLeft: '1px solid #E0E0E0',
-                        borderRight: '1px solid #E0E0E0',
-                        borderBottom: '1px solid #E0E0E0',
-                        borderTop: 'none',
-                        boxShadow: variant === 'navbar' ? 'none' : '0px 2px 3px 1px #0000001F, 0px 2px 1px 0px #00000024, 0px 2px 5px 0px #00000033',
-                        clipPath: variant === 'navbar' ? 'none' : 'inset(0px -15px -15px -15px)',
-                        padding: variant === 'navbar' ? '6px 0px 4px 6px' : '6px 0px 4px',
+                        borderRadius: '0 0 24px 24px', 
+                        border: 'none',
+                        borderTop: '1px solid transparent', 
+                        boxShadow: '0 4px 6px rgba(32,33,36,.28)', 
+                        padding: '10px 0px',
                         backgroundColor: '#ffffff',
-                        marginTop: '6px',
-                        width: variant === 'navbar' ? 'calc(100% + 3rem)': 'calc(100% + 2.35rem)',
-                        maxWidth: 'none',
                         position: 'absolute',
-                        left: variant === 'navbar' ? 'calc(-2.95rem)': 'calc(-2.29rem)',
-                        top: '100%',
-                        zIndex: 1000,
-                        overflow:"hidden",
+                        marginLeft: '-47.2px',
+                        ...((variant === 'navbar' || location.pathname === '/browse-by-annotation') ? {
+                            width: 'calc(100% + 198px)',
+                            
+                        } : {
+                            right: '-151px',
+                            width: 'calc(100% + 194.4px)', 
+                        }),
+                        
+                        top: '100%',        
+                        marginTop: '7px',   
+                        zIndex: 2000,
+                        overflow: "hidden",
                     }}
                     />
                 )}
                 sx={variant === 'navbar' ? {
                     flex: '1 1 auto',
                     minWidth: 0,
+                    position: 'static',
                     '& .MuiAutocomplete-listbox': {
                         padding: '0px'
                     }
                 } : {
+                  flex: 1,
+                  minWidth: 0,
+                    position: 'static',
                     '& .MuiAutocomplete-listbox': {
                         padding: '0px'
                     }
                 }}
                 noOptionsText={!searchTerm && recentSearches.length === 0 ? "No recent searches" : "No options"}
             />
-            
-            <span id="seach-select-span" style={{
-                    height: '49.44px',
-                    marginRight: variant === 'navbar' ? "0px" : "7px",
-                    background: "#E9EEF6", 
-                    border:"none",
-                    color:"#575757",
-                    fontSize:"0.875rem",
-                    fontStyle: "bold",
-                    fontWeight:"500",
-                    borderTopRightRadius:"3.125rem",
-                    borderBottomRightRadius:"3.125rem",
-                    borderLeft:"0.0625rem solid #C5C7C5",
-                    flex: variant === 'navbar' ? '0 0 9.375rem' : 'initial',
-                    paddingLeft: '1rem',
-                    position: 'relative',
-                    zIndex: 2,
-                    boxShadow: isAnyDropdownOpen 
-                    ? (variant === 'navbar' 
-                        ? "0px -3px 1px white" // Navbar variant: ONLY the white line to cover the border join
-                        : "inset 6px 0 8px -5px rgba(0, 0, 0, 0.20), inset 1.5px 0 0.5px -1px rgba(0, 0, 0, 0.20), 0px -3px 1px white") // Default variant: All shadows
-                    : "0px -3px 1px white",
-                }}
-            >
-                <Select
-                    labelId=""
-                    id="search-default-type"
-                    value={searchType}
-                    label=""
-                    onChange={handleSearchDefaultChange}
-                    onOpen={() => setIsSelectDropdownOpen(true)}
-                    onClose={() => setIsSelectDropdownOpen(false)}
-                    renderValue={(value) => (
-                        <span style={{ 
-                            color: '#575757', 
-                            fontSize: '0.875rem',
-                            fontWeight: 500,
-                        }}>
-                            {value === 'All' ? 'All Assets' : value}
-                        </span>
-                    )}
-                    MenuProps={{
-                        anchorOrigin: {
-                            vertical: "bottom",
-                            horizontal: "center"
-                        },
-                        transformOrigin: {
-                            vertical: "top",
-                            horizontal: "center"
-                        },
-                        sx: {
-                            '& .MuiPaper-root': {
-                                marginLeft: '-0.5rem',
-                            }
+          <div style={{ paddingRight: '8px', flexShrink: 0 }}>
+                <button
+                    className={!semanticSearch ? "natural-language-btn-hover-effect" : ""}
+                    onClick={(e) => {
+                        if (!semanticSearch) {
+                            setIsAnimating(true);
+                            setTimeout(() => setIsAnimating(false), 2500);
                         }
+                        handleSemanticSearchToggle();
+                        e.currentTarget.blur();
                     }}
-                    sx={{
-                        flex: variant === 'navbar' ? '1 1 auto' : 'initial',
-                        background: "#E9EEF6",
-                        color:'#575757', 
-                        border:"none !important",
-                        borderRadius: isAnyDropdownOpen ? "0rem 4.0625rem 4.0625rem 0rem" : "4.0625rem",
-                        '& .MuiOutlinedInput-root': {
-                            '& fieldset': {
-                                border: 'none !important',
-                            },
-                            '&:hover fieldset': {
-                                border: 'none !important',
-                            },
-                            '&.Mui-focused fieldset': {
-                                border: 'none !important',
-                            },
-                        },
-                        '& .MuiSelect-icon': {
-                                marginRight: '0.75rem', // Adjust this value as needed
-                        },
+                    style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: semanticSearch ? '#d2e3fc' : '#E9EEF6',
+                        color: semanticSearch ? '#174ea6' : '#5F6368',
+                        border: '2px solid transparent', 
+                        padding: '2px 8px 2px 4px',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.1)',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontFamily: '"Google Sans", sans-serif',
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        transition: 'all 0.2s ease',
+                        boxSizing: 'border-box', 
                     }}
                 >
-                    <MenuItem 
-                        key="all-asset" 
-                        value="All" 
-                        sx={{
-                            color: searchType === 'All' ? '#0E4DCA' : '#575757',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.75rem 1rem',
-                            fontSize: '0.875rem'
-                        }}
-                    >
-                        <span>All Assets</span>
-                        {searchType === 'All' && (
-                            <CheckIcon sx={{ 
-                                fontSize: '1.5rem', 
-                                color: '#0E4DCA',
-                                marginLeft: '0.5rem'
-                            }} />
-                        )}
-                    </MenuItem>
-                    <MenuItem 
-                        key="bigQuery" 
-                        value="BigQuery" 
-                        sx={{
-                            color: searchType === 'BigQuery' ? '#0E4DCA' : '#575757',
-                            fontWeight: 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.75rem 1rem',
-                            fontSize: '0.875rem'
-                        }}
-                    >
-                        <span>BigQuery</span>
-                        {searchType === 'BigQuery' && (
-                            <CheckIcon sx={{ 
-                                fontSize: '1.5rem', 
-                                color: '#0E4DCA',
-                                marginLeft: '0.5rem'
-                            }} />
-                        )}
-                    </MenuItem>
-                </Select>
-            </span>
-            
+                    <AutoAwesomeIcon style={{ fontSize: '16px' }} />
+                    <span>Natural Language</span>
+                </button>
+            </div>
         </div>
-    </div>
   );
 }
 

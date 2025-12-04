@@ -1118,8 +1118,9 @@ app.get('/api/v1/get-projects', async (req, res) => {
  * A protected endpoint to list all data quality scans in the configured location.
  */
 app.get('/api/v1/data-scans', async (req, res) => {
+    const { project } = req.query;
     try {
-        const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+        const projectId = (project != '' && project != null && project != "undefined") ? project : process.env.GOOGLE_CLOUD_PROJECT_ID;
         const location = process.env.GCP_LOCATION;
 
         if (!projectId || !location) {

@@ -112,6 +112,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const [openFeedback, setOpenFeedback] = React.useState<boolean>(false);
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
   const searchFilters = useSelector((state:any) => state.search.searchFilters);
+  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const id_token = user?.token || '';
   const [isNotificationVisible, setIsNotificationVisible] = React.useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = React.useState<string>('');
@@ -134,7 +135,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   };
   
   useEffect(() => {
-    dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token}));   
+    dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, semanticSearch: semanticSearch}));   
   }, []);
 
   const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -201,7 +202,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
 
   const handleNavSearch = (text: string) => {
     dispatch({ type: 'resources/setItemsStoreData', payload: [] });
-    dispatch(searchResourcesByTerm({term : text, id_token: id_token, filters: searchFilters}));
+    dispatch(searchResourcesByTerm({term : text, id_token: id_token, filters: searchFilters, semanticSearch: semanticSearch}));
     searchNavigate && navigate('/search');
   }
 
@@ -259,7 +260,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                 height: "3rem", 
                 margin: "0", 
               }}>
-                <div style={{ width: '100%', marginLeft: '1.5rem'}}>
+                <div style={{ width: '100%', marginLeft: '1.5rem' }}>
                   <SearchBar 
                     handleSearchSubmit={handleNavSearch} 
                     dataSearch={[

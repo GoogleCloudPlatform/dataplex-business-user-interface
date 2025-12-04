@@ -395,7 +395,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                      paddingLeft: '3px'
                    }}
                  >
-                   {getFormatedDate(entry?.updateTime?.seconds || entry?.createTime?.seconds)}
+                   {getFormatedDate(entry?.updateTime || entry?.createTime)}
                  </TableCell>
               </TableRow>
             );

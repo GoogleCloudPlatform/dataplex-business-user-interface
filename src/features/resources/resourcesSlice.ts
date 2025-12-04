@@ -49,7 +49,16 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         requestData.filters.forEach((filter: any) => {
           if(filter.type === 'aspectType') {
             //let aspect = filter.name.replace(' ', '-');
-            aspectType += (aspectType != '' ? '|' : '') + `${getAspectName(filter.name)}`;
+            const name = getAspectName(filter.name);
+            if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
+              filter.subAnnotationData.forEach((subAspect:any) => {
+                let subAspectName = `${name}.${subAspect.fieldName}`;
+                let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(aspect:${subAspectName}:${subAspect.value})` : `-(aspect:(${subAspectName}:${subAspect.value})`) : '';
+                aspectType += (aspectType != '' ? '|' : '') + `aspect=(${subAspectName}) AND ${subAspectNameVal}`;
+              });
+            }else {
+              aspectType += (aspectType != '' ? '|' : '') + `aspect=(${name})`;
+            }
           }
           if(filter.type === 'system') {
             system += (system != '' ? '|' : '') + `${filter.name.replaceAll(' ', '_').replace('/','').toUpperCase()}`;
@@ -79,41 +88,42 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         //     system=(ANALYTICS_HUB|CLOUD_SQL|CUSTOM|DATAFORM|DATAPLEX|DATAPROC_METASTORE|CLOUD_SPANNER|VERTEX_AI)
         //  )
 
-        searchString += aspectType != '' ? ((searchString != '' ? ',' : '') + `(aspect:(${aspectType}))`) : '';
+        searchString += aspectType != '' ? ((searchString != '' ? ' ' : '') + `(${aspectType})`) : '';
         searchString += system != '' ? ((searchString != '' ? ',' : '') + `(system=(${system}))`) : '';
         searchString += typeAliases != '' ? ((searchString != '' ? ',' : '') + `(type=(${typeAliases}))`) : '';
         searchString += project != '' ? ((searchString != '' ? ',' : '') + `(project=(${project}))`) : '';
       }
       requestResourceData = {
         query: searchString,
-        pageSize: 20,
+        pageSize: requestData.semanticSearch ? 100 : 20,
         pageToken: requestData.nextPageToken ?? '', // Optional: for pagination
         //orderBy: '', // Optional: specify ordering  
+        semanticSearch: requestData.semanticSearch || false,
       };
     }
     
-    const response = await axios.post(URLS.API_URL + URLS.SEARCH, requestResourceData);
-    const data = await response.data;
-    return data;
+    // const response = await axios.post(URLS.API_URL + URLS.SEARCH, requestResourceData);
+    // const data = await response.data;
+    // return data;
 
-    // const response = await axios.post(
-    //   `https://dataplex.googleapis.com/v1/projects/${import.meta.env.VITE_GOOGLE_PROJECT_ID}/locations/global:searchEntries`,
-    //   { 
-    //     query: searchString,
-    //     pageSize: 20,
-    //     pageToken: requestData.nextPageToken ?? '', // Optional: for pagination
-    //     //orderBy: '', // Optional: specify ordering},
-    //   }// },
-    //   // {
-    //   //   headers: {
-    //   //     Authorization: `Bearer ${requestData.id_token}`,
-    //   //     'Content-Type': 'application/json',
-    //   //   },
-    //   // }
-    // );
+    const response = await axios.post(
+      `https://dataplex.googleapis.com/v1/projects/${import.meta.env.VITE_GOOGLE_PROJECT_ID}/locations/global:searchEntries`,
+      requestResourceData
+      // },
+      // {
+      //   headers: {
+      //     Authorization: `Bearer ${requestData.id_token}`,
+      //     'Content-Type': 'application/json',
+      //   },
+      // }
+    );
 
-    // console.log(response.data);
-    // return response.data;
+    //console.log(response);
+    return response.status === 200 || response.status !== 401 ? {
+      data : response.data.results,
+      requestData: {...requestResourceData,pageToken: response.data.nextPageToken || ''},
+      results : response.data,
+    } : rejectWithValue('Token expired');
     //return mockSearchData; // For testing, we return mock data
 
   } catch (error) {
@@ -254,12 +264,13 @@ export const resourcesSlice = createSlice({
         state.status = 'loading';
       })
       .addCase(searchResourcesByTerm.fulfilled, (state, action) => {
-        state.totalItems = action.payload?.results?.totalSize ?? 0;
-        state.itemsRequestData = action.payload?.requestData ?? {};
-        state.itemsStore = [...state.itemsStore, ...(action.payload?.data ?? [])]; // Append new results to the store
+        const payload = Array.isArray(action.payload) ? { data: [], requestData:{}, results:{} } : action.payload;
+        state.totalItems = payload?.results?.totalSize ?? 0;
+        state.itemsRequestData = payload?.requestData ?? {};
+        state.itemsStore = [...state.itemsStore, ...(payload?.data ?? [])]; // Append new results to the store
         state.items = state.itemsNextPageSize != null 
         ? state.itemsStore.slice(state.itemsStore.length - state.itemsNextPageSize)
-        : action.payload?.data ?? []; // Replace the list with search results
+        : payload?.data ?? []; // Replace the list with search results
         state.status = 'succeeded';
       })
       .addCase(searchResourcesByTerm.rejected, (state, action) => {
