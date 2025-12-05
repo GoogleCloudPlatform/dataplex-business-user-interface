@@ -14,7 +14,7 @@ import SubmitAccess from '../SearchPage/SubmitAccess';
 import NotificationBar from '../SearchPage/NotificationBar';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
 import type { AppDispatch } from '../../app/store';
-import { getName, getEntryType, getFormattedDateTimeParts, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink } from '../../utils/resourceUtils';
+import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink, getFormattedDateTimePartsByDateTime } from '../../utils/resourceUtils';
 // import { useFavorite } from '../../hooks/useFavorite';
 import { useAuth } from '../../auth/AuthProvider';
 
@@ -118,8 +118,8 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   const hasAnnotations = entry?.aspects ? Object.keys(entry.aspects).some(key => hasValidAnnotationData(entry.aspects[key])) : false;
 
 
-  const { date: creationDate, time: creationTime } = getFormattedDateTimeParts(previewData?.createTime?.seconds);
-  const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(previewData?.updateTime?.seconds);
+  const { date: creationDate, time: creationTime } = getFormattedDateTimePartsByDateTime(previewData?.createTime);
+  const { date: updateDate, time: updateTime } = getFormattedDateTimePartsByDateTime(previewData?.updateTime);
 
 
   // Event handlers
@@ -357,7 +357,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
             }}>
               <Tooltip 
                 title={
-                  previewData.entrySource.displayName.length > 0 
+                  previewData.entrySource?.displayName?.length > 0
                   ? previewData.entrySource.displayName 
                   : getName(previewData.name || '', '/')
                 }
@@ -369,13 +369,13 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                 fontWeight: "400",
                 fontFamily: '"Google Sans", sans-serif',
                 lineHeight: 1.33,
-                textTransform:"capitalize",
+                // textTransform:"capitalize",
                 maxWidth: '200px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 textWrap: "nowrap",
               }}>
-                {previewData.entrySource.displayName.length > 0 ? previewData.entrySource.displayName : getName(previewData.name || '', '/')}
+                {previewData.entrySource?.displayName?.length > 0 ? previewData.entrySource.displayName : getName(previewData.name || '', '/')}
               </label>
               </Tooltip>
               <div style={{
@@ -882,9 +882,9 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                     </div>
                     <div style={{ flex: '1 1 0', width: '50%'  }}>
                       <div style={{ color: "#575757", fontSize: "0.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Project</div>
-                      <Tooltip title={ (previewData.fullyQualifiedName.split(':').pop() || '').split('.')[0] || '-' } arrow>
+                      <Tooltip title={ ((previewData?.fullyQualifiedName || '').split(':').pop() || '').split('.')[0] || '-' } arrow>
                         <div style={{ color: "#1F1F1F", fontSize: "0.875rem", fontWeight: "400", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          { (previewData.fullyQualifiedName.split(':').pop() || '').split('.')[0] || '-' }
+                          { ((previewData?.fullyQualifiedName || '').split(':').pop() || '').split('.')[0] || '-' }
                         </div>
                       </Tooltip>
                     </div>

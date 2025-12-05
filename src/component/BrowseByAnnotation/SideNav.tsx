@@ -74,8 +74,11 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
     <Box
       sx={{
         width: '250px',
-        backgroundColor: '#F8FAFD',
-        height: '100vh',
+        backgroundColor: '#FFFFFF',
+        borderRadius: '20px',
+        height: 'calc(100vh - 1.5rem)',
+        marginTop: "0px",
+        marginRight: "10px",
         padding: 2,
         overflowY: 'auto',
       }}

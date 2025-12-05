@@ -1,0 +1,62 @@
+.hidden-link {
+    opacity: 0 !important; 
+    display: none !important;
+}
+
+/**
+  Browser should support Houdini API
+*/
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 90deg;
+  inherits: false;
+}
+
+:root {
+  --bg-background: #ffffff;
+  --clr-card: #8bb3e0;
+  --clr-1: #1676d0;
+  --clr-2: #4173d7;
+  --clr-3: #7dabdc;
+}
+
+.card {
+  width: 18.3rem;
+  border-radius: 9px;
+  cursor: pointer;
+  background-color: var(--clr-card);
+}
+
+.card::after,
+.card::before {
+  content: " ";
+  position: absolute;
+  z-index: -1;
+  inset: -1px -2px;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    var(--clr-card),
+    var(--clr-1),
+    var(--clr-2),
+    var(--clr-3),
+    var(--clr-2),
+    var(--clr-1),
+    var(--clr-card)
+  );
+  border-radius: inherit;
+  animation: rotate 2s linear infinite;
+}
+
+.card::after {
+  filter: blur(5px);
+}
+
+@keyframes rotate {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
+}

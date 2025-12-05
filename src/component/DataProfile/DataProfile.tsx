@@ -411,7 +411,7 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName }) => {
       }}>
       <CircularProgress />
     </Box>
-  ) : (dataProfileAvailable ? (
+  ) : (dataProfileAvailable && profileData.length > 0 ? (
         <Box sx={{
           flex: 1,
           position: 'relative',
@@ -1040,9 +1040,10 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName }) => {
                                     color: '#1F1F1F',
                                     lineHeight: '1.33em',
                                     letterSpacing: '0.1px',
-                                    width: '101px', 
+                                    width: '101px',
+                                    whiteSpace: 'nowrap',
                                   }}>
-                                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                                    {key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, str => str.toUpperCase())}
                                   </Typography>
                                   <Typography sx={{
                                     fontSize: '12px',

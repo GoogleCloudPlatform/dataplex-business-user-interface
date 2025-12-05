@@ -10,7 +10,7 @@ import { Handle, Position } from '@xyflow/react';
 // MUI component styles based on Figma design
 const nodeContentStyles = {
   color: '#1F1F1F',
-  padding: '0.5rem',
+  padding: '0.3rem',
   fontFamily: '"Google Sans", sans-serif',
 };
 

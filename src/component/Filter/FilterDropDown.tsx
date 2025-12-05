@@ -736,12 +736,18 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
     if (appliedSubAnnotations.length > 0) {
       const parentAnnotation = {
         name: selectedAnnotationForSubPanel,
-        type: 'aspectType'
+        type: 'aspectType',
+        subAnnotationData: appliedSubAnnotations // You can include additional data if needed
       };
       
       // Add parent annotation to selected filters if not already present
       if (!selectedFilters.some(filter => filter.name === selectedAnnotationForSubPanel && filter.type === 'aspectType')) {
         const updatedFilters = [...selectedFilters, parentAnnotation];
+        setSelectedFilters(updatedFilters);
+        onFilterChange(updatedFilters);
+      }else{
+
+        const updatedFilters = [...selectedFilters.filter(filter => filter.name !== selectedAnnotationForSubPanel && filter.type === 'aspectType'), parentAnnotation];
         setSelectedFilters(updatedFilters);
         onFilterChange(updatedFilters);
       }
@@ -759,9 +765,9 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
   };
 
   // Debug useEffect to monitor selectedFilters changes
-  useEffect(() => {
-    console.log('selectedFilters changed:', selectedFilters);
-  }, [selectedFilters]);
+  // useEffect(() => {
+  //   console.log('selectedFilters changed:', selectedFilters);
+  // }, [selectedFilters]);
 
   // const handleMenuOpen = (event:any) => {
   //   setAnchorEl(event.currentTarget);
@@ -795,9 +801,10 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
             alignItems: "center",
             width: "100%",
             paddingRight: 0,
-            flex: "1 1 auto"
+            flex: "1 1 auto",
+            marginTop: "-20px"
         }}>
-            <Typography sx={{fontWeight:"500", fontSize:"1rem", color:"#1F1F1F", flex: "0 1 auto", fontFamily: "Google sans text, sans-serif"}}>Filters</Typography>
+            <Typography sx={{fontWeight:"500", fontSize:"1rem", color:"#1F1F1F", flex: "0 1 auto", fontFamily: "Google sans text, sans-serif", marginLeft: '5px'}}>Filters</Typography>
             <Button onClick={handleFilterClear} 
               disabled={selectedFilters.length === 0}
               sx={{
@@ -807,6 +814,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
                 fontSize:"0.75rem",
                 fontStyle:"normal", 
                 display: "flex",
+                marginRight: "8px",
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "0.25rem",
@@ -863,10 +871,10 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls={filter.title+"-content"}
                 id={filter.title+"-header"}
-                sx={{ padding:"0rem 0.3215rem 0rem 0.65rem", flex: "0 0 auto", minHeight: 'auto',
+                sx={{ padding:"0rem 0.7rem 0rem 0.65rem", flex: "0 0 auto", minHeight: 'auto',
                   '& .MuiAccordionSummary-content': {
                   lineHeight: '48px',
-                  margin: "14px -4.8px"
+                  margin: "14px -1.2px"
                 },
                 '& .MuiAccordionSummary-expandIconWrapper': {
                   marginRight: '-3px',
@@ -875,7 +883,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
                     minHeight: 'auto',
                     '& .MuiAccordionSummary-content': {
                    lineHeight: '48px',
-                   margin: "14px -4.8px"
+                   margin: "14px -1.2px"
                   }
                }}}
               >
@@ -920,7 +928,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
                         display: 'flex',
                         alignItems: 'center',
                         flex: '1 1 auto',
-                        paddingLeft: '0.22rem',
+                        paddingLeft: '0.45rem',
                       }}>
                         <FormControlLabel 
                           control={

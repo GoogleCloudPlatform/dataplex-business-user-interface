@@ -61,3 +61,21 @@
     float: right;
   }
   
+  .home-search-container {
+    width: 47.86%;
+    transition: width 0.3s ease;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .home-search-container {
+        width: 70%;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .home-search-container {
+        width: 95%;
+    }
+}

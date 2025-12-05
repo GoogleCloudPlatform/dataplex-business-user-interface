@@ -59,10 +59,10 @@ export const fetchDataScan = createAsyncThunk(
 
 export const fetchAllDataScans = createAsyncThunk(
   'dataScan/fetchAllDataScans',
-  async (requestData: { id_token: string }, { rejectWithValue }) => {
+  async (requestData: { id_token: string, projectId: string }, { rejectWithValue }) => {
     try {
       axios.defaults.headers.common['Authorization'] = `Bearer ${requestData.id_token}`;
-      const response = await axios.get(URLS.API_URL + URLS.GET_ALL_DATA_SCANS);
+      const response = await axios.get(URLS.API_URL + URLS.GET_ALL_DATA_SCANS+`?project=${requestData.projectId}`);
       const data = await response.data;
       return data;
     } catch (error) {

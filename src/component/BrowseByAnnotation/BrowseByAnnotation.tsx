@@ -121,7 +121,7 @@ const BrowseByAnnotation = () => {
             return { title: f, fieldValues: 0, assets: 0 };
           });
           generatedData.push({
-            title: aspectInfo?.dataplexEntry.entrySource.displayName || 'Unknown Aspect',
+            title: aspectInfo?.dataplexEntry.entrySource.displayName || (aspectInfo?.dataplexEntry.name ? aspectInfo.dataplexEntry.name.split('/').pop() : 'Unknown Aspect'),
             fieldValues: subItems.length || 0,
             assets: 0,
             name:a,

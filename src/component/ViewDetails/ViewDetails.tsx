@@ -150,10 +150,10 @@ let annotationTab = <PreviewAnnotation
 
   useEffect(() => {
     // Only fetch if we have a token and haven't fetched yet
-    if (id_token && allScansStatus === 'idle') {
-      dispatch(fetchAllDataScans({ id_token: id_token }));
+    if (id_token){ // && allScansStatus === 'idle') {
+      dispatch(fetchAllDataScans({ id_token: id_token, projectId: entry?.entrySource?.resource.split('/')[1] || '' }));
     }
-  }, [dispatch, id_token, allScansStatus]);
+  }, []);//[dispatch, id_token, allScansStatus]);
 
 useEffect(() => {
     if (
@@ -290,7 +290,7 @@ useEffect(() => {
                         color: "#1F1F1F", 
                         fontSize: "1.125rem", 
                         fontWeight: "500",
-                        textTransform: "capitalize",
+                        // textTransform: "capitalize",
                         marginRight: "0.5rem",
                         maxWidth: '400px',
                         overflow: 'hidden',

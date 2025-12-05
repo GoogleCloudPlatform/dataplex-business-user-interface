@@ -47,6 +47,38 @@ export const getFormattedDateTimeParts = (timestamp: any) => {
   return { date, time }; 
 };
 
+export const getFormattedDateTimePartsByDateTime = (dateTime: any) => {
+  if (!dateTime) {
+    return { date: '-', time: '' };
+  }
+  
+  let timeValue = dateTime;
+  if (typeof dateTime === 'object' && dateTime !== null && 'seconds' in dateTime) {
+    timeValue = Number(dateTime.seconds) * 1000;
+  }
+
+  const myDate = new Date(timeValue);
+
+  if (isNaN(myDate.getTime())) {
+    return { date: '-', time: '' };
+  }
+
+  const date = new Intl.DateTimeFormat('en-US', { 
+    month: "short", 
+    day: "numeric", 
+    year: "numeric",
+  }).format(myDate);
+
+  const time = new Intl.DateTimeFormat('en-US', { 
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit", 
+    hour12: true 
+  }).format(myDate);
+
+  return { date, time }; 
+};
+
 
 export const generateBigQueryLink = (entry:any) => {
   if (!entry?.name || !entry?.fullyQualifiedName) return '';

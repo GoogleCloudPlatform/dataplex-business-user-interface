@@ -55,6 +55,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
   const dispatch = useDispatch<AppDispatch>();
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
   const searchType = useSelector((state:any) => state.search.searchType);
+  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const id_token = user?.token || '';
   const [previewData, setPreviewData] = useState<any | null>(null);
   const [filters, setFilters] = useState<any[]>([]);
@@ -88,7 +89,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
     // Only search if there's a search term and no existing results
     if (searchTerm && searchTerm.trim() !== '' && resources.length === 0) {
       
-      dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters}));   
+      dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters, semanticSearch: semanticSearch}) );   
     }
   }, []);
 
@@ -109,7 +110,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
     setStartIndex(0);
     setPageNumber(1);
     if(filters.length > 0 || prevFilters.length > 0){
-      dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters}));
+      dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters, semanticSearch: semanticSearch}));
     }
     setPrevFilters(filters);
   }, [filters]);
@@ -196,7 +197,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
         }else if(requestResourceData != null){
           requestResourceData.pageSize = (start + size) - requestItemStore.length;
           dispatch({ type: 'resources/setItemsNextPageSize', payload: size });
-          dispatch(searchResourcesByTerm({ term:searchTerm, requestResourceData: requestResourceData, id_token: id_token }));
+          dispatch(searchResourcesByTerm({ term:searchTerm, requestResourceData: requestResourceData, id_token: id_token, filters:filters, semanticSearch: semanticSearch }) );
         }
       }
     } else if (direction === 'previous') {
@@ -258,12 +259,15 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
             <div style={{
                 position: 'absolute',
                 left: isFiltersOpen ? '1rem' : '-210px',
-                top: '0px',
+                top: '5px',
                 width: '210px',
                 height: 'calc(100vh - 3.9rem)',
                 transition: 'left 0.3s ease-in-out',
                 zIndex: 1000,
-                overflowY: 'auto'
+                overflowY: 'auto',
+                backgroundColor: '#ffffff',
+                borderRadius: '20px',
+                padding: '10px 0'
             }}>
                 <FilterDropdown key="filters-panel" filters={filters} onFilterChange={(f) => { handleFilterChange(f)} }/>
             </div>
