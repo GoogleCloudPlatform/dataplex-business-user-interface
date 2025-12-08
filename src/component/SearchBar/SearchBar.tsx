@@ -304,7 +304,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
-                zIndex: 150,
+                zIndex: 1000,
                 transition: 'all 0.2s ease',
                 boxShadow: isAnyDropdownOpen ? '0 1px 6px rgba(32,33,36,.28)' : 'none',
                  border: '1px solid transparent',

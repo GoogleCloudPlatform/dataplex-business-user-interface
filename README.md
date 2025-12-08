@@ -322,16 +322,15 @@ gcloud run deploy [SERVICE_NAME] \
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
 
 
-## Release Note : 1.1.0
-This is a minor release with features, identified bug/fixes and some user small changes.
-Feature Enhancements:
-
-  - Natural language search option is added in the UI experience.
-  - Lineage Graph Multi level upstream and downstream is added.
+## Release Note : 1.1.1 [DRAFT Release]
+This is a sub minor release with UI bug fixes.
 
 Bug Fixes:
 
-  - Data profile and Data Quality for assets belongs to other projects is also visible now in the view details page.
-  - Other UI enhancements
+  - Collapsible in Overview, Data Profile and Data Quality fill the whole screen depending on the aspect ratio of the screen (leaves no white space now if there is sufficient content inside the collapsible)
+  - Aspects nomenclature updated
+  - Aspects show the correct values which were not visible previously (numbered values and boolean values do not get filtered now)
+  - Custom entries are visible now 
+  - Overall asset capitalisation fixed
 
 

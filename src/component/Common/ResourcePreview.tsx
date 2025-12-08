@@ -422,7 +422,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
 
                 </Tooltip> */}
                 {
-                  previewData.entrySource?.system.toLowerCase() === 'bigquery' ? (<>
+                  previewData.entrySource?.system ? ((previewData.entrySource?.system.toLowerCase() === 'bigquery') ? (<>
                     <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : "Open in BigQuery"} arrow>
                       <IconButton
                         disabled={entryStatus !== 'succeeded' || !bigQueryUrl}
@@ -467,7 +467,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                     />
                   </IconButton>
                 </Tooltip>
-                </>):(<></>)
+                </>):(<></>)) : (<></>)
                 }
                 
                 <div style={{ marginLeft: '-5px' }} />
@@ -503,7 +503,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           flex: '0 0 auto',
           flexWrap: 'wrap'
         }}>
-          <Tag text={previewData.entrySource.system.toLowerCase() === 'bigquery' ? 'BigQuery' : previewData.entrySource.system.replace("_", " ").replace("-", " ").toLowerCase()} css={{
+          <Tag text={previewData.entrySource.system ? (previewData.entrySource.system.toLowerCase() === 'bigquery' ? 'BigQuery' : previewData.entrySource.system.replace("_", " ").replace("-", " ").toLowerCase() ) : ""} css={{
             fontFamily: '"Google Sans Text", sans-serif',
                     color: '#004A77',
                     backgroundColor: '#C2E7FF',

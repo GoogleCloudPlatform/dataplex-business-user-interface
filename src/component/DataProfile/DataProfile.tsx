@@ -791,7 +791,7 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName }) => {
               </Menu>
               {/* Table */}
               <TableContainer sx={{ 
-                maxHeight: '463px', 
+                maxHeight: 'calc(100vh - 260px)', 
                 overflow: 'auto', 
                 border: '1px solid #DADCE0', 
                 borderBottomRightRadius: '8px', 

@@ -837,7 +837,7 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
                     </AccordionSummary>
                         <AccordionDetails sx={{
                             minHeight: "200px",
-                            maxHeight: "500px",
+                            maxHeight: "calc(100vh - 380px)",
                             overflowY: "scroll",
                             padding: "0px 20px 16px",
                             '&::-webkit-scrollbar': {

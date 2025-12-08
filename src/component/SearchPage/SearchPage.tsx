@@ -263,7 +263,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
                 width: '210px',
                 height: 'calc(100vh - 3.9rem)',
                 transition: 'left 0.3s ease-in-out',
-                zIndex: 1000,
+                zIndex: 900,
                 overflowY: 'auto',
                 backgroundColor: '#ffffff',
                 borderRadius: '20px',

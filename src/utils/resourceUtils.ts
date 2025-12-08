@@ -128,7 +128,7 @@ export const hasValidAnnotationData = (aspectData: any): boolean => {
 
   const validFields = fieldKeys.filter(key => {
     const item = fields[key];
-    return (item.kind === 'stringValue' && item.stringValue) || 
+    return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue' && item.boolValue) || 
            (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
   });
 

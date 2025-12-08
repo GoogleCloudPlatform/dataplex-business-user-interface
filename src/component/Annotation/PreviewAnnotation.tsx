@@ -138,8 +138,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
 
     const validFields = fieldKeys.filter(key => {
       const item = fields[key];
-      return (item.kind === 'stringValue' && item.stringValue) ||
-             (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
+      return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue' && item.boolValue) || 
+           (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
     });
 
     if (validFields.length === 0) {
@@ -160,8 +160,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         aValue = a.toLowerCase();
         bValue = b.toLowerCase();
       } else { // sorting by 'value'
-        aValue = fields[a].kind === 'stringValue' ? fields[a].stringValue.toLowerCase() : '';
-        bValue = fields[b].kind === 'stringValue' ? fields[b].stringValue.toLowerCase() : '';
+        aValue = (fields[a].kind === 'stringValue' || fields[a].kind === 'numberValue' || fields[a].kind === 'boolValue') ? fields[a].stringValue.toLowerCase() : '';
+        bValue = (fields[b].kind === 'stringValue' || fields[a].kind === 'numberValue' || fields[a].kind === 'boolValue' )? fields[b].stringValue.toLowerCase() : '';
       }
 
       if (aValue < bValue) {
@@ -196,7 +196,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
             onMouseEnter={() => setHoveredInfo({ aspectKey: aspectKey, column: 'name' })}
             onMouseLeave={() => setHoveredInfo(null)}
             style={{
-              flex: isTopComponent ? "0 0 30%" : "0 0 40%",
+              flex: isTopComponent ? "0 0 30%" : "0 0 50%",
               fontSize: "0.75rem",
               fontWeight: "500",
               color: "#444746",
@@ -220,7 +220,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
             onMouseEnter={() => setHoveredInfo({ aspectKey: aspectKey, column: 'value' })}
             onMouseLeave={() => setHoveredInfo(null)}
             style={{
-              flex: isTopComponent ? "0 0 70%" : "0 0 60%",
+              flex: isTopComponent ? "0 0 70%" : "0 0 50%",
               fontSize: "0.75rem",
               fontWeight: "500",
               color: "#444746",
@@ -244,7 +244,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         {/* Table Rows */}
         {sortedFieldKeys.map((key, index) => {
           const item = fields[key];
-          if (item.kind === 'stringValue') {
+          if (item.kind === 'stringValue' || item.kind === 'numberValue'  || item.kind === 'boolValue') {
             return (
               <div key={key + "annotation"} style={{
                 minHeight: '36px',
@@ -257,7 +257,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                 flex: "0 0 auto"
               }}>
                 <div style={{
-                  flex: isTopComponent ? "0 0 30%" : "0 0 40%",
+                  flex: isTopComponent ? "0 0 30%" : "0 0 50%",
                   display: "flex",
                   alignItems: "center",
                   gap: "0.375rem",
@@ -278,7 +278,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                   position: "relative",
                   wordBreak: 'break-word',
                 }}>
-                  {item.stringValue}
+                  {item.stringValue || item.numberValue || (item.boolValue == true ? 'true' : 'false')}
                 </div>
               </div>
             );
@@ -410,9 +410,9 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                       fontSize: '0.875rem',
                       lineHeight: 1.43,
                       color: "#1f1f1f", 
-                      //textTransform: "capitalize",
+                      textTransform: "capitalize",
                     }}>
-                      {aspects[key].aspectType.split('/').pop()}
+                      {aspects[key].aspectType.split('/').pop().replaceAll('-', ' ')}
                     </Typography>
                     <span style={{
                       fontFamily: '"Google Sans Text", sans-serif',
