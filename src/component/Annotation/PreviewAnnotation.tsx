@@ -160,8 +160,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         aValue = a.toLowerCase();
         bValue = b.toLowerCase();
       } else { // sorting by 'value'
-        aValue = (fields[a].kind === 'stringValue' || fields[a].kind === 'numberValue' || fields[a].kind === 'boolValue') ? fields[a].stringValue.toLowerCase() : '';
-        bValue = (fields[b].kind === 'stringValue' || fields[a].kind === 'numberValue' || fields[a].kind === 'boolValue' )? fields[b].stringValue.toLowerCase() : '';
+        aValue = fields[a].kind === 'stringValue' ? fields[a].stringValue.toLowerCase() :  (fields[a].kind === 'numberValue' ? fields[a].numberValue.toLowerCase() : (fields[a].kind === 'boolValue') ? (fields[a].boolValue === true ? 'true' : 'false') : '');
+        bValue = fields[b].kind === 'stringValue' ? fields[b].stringValue.toLowerCase() :  (fields[b].kind === 'numberValue' ? fields[b].numberValue.toLowerCase() : (fields[b].kind === 'boolValue') ? (fields[b].boolValue === true ? 'true' : 'false') : '');
       }
 
       if (aValue < bValue) {

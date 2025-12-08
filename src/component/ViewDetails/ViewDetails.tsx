@@ -303,7 +303,7 @@ useEffect(() => {
                     </label>
                     </Tooltip>
                     <Tag 
-                        text={entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.replace("_", " ").replace("-", " ").toLowerCase()} 
+                        text={entry.entrySource.system ? (entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.replace("_", " ").replace("-", " ").toLowerCase()) : 'Custom'} 
                         css={{
                             fontFamily: '"Google Sans Text", sans-serif',
                             backgroundColor: '#C2E7FF',

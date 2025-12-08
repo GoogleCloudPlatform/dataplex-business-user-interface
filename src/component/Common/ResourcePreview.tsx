@@ -503,7 +503,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           flex: '0 0 auto',
           flexWrap: 'wrap'
         }}>
-          <Tag text={previewData.entrySource.system ? (previewData.entrySource.system.toLowerCase() === 'bigquery' ? 'BigQuery' : previewData.entrySource.system.replace("_", " ").replace("-", " ").toLowerCase() ) : ""} css={{
+          <Tag text={previewData.entrySource.system ? (previewData.entrySource.system.toLowerCase() === 'bigquery' ? 'BigQuery' : previewData.entrySource.system.replace("_", " ").replace("-", " ").toLowerCase() ) : "Custom"} css={{
             fontFamily: '"Google Sans Text", sans-serif',
                     color: '#004A77',
                     backgroundColor: '#C2E7FF',
