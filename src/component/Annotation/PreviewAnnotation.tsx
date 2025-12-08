@@ -138,7 +138,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
 
     const validFields = fieldKeys.filter(key => {
       const item = fields[key];
-      return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue' && item.boolValue) || 
+      return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue') || 
            (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
     });
 
