@@ -1,7 +1,7 @@
 {
   "name": "dataplex-buisness-user-interface",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
