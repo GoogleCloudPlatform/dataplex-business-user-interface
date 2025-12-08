@@ -410,7 +410,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                       fontSize: '0.875rem',
                       lineHeight: 1.43,
                       color: "#1f1f1f", 
-                      textTransform: "capitalize",
+                      //textTransform: "capitalize",
                     }}>
                       {aspects[key].aspectType.split('/').pop()}
                     </Typography>
