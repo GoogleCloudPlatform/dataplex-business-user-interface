@@ -105,6 +105,7 @@ import { getProjects } from '../../features/projects/projectsSlice';
 interface FilterProps {
   filters?: any[];
   onFilterChange: (selectedFilters: any[]) => void;
+  isGlossary? : boolean;
 }
 
 // Function to get icon for product
@@ -206,24 +207,12 @@ const getAssetIcon = (assetName: string) => {
   }
 };
 
-// FilterDropdown component
-const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => {
+
+const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlossary = false }) => {
   // const [anchorEl, setAnchorEl] = useState(null);
   // const [selectedCategory, setSelectedCategory] = useState(null);
-  const { user } = useAuth();
-  const dispatch = useDispatch<AppDispatch>();
-  const searchTerm = useSelector((state: any) => state.search.searchTerm);
-  const searchType = useSelector((state: any) => state.search.searchType);
-  const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
-  const projectsList = useSelector((state: any) => state.projects.items);
-  const [loading, setLoading] = useState(false);
-  let annotations:any = {
-    title: 'Aspects',
-    items: [
-    ],
-    defaultExpanded: false,
-  };
-  let assets:any = {
+
+ let assets:any = {
     title: 'Assets',
     items: [
       {
@@ -407,6 +396,20 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
     ],
     defaultExpanded: false,
   };
+  const { user } = useAuth();
+  const dispatch = useDispatch<AppDispatch>();
+  const searchTerm = useSelector((state: any) => state.search.searchTerm);
+  const searchType = useSelector((state: any) => state.search.searchType);
+  const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
+  const projectsList = useSelector((state: any) => state.projects.items);
+  const [loading, setLoading] = useState(false);
+  let annotations:any = {
+    title: 'Aspects',
+    items: [
+    ],
+    defaultExpanded: false,
+  };
+ 
   
   let projects:any = {
     title: 'Projects',
@@ -482,6 +485,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
 
   // Auto-select asset filters when search term matches asset names
   useEffect(() => {
+    if (isGlossary) return;
     if (searchTerm && searchType === 'All' && searchTerm.length >= 3) {
       const matchingAssets = assets.items.filter((asset: any) => 
         asset.name.toLowerCase() === (searchTerm.toLowerCase())
@@ -511,6 +515,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
 
   // Clear asset filters when search term is cleared or search type changes from 'All'
   useEffect(() => {
+    if (isGlossary) return;
     if (!searchTerm || searchType !== 'All') {
       const nonAssetFilters = selectedFilters.filter((f: any) => f.type !== 'typeAliases');
       if (nonAssetFilters.length !== selectedFilters.length) {
@@ -552,8 +557,25 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
     }
   }, [searchType, products.items, selectedFilters, onFilterChange]);
 
+  useEffect(() => {
+    // Re-construct projects list
+    let plist:any = projectsLoaded ? projectsList : (user?.appConfig?.projects || []);
+    let pItems = plist.map((project:any) => ({
+      name: project.projectId,
+      type: "project",
+      data: {}
+    }));
+    
+    pItems.push({ name: 'Others', type: "project", data: {} });
+
+    const newProjects = { ...projects, items: pItems };
+
+    setFilterData([annotations, assets, products, newProjects]);
+    
+  }, [projectsLoaded, user?.appConfig]);
+
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-    'Annotations': false,
+    'Aspects': isGlossary,
     'Assets': false,
     'Products': false,
     'Projects': false
@@ -561,32 +583,23 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
 
   // Auto-expand accordions when search term exists or specific product is selected
 
-  const handleCheckboxChange = (filter: any) => {
-    const updatedFilters = selectedFilters.some(item => item.name === filter.name )
-      ? selectedFilters.filter((f) => f.name !== filter.name)
+const handleCheckboxChange = (filter: any) => {
+    const isSelected = selectedFilters.some(item => item.name === filter.name && item.type === filter.type);
+
+    const updatedFilters = isSelected
+      ? selectedFilters.filter((f) => !(f.name === filter.name && f.type === filter.type))
       : [...selectedFilters, filter];
-      console.log("updated filter" ,updatedFilters);
 
     setSelectedFilters(updatedFilters);
-    onFilterChange(updatedFilters); // Notify parent
-    dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updatedFilters } });
-    
-    // Sync with search type if this is a Products filter
-    // if (filter.type === 'system') {
-    //   const systemFilters = updatedFilters.filter((f: any) => f.type === 'system');
-    //   if (systemFilters.length === 0) {
-    //     // No system filters selected, set search type to 'All'
-    //     dispatch({ type: 'search/setSearchType', payload: { searchType: 'All' } });
-    //   } else if (systemFilters.length === 1) {
-    //     // One system filter selected, set search type to that filter
-    //     dispatch({ type: 'search/setSearchType', payload: { searchType: systemFilters[0].name } });
-    //   }
-    //   // If multiple system filters are selected, we don't change the search type
-    //   // as the dropdown only supports single selection
-    // }
-    if (filter.type === 'system' && filter.name === "BigQuery") {
-      if (!updatedFilters.find(item => item.name === filter.name)){
-        dispatch({ type: 'search/setSearchType', payload: { searchType: 'All' } });
+    onFilterChange(updatedFilters);
+
+    if (!isGlossary) {
+      dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updatedFilters } });
+
+      if (filter.type === 'system' && filter.name === "BigQuery") {
+        if (!updatedFilters.find(item => item.name === filter.name)) {
+          dispatch({ type: 'search/setSearchType', payload: { searchType: 'All' } });
+        }
       }
     }
   };
@@ -626,8 +639,8 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange }) => 
       setMultiselectPosition({
         top: ((headerRect.top + window.scrollY + 341) > window.innerHeight) 
           ? window.innerHeight - 360
-          : headerRect.top + window.scrollY, // Align with accordion header
-        left: rect.right + 16 // Position to the right of the accordion with some spacing
+          : headerRect.top + window.scrollY,
+        left: isGlossary ? (rect.left - 730) : (rect.right + 16)
       });
     }
     

@@ -538,12 +538,19 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 <button
                     className={!semanticSearch ? "natural-language-btn-hover-effect" : ""}
                     onClick={(e) => {
-                        if (!semanticSearch) {
-                            setIsAnimating(true);
-                            setTimeout(() => setIsAnimating(false), 2500);
-                        }
                         handleSemanticSearchToggle();
-                        e.currentTarget.blur();
+                        if (!semanticSearch) {
+                          setIsAnimating(true);
+                          setTimeout(() => setIsAnimating(false), 2500);
+
+                          // 3. Trigger search if text exists (Acting as "Enter")
+                          const trimmedTerm = searchTerm?.toString().trim();
+                          if (trimmedTerm && trimmedTerm.length >= 3) {
+                              handleSearchSubmit(trimmedTerm);
+                              addToRecentSearches(trimmedTerm);
+                          }
+                      }
+                      e.currentTarget.blur();
                     }}
                     style={{
                         position: 'relative',

@@ -6,7 +6,8 @@ import {
   MiniMap,
   Controls,
   Background,
-  BackgroundVariant
+  BackgroundVariant,
+  Panel
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
@@ -16,10 +17,11 @@ import './xy-theme.css';
 import LineageNode from './LineageNode';
 import QueryNode from './QueryNode';
 import { CloseFullscreen } from '@mui/icons-material';
-import { Tooltip } from '@mui/material';
+import { CircularProgress, Tooltip } from '@mui/material';
 //@ts-ignore: Could not find a declaration file for module '@dagrejs/dagre'
 import dagre from '@dagrejs/dagre';
 import './LineageChartViewNew.css';
+import LineageColumnLevelPanel from './LineageColumnLevelPanel';
 
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 
@@ -28,7 +30,7 @@ const getLayoutedElements = (nodes:any, edges:any, direction = 'LR') => {
   dagreGraph.setGraph({ rankdir: direction });
 
   nodes.forEach((node:any) => {
-    dagreGraph.setNode(node.id, { width: (node.type === 'lineageNode' ? 350 : 150), height: (node.data?.nodeData?.isRoot ? 350 / 2 : 200 / 2) });
+    dagreGraph.setNode(node.id, { width: (node.type === 'lineageNode' ? 350 : 150), height:(node.data?.columnLineageApplied && node.data?.columnName !== "" && node.data?.columnName != undefined) ? 300/2 : (node.data?.nodeData?.isRoot ? 350 / 2 : 200 / 2) });
   });
 
   edges.forEach((edge:any) => {
@@ -73,20 +75,27 @@ interface LineageChartViewProps {
   handleQueryPanelToggle?: (data:any) => void;
   fetchLineageDownStream?: (nodeData:any) => void;
   fetchLineageUpStream?: (nodeData:any) => void;
-  //entry?: any; // Optional entry prop for data
+  fetchColumnLevelLineage: (columnName:string|undefined, direction:'upstream' | 'downstream' | 'both') => void;
+  resetLineageGraph: ()=>void;
+  entry?: any;
   graphData: any[]; // Optional entry prop for data
   isSidePanelOpen?: boolean; // Side panel state
   selectedNode?: string | null; // Selected node name
   isFullScreen?: boolean;
+  isColumnLineageLoading?: boolean;
   toggleFullScreen?: () => void;
 }
 
 
-const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanelToggle, handleQueryPanelToggle, fetchLineageDownStream, fetchLineageUpStream, graphData, isSidePanelOpen = false, selectedNode = null, isFullScreen=false, toggleFullScreen }) => {
+const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanelToggle, handleQueryPanelToggle, fetchLineageDownStream, fetchLineageUpStream, fetchColumnLevelLineage, resetLineageGraph, entry, graphData, isSidePanelOpen = false, selectedNode = null, isFullScreen=false, isColumnLineageLoading=false, toggleFullScreen }) => {
   
   const [refresh, setRefresh] = useState<number>(0);  
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
+  const [columnName, setColumnName] = useState<string>('');
+  const [panelVisible, setPanelVisible] = useState<boolean>(false);
+  const [direction, setDirection] = useState<'upstream' | 'downstream' | 'both'>('both');
+  const [columnLineageApplied, setColumnLineageApplied] = useState<boolean>(false);
 
   useEffect(() => {
     
@@ -96,10 +105,10 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
     graphData.map((item:any, index:number) => {
       // Create node object
         if(item.type === 'assetNode' ){
-            nodesArray.push({
+              nodesArray.push({
                 id: item.id,
                 type: 'lineageNode', // 'output' is another default node type
-                data: { label: item.name, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
+                data: { label: item.name, columnName : columnName, columnLineageApplied: columnLineageApplied, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
                 position: {x:0,y:0},
                 className: `${selectedNode === item.id ? 'card' : ''}`,
                 style: { 
@@ -107,7 +116,7 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
                     padding: '0px',
                     backgroundColor: '#ffffff'  
                 },
-            });
+              });
         }else if(item.type === 'queryNode' ){
             // defaultX = isLastNodeAsset ? defaultX : defaultX + nodeSpacingX;
             // isLastNodeAsset = false;
@@ -155,7 +164,7 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
             nodesArray.push({
                 id: item.id,
                 type: 'lineageNode', // 'output' is another default node type
-                data: { label: item.name, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
+                data: { label: item.name, columnName : columnName, columnLineageApplied: columnLineageApplied, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
                 position: {x:0,y:0},
                 className: `${selectedNode === item.id ? 'card' : ''}`,
                 style: { 
@@ -202,6 +211,7 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
   }, [graphData, refresh]);
 
   return (
+    <>
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -258,7 +268,64 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
         style={{backgroundColor: '#ffffff'}}
       />
       <Controls showInteractive={false}/>
+      <Panel position="top-left" >
+        {panelVisible ?
+          <LineageColumnLevelPanel 
+            entryData={entry} 
+            direction={direction} 
+            setDirection={setDirection}
+            columnName={columnName} 
+            setColumnName={setColumnName}
+            onClose={()=>{
+              setPanelVisible(false);
+              //setColumnLineageApplied(false);
+            }}
+            fetchColumnLineage={(columnName, direction) => {
+              setColumnLineageApplied(true); 
+              fetchColumnLevelLineage(columnName, direction)
+            }}
+            resetLineageGraph={()=>{
+              setColumnName("");
+              setColumnLineageApplied(false);
+              resetLineageGraph();
+            }}
+
+          />
+        :(<button
+            style={{
+              margin: '0.5rem',
+              padding: '0.25rem 0.5rem',
+              fontSize: '14px',
+              borderRadius: '4px',
+              border: '1px solid #dddddd',
+              backgroundColor: '#ffffff',
+              cursor: 'pointer',
+            }}
+            onClick={() => setPanelVisible(true)}
+          >
+            Show Lineage Explorer
+          </button>)
+        }
+      </Panel>
+
     </ReactFlow>
+    {
+      isColumnLineageLoading && (
+        <div style={{
+          position:"absolute",
+          top:'230px',
+          width:'90%',
+          background:'rgba(256, 256, 256, 0.7)',
+          justifyContent:'center',
+          alignItems:'center',
+          display:'flex',
+          height:'calc(100vh - 230px)'
+        }}>
+        <CircularProgress/>
+        </div>
+      )
+    }
+    </>
   );
 };
 

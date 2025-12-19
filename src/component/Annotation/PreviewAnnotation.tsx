@@ -10,7 +10,6 @@ import {
 import { ArrowUpward, ArrowDownward } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '../../assets/svg/help_outline.svg';
-import { hasValidAnnotationData } from '../../utils/resourceUtils';
 
 /**
  * @file PreviewAnnotation.tsx
@@ -62,6 +61,7 @@ interface PreviewAnnotationProps {
   isTopComponent?: boolean;
   expandedItems: Set<string>;
   setExpandedItems: React.Dispatch<React.SetStateAction<Set<string>>>;
+  isGlossary?: boolean;
 }
 
 // FilterDropdown component
@@ -70,7 +70,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
   css, 
   isTopComponent = false, 
   expandedItems = new Set(),
-  setExpandedItems 
+  setExpandedItems,
+  isGlossary = false 
 }) => {
   
   const aspects = entry?.aspects;
@@ -85,9 +86,6 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
 
   // Handle accordion expansion change
   const handleAccordionChange = (key: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
-    if (isExpanded && !hasValidAnnotationData(aspects[key])) {
-      return;
-    }
     
     // Create a new Set based on the prop to avoid direct mutation
     const newExpanded = new Set(expandedItems);
@@ -133,14 +131,28 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         <ArrowDownward sx={{ fontSize: '14px', color: '#575757' }} />;
     };
 
-    const renderAnnotation = (fields: any, aspectKey: string) => {
+   const renderAnnotation = (fields: any, aspectKey: string) => {
+    if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+      return (
+        <div style={{ padding: '0.5rem', color: '#575757', fontStyle: 'italic', fontSize: '0.75rem' }}>
+          No data available
+        </div>
+      );
+    }
+
     const fieldKeys = Object.keys(fields);
 
-    const validFields = fieldKeys.filter(key => {
-      const item = fields[key];
-      return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue') || 
-           (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
-    });
+  const validFields = fieldKeys.filter(key => {
+  const item = fields[key];
+  if (item && typeof item === 'object' && 'kind' in item) {
+     return (item.kind === 'stringValue' && item.stringValue) ||
+            (item.kind === 'numberValue' && item.numberValue !== undefined) ||
+            (item.kind === 'boolValue') ||
+            (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
+  }
+  // Simple type (Standard JSON key-value)
+  return item !== null && item !== undefined && typeof item !== 'object';
+});
 
     if (validFields.length === 0) {
       return null;
@@ -160,16 +172,24 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         aValue = a.toLowerCase();
         bValue = b.toLowerCase();
       } else { // sorting by 'value'
-        aValue = fields[a].kind === 'stringValue' ? fields[a].stringValue.toLowerCase() :  (fields[a].kind === 'numberValue' ? fields[a].numberValue.toLowerCase() : (fields[a].kind === 'boolValue') ? (fields[a].boolValue === true ? 'true' : 'false') : '');
-        bValue = fields[b].kind === 'stringValue' ? fields[b].stringValue.toLowerCase() :  (fields[b].kind === 'numberValue' ? fields[b].numberValue.toLowerCase() : (fields[b].kind === 'boolValue') ? (fields[b].boolValue === true ? 'true' : 'false') : '');
+        const valA = fields[a];
+        const valB = fields[b];
+        
+        // Helper to extract string value regardless of format
+        const getString = (v: any) => {
+            if (v?.kind === 'stringValue') return v.stringValue || '';
+            if (v?.kind === 'numberValue') return String(v.numberValue) || '';
+            if (v?.kind === 'boolValue') return v.boolValue ? 'true' : 'false';
+            if (typeof v !== 'object') return String(v);
+            return ''; 
+        };
+
+        aValue = getString(valA).toLowerCase();
+        bValue = getString(valB).toLowerCase();
       }
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -244,7 +264,34 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         {/* Table Rows */}
         {sortedFieldKeys.map((key, index) => {
           const item = fields[key];
-          if (item.kind === 'stringValue' || item.kind === 'numberValue'  || item.kind === 'boolValue') {
+          let displayValue = '';
+
+          if (item && typeof item === 'object' && item.kind === "listValue") {
+            return item.listValue.values.map((value: any, valueIndex: number) => (
+              <div key={`${key}-annotation-${valueIndex}`} style={{
+                display: "flex", borderBottom: "1px solid #E0E0E0", padding: "0.75rem 1rem",
+                backgroundColor: "#FFFFFF", flex: "0 0 auto"
+              }}>
+                <div style={{ flex: isTopComponent ? "0 0 30%" : "0 0 40%", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif",wordBreak: 'break-word' }}>
+                  {key}
+                  <img src={HelpOutlineIcon} alt="Help" style={{ width: "0.875rem", height: "0.875rem", opacity: "0.6", flex: "0 0 auto" }} />
+                </div>
+                <div style={{ flex: isTopComponent ? "0 0 70%" : "0 0 60%", fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif", wordBreak: 'break-word' }}>
+                  {value.stringValue}
+                </div>
+              </div>
+            ));
+          }
+
+          if (item && typeof item === 'object') {
+            if (item.kind === 'stringValue') displayValue = item.stringValue;
+            else if (item.kind === 'numberValue') displayValue = String(item.numberValue);
+            else if (item.kind === 'boolValue') displayValue = item.boolValue ? 'true' : 'false';
+          } else if (typeof item !== 'object' && item !== null && item !== undefined) {
+            displayValue = String(item);
+          }
+
+          if (displayValue) {
             return (
               <div key={key + "annotation"} style={{
                 minHeight: '36px',
@@ -254,7 +301,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                 paddingTop: '0.5rem',
                 paddingBottom: '0.5rem',
                 backgroundColor: "#FFFFFF",
-                flex: "0 0 auto"
+                flex: "0 0 auto",
+                gap: '0.3rem'
               }}>
                 <div style={{
                   flex: isTopComponent ? "0 0 30%" : "0 0 50%",
@@ -263,12 +311,13 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                   gap: "0.375rem",
                   fontSize: "0.75rem",
                   color: "#1F1F1F",
-                  fontFamily: "sans-serif"
+                  fontFamily: "sans-serif",
+                  wordBreak: 'break-word',
                 }}>
                   {key}
                 </div>
                 <div style={{
-                  flex: 1,
+                  flex: isTopComponent ? "0 0 70%" : "0 0 50%",
                   fontSize: "0.75rem",
                   color: "#1F1F1F",
                   fontFamily: "Google Sans Text, sans-serif",
@@ -278,51 +327,10 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                   position: "relative",
                   wordBreak: 'break-word',
                 }}>
-                  {item.stringValue || item.numberValue || (item.boolValue == true ? 'true' : 'false')}
+                  {displayValue}
                 </div>
               </div>
             );
-          } else if (item.kind === "listValue") {
-            // Note: Sorting is based on the key name, not these individual values.
-            return item.listValue.values.map((value: any, valueIndex: number) => (
-              <div key={`${key}-annotation-${valueIndex}`} style={{
-                display: "flex",
-                borderBottom: "1px solid #E0E0E0",
-                padding: "0.75rem 1rem",
-                backgroundColor: "#FFFFFF",
-                flex: "0 0 auto"
-              }}>
-                <div style={{
-                  flex: isTopComponent ? "0 0 30%" : "0 0 40%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.375rem",
-                  fontSize: "0.75rem",
-                  color: "#1F1F1F",
-                  fontFamily: "sans-serif"
-                }}>
-                  {key}
-                  <img 
-                    src={HelpOutlineIcon} 
-                    alt="Help" 
-                    style={{
-                      width: "0.875rem",
-                      height: "0.875rem",
-                      opacity: "0.6",
-                      flex: "0 0 auto"
-                    }}
-                  />
-                </div>
-                <div style={{
-                  flex: isTopComponent ? "0 0 70%" : "0 0 60%",
-                  fontSize: "0.75rem",
-                  color: "#1F1F1F",
-                  fontFamily: "sans-serif"
-                }}>
-                  {value.stringValue}
-                </div>
-              </div>
-            ));
           }
           return null;
         })}
@@ -332,43 +340,97 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
 
   return (
     <>
+      <div style={{ fontSize: "0.75rem", border: "1px solid #E0E0E0", display: "flex", flexDirection: "column", flex: "1 1 auto", overflow: "hidden", borderRadius: "8px", ...css }}>
+        {keys.map((key, index) => {
+          const isSchema = key === `${number}.global.schema`;
+          const isOverview = key.endsWith('.global.overview');
+          const isContacts = key === `${number}.global.contacts`;
+          const isUsage = key === `${number}.global.usage`;
+          const isGlossaryTermAspect = key.endsWith('.global.glossary-term-aspect');
 
-      <div style={{fontSize:"0.75rem", border:"1px solid #E0E0E0", display: "flex", flexDirection: "column", flex: "1 1 auto", overflow: "hidden", ...css}}>
-        {
-           keys.map((key) => (aspects[key].data !== null 
-            && key !== `${number}.global.schema` 
-            && key !== `${number}.global.overview`
-            && key !== `${number}.global.contacts`
-            && key !== `${number}.global.usage`) ? 
-            (
-            <>
-              <Accordion 
-                key={key + "accordian"} 
+          if (isSchema || isOverview || isContacts || isUsage || isGlossaryTermAspect) {
+            return null;
+          }
+
+          const rawData = aspects[key].data;
+          
+          const hasFields = rawData && rawData.fields && Object.keys(rawData.fields).length > 0;
+          let hasContent = false;
+
+          if (rawData) {
+             const fieldsToCheck = rawData.fields || rawData;
+
+             const validFieldKeys = Object.keys(fieldsToCheck).filter(fieldKey => {
+                const item = fieldsToCheck[fieldKey];
+                
+                if (item && typeof item === 'object' && 'kind' in item) {
+                    return (item.kind === 'stringValue' && item.stringValue) ||
+                          (item.kind === 'numberValue' && item.numberValue !== undefined) ||
+                          (item.kind === 'boolValue') ||
+                          (item.kind === "listValue" && item.listValue?.values?.length > 0);
+                }
+                
+                return item !== null && item !== undefined && typeof item !== 'object';
+            });
+
+             hasContent = validFieldKeys.length > 0;
+          }
+          const aspectName = aspects[key].aspectType.split('/').pop().replaceAll('-', ' ');
+
+          const headerContent = (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flex: '1 1 auto',
+              marginRight: isGlossary ? '0.5rem' : '3.75rem'
+            }}>
+              <Typography component="span" sx={{
+                fontFamily: 'Google Sans Text, sans-serif',
+                fontWeight: 500,
+                fontSize: isGlossary ? '0.7rem': '0.875rem',
+                lineHeight: 1.43,
+                color: "#1f1f1f",
+                textTransform: "capitalize",
+                wordBreak: isGlossary ? 'break-word' : 'normal',
+              }}>
+                {aspectName}
+              </Typography>
+              <span style={{
+                fontFamily: '"Google Sans Text", sans-serif',
+                fontSize: isGlossary ? "0.7rem": "0.75rem",
+                background: expandedItems.has(key) ? "#0B57D0" : "#E7F0FE",
+                color: expandedItems.has(key) ? "#FFFFFF" : "#004A77",
+                padding: "0.25rem 0.625rem",
+                borderRadius: "1.875rem",
+                display: 'flex',
+                alignItems: 'center',
+                lineHeight: 1,
+                fontWeight: 500
+              }}>
+                Aspect
+              </span>
+            </div>
+          );
+
+          if (hasContent) {
+            return (
+              <Accordion
+                key={key + "accordion"}
                 expanded={expandedItems.has(key)}
-                onChange={handleAccordionChange(key)}
+                onChange={handleAccordionChange(key)} 
                 disableGutters
                 sx={{
-                    background: "none",
-                    boxShadow: "none",
-                    '&:before': {
-                      display: 'none',
-                    },
-                    borderTop: '1px solid #E0E0E0',
-                    '&:first-of-type': {
-                      borderTop: 'none',
-                    },
-                  }}
+                  background: "none",
+                  boxShadow: "none",
+                  '&:before': { display: 'none' },
+                  borderTop: index === 0 ? 'none' : '1px solid #E0E0E0',
+                }}
               >
                 <AccordionSummary
-                  expandIcon={hasValidAnnotationData(aspects[key]) ? <ExpandMoreIcon /> : null}
+                  expandIcon={<ExpandMoreIcon />}
                   aria-controls={key + "-content"}
                   id={key + "-header"}
-                  onClick={(e) => {
-                    if (!hasValidAnnotationData(aspects[key])) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }
-                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -376,68 +438,42 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                     minHeight: '3rem',
                     padding: '0 1rem',
                     backgroundColor: '#ffffff',
-                    cursor: hasValidAnnotationData(aspects[key]) ? 'pointer' : 'default',
+                    cursor: 'pointer',
                   }}
                   sx={{
-                    '& .MuiAccordionSummary-content': {
-                      margin: 0,
-                    },
+                    '& .MuiAccordionSummary-content': { margin: 0 },
                     '& .MuiAccordionSummary-expandIconWrapper': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '3rem',
-                      width: '3rem',
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                    },
-                    '& .MuiAccordionSummary-expandIconWrapper.Mui-expanded': {
-                      transform: 'rotate(180deg)',
-                    },
+                      color: '#575757'
+                    }
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    flex: '1 1 auto',
-                    marginRight: '3.75rem'
-                  }}>
-                    <Typography component="span" sx={{
-                      fontFamily: 'Google Sans Text, sans-serif',
-                      fontWeight: 500,
-                      fontSize: '0.875rem',
-                      lineHeight: 1.43,
-                      color: "#1f1f1f", 
-                      textTransform: "capitalize",
-                    }}>
-                      {aspects[key].aspectType.split('/').pop().replaceAll('-', ' ')}
-                    </Typography>
-                    <span style={{
-                      fontFamily: '"Google Sans Text", sans-serif',
-                      fontSize: "0.75rem", 
-                      background: expandedItems.has(key) ? "#0B57D0" : "#E7F0FE", 
-                      color: expandedItems.has(key) ? "#FFFFFF" : "#004A77",  
-                      padding: "0.25rem 0.625rem", 
-                      borderRadius: "1.875rem",
-                      display: 'flex',
-                      alignItems: 'center',
-                      lineHeight: 1,
-                      fontWeight: 500
-                    }}>
-                      Aspect
-                    </span>
-                  </div>
+                  {headerContent}
                 </AccordionSummary>
                 <AccordionDetails sx={{ padding: "0rem 1rem 1rem 1rem" }}>
-                  {renderAnnotation(aspects[key].data.fields, key)}
+                  {renderAnnotation(hasFields ? rawData.fields : rawData, key)}
                 </AccordionDetails>
               </Accordion>
-            </>
-            ) : (<></>)
-          )
-        }
+            );
+          } else {
+            return (
+              <div
+                key={key + "static"}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  minHeight: '3rem',
+                  padding: '0 1rem',
+                  backgroundColor: '#ffffff',
+                  borderTop: index === 0 ? 'none' : '1px solid #E0E0E0',
+                  cursor: 'default'
+                }}
+              >
+                {headerContent}
+              </div>
+            );
+          }
+        })}
       </div>
     </>
   );

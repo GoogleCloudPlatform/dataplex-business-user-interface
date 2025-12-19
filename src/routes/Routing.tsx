@@ -21,6 +21,7 @@ import { ProtectedRoute } from '../auth/ProtectedRoute';
 import BrowseByAnnotation from '../component/BrowseByAnnotation/BrowseByAnnotation';
 import SessionExpirationWrapper from '../component/Auth/SessionExpirationWrapper';
 import UserGuide from '../component/Guide/UserGuide';
+import Glossaries from '../component/Glossaries/Glossaries';
 
 const Routing = () => {
   // state to hold the user object
@@ -173,6 +174,21 @@ const Routing = () => {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/glossaries"
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <>
+                <Navbar searchBar={true}/>
+                <Glossaries />
+              </>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+
      <Route
         path="/guide"
         element={

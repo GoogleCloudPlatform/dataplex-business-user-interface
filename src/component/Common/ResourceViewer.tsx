@@ -453,6 +453,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
           minHeight: 'calc(100vh - 3.9rem)',
           maxHeight: 'calc(100vh - 3.9rem)',
           overflowY: 'auto',
+          overflowX: 'hidden',
           ...contentStyle
       }}>
         <div style={{ 

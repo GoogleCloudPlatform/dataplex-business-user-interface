@@ -77,10 +77,11 @@ interface ResourcePreviewProps {
   
   // Access control props
   id_token: string;
-  
+  demoMode?: boolean;
   // Event handlers
   onViewDetails?: (entry: any) => void;
   onRequestAccess?: (entry: any) => void;
+  isGlossary?: boolean;
 }
 
 const ResourcePreview: React.FC<ResourcePreviewProps> = ({
@@ -89,6 +90,8 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   id_token,
   onViewDetails,
   onRequestAccess,
+  demoMode = false,
+  isGlossary = false
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -108,10 +111,11 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   // const { isFavorite: isFavorited, toggleFavorite } = useFavorite(previewData?.name || '');
 
   // Redux selectors
-  const entry = useSelector((state: any) => state.entry.items);
-  const entryStatus = useSelector((state: any) => state.entry.status);
+  const reduxEntry = useSelector((state: any) => state.entry.items);
+  const reduxEntryStatus = useSelector((state: any) => state.entry.status);
   const entryError = useSelector((state: any) => state.entry.error);
-
+  const entry = demoMode ? previewData : reduxEntry;
+  const entryStatus = demoMode ? 'succeeded' : reduxEntryStatus;
   const number = entry?.entryType?.split('/')[1];
   const contacts = entry?.aspects?.[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || [];
   const schemaData = entry?.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
@@ -218,10 +222,10 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
 };
   // Effects
   useEffect(() => {
-    if (previewData !== null) {
-      dispatch(fetchEntry({ entryName: previewData.name, id_token: id_token }));
+    if (previewData !== null && !demoMode) {
+       dispatch(fetchEntry({ entryName: previewData.name, id_token: id_token }));
     }
-  }, [previewData, dispatch, id_token]);
+  }, [previewData, dispatch, id_token, demoMode]);
 
   // Sync filtered entries with fetched entry
   useEffect(() => {
@@ -277,6 +281,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
     }} isTopComponent={false}
     expandedItems={expandedAnnotations}
     setExpandedItems={setExpandedAnnotations}
+    isGlossary={isGlossary}
     />;
   } else if (entryStatus === 'failed') {
     if(entryError?.details?.toLowerCase().includes('403') || entryError?.details?.includes('PERMISSION_DENIED')) {
@@ -369,8 +374,8 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                 fontWeight: "400",
                 fontFamily: '"Google Sans", sans-serif',
                 lineHeight: 1.33,
+                maxWidth: isGlossary ? '175px' : '200px',
                 // textTransform:"capitalize",
-                maxWidth: '200px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 textWrap: "nowrap",
@@ -425,7 +430,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                   previewData.entrySource?.system ? ((previewData.entrySource?.system.toLowerCase() === 'bigquery') ? (<>
                     <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : "Open in BigQuery"} arrow>
                       <IconButton
-                        disabled={entryStatus !== 'succeeded' || !bigQueryUrl}
+                        disabled={entryStatus !== 'succeeded' || !bigQueryUrl || demoMode}
                         size="small"
                         onClick={() => {
                           window.open(bigQueryUrl, '_blank');
@@ -440,17 +445,17 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                         <img
                           src="/assets/svg/bigquery-icon.svg"
                           alt="Open in BigQuery"
-                          style={{ width: "1.2rem", height: "1.2rem", opacity: entryStatus !== 'succeeded' || !bigQueryUrl ? 0.4 : 1    }}
+                          style={{ width: "1.2rem", height: "1.2rem", opacity: entryStatus !== 'succeeded' || !bigQueryUrl || demoMode ? 0.4 : 1    }}
                         />
                       </IconButton>
                     </Tooltip>
                   
                       
                 {/* Open in Looker */}
-                <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : "Explore with Looker Studio"} arrow>
+                <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : (demoMode ? "Disabled in Demo Mode" : "Explore with Looker Studio")} arrow>                  
                   <IconButton
                     size="small"
-                    disabled={entryStatus !== 'succeeded' || !lookerUrl}
+                    disabled={entryStatus !== 'succeeded' || !lookerUrl || demoMode}
                     onClick={() => {
                       window.open(lookerUrl, '_blank');
                     }}
@@ -463,7 +468,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                     <img
                       src="/assets/svg/looker-icon.svg"
                       alt="Open in Looker"
-                      style={{ width: "1.2rem", height: "1.2rem", opacity: entryStatus !== 'succeeded' || !lookerUrl ? 0.4 : 1    }}
+                      style={{ width: "1.2rem", height: "1.2rem", opacity: entryStatus !== 'succeeded' || !lookerUrl || demoMode ? 0.4 : 1    }}
                     />
                   </IconButton>
                 </Tooltip>
@@ -546,10 +551,10 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           flex: '0 0 auto',
           flexWrap: 'wrap'
         }}>
-          <Tooltip title={viewDetailAccessable ? "Click to view details of the entry" : "You do not have permission to view details"} arrow>
+          <Tooltip title={demoMode ? "Action disabled in demo mode" : (viewDetailAccessable ? "Click to view details of the entry" : "You do not have permission to view details")} arrow>
           <CTAButton
             //disabled={!viewDetailAccessable}
-            handleClick={() => {if(viewDetailAccessable) handleViewDetails(entry);}}
+            handleClick={() => {if(viewDetailAccessable && !demoMode) handleViewDetails(entry);}}
             text="View Details"
             css={{
               fontFamily: '"Google Sans Text", sans-serif',
@@ -569,7 +574,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
               justifyContent: 'center',
               textTransform: 'none',
               flex: '0 0 auto',
-              opacity: viewDetailAccessable ? 1 : 0.6,
+              opacity: viewDetailAccessable && !demoMode ? 1 : 0.6,
             }}
           />
           </Tooltip>
@@ -577,7 +582,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           <Tooltip title={(viewDetailAccessable ? "You cannot request permission for the entries which you already have access to." : "Click to request permission for this entry")} arrow>
           <CTAButton
             //disabled={viewDetailAccessable}
-            handleClick={() => handleRequestAccess(entry)}
+            handleClick={() => { if(!demoMode) handleRequestAccess(entry) }}
             text="Request Access"
             css={{
               fontFamily: '"Google Sans Text", sans-serif',
@@ -597,7 +602,8 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               textTransform: 'none',
-              flex: '0 0 auto'
+              flex: '0 0 auto',
+              opacity: demoMode ? 0.6 : 1,
             }}
           />
           </Tooltip>
@@ -946,7 +952,16 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
 
   return (
     <>
-      <div style={{background: "#FFF", height: 'calc(100vh - 3.9rem)', padding:"1.25rem", borderRadius:"1.25rem", marginLeft: "0.9375rem", display: "flex", flexDirection: "column", flex: "1 1 auto"}}>
+      <div style={{
+        background: "#FFF",
+        height: isGlossary ? '100%' : 'calc(100vh - 3.9rem)', 
+        padding:"1.25rem",
+        borderRadius:  "1.25rem", 
+        marginLeft: isGlossary ? "0" : "0.9375rem", 
+        display: "flex",
+        flexDirection: "column",
+        flex: "1 1 auto"
+      }}>
         {preview}
       </div>
 

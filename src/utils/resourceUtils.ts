@@ -121,15 +121,29 @@ export const generateLookerStudioLink = (entry: any) => {
 };
 
 export const hasValidAnnotationData = (aspectData: any): boolean => {
-  if (!aspectData || !aspectData.data || !aspectData.data.fields) return false;
+  if (!aspectData || !aspectData.data) return false;
 
-  const fields = aspectData.data.fields;
+  const rawData = aspectData.data;
+  
+  const fields = (rawData.fields && typeof rawData.fields === 'object') 
+    ? rawData.fields 
+    : rawData;
+
   const fieldKeys = Object.keys(fields);
+
+  if (fieldKeys.length === 0) return false;
 
   const validFields = fieldKeys.filter(key => {
     const item = fields[key];
-    return (item.kind === 'stringValue' && item.stringValue) || (item.kind === 'numberValue' && item.numberValue) || (item.kind === 'boolValue') || 
-           (item.kind === "listValue" && item.listValue && item.listValue.values && item.listValue.values.length > 0);
+
+    if (item && typeof item === 'object' && 'kind' in item) {
+       return (item.kind === 'stringValue' && item.stringValue) ||
+              (item.kind === 'numberValue' && item.numberValue !== undefined) ||
+              (item.kind === 'boolValue') || 
+              (item.kind === "listValue" && item.listValue?.values?.length > 0);
+    }
+
+    return item !== null && item !== undefined && typeof item !== 'object';
   });
 
   return validFields.length > 0;

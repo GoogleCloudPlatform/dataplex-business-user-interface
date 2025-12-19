@@ -20,4 +20,5 @@ export const URLS = {
     ACCESS_REQUEST : '/access-request',
     GET_PROJECTS: '/get-projects',
     SEND_FEEDBACK: '/send-feedback',
+    LINEAGE_SEARCH_COLUMN_LEVEL: '/lineage-column-level',
 }
