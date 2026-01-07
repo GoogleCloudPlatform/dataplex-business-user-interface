@@ -41,12 +41,23 @@ interface SearchTableViewProps {
   getEntryType: (namePath: string, separator: string) => string;
 }
 
-const capitalizeFirstLetter = (s: any) => {
-  if (typeof s !== 'string' || s.length === 0) {
-    return '';
+// const capitalizeFirstLetter = (s: any) => {
+//   if (typeof s !== 'string' || s.length === 0) {
+//     return '';
+//   }
+//   return s.charAt(0).toUpperCase() + s.slice(1);
+// };
+
+const getNameFromEntry = (entry: any) => {
+  var calculatedName = '';
+  if (entry?.entrySource?.displayName && entry.entrySource.displayName.length > 0) {
+    calculatedName = entry.entrySource.displayName;
+  } else if (entry.name) {
+    const segments = entry.name.split('/');
+    calculatedName = segments[segments.length - 1];
   }
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
+  return calculatedName;
+}
 const SearchTableView: React.FC<SearchTableViewProps> = ({
   resources,
   onRowClick,
@@ -308,7 +319,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    {capitalizeFirstLetter(entry?.name?.split('/').pop() ?? '')}
+                    {getNameFromEntry(entry)}
                   </Typography>
                   {hasLock && (
                     <Lock sx={{ fontSize: '12px', color: '#575757' }} />

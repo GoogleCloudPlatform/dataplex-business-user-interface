@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, TextField, Button, IconButton, Tooltip, Drawer } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import { useAuth } from '../../auth/AuthProvider';
 import { useSelector } from 'react-redux';
@@ -110,6 +110,18 @@ const SendFeedback: React.FC<SendFeedbackProps> = ({ isOpen, onClose, onSubmitSu
 
 
 return (
+  <Drawer
+      anchor="right"
+      open={isOpen}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: '500px',
+          backgroundColor: '#FFFFFF',
+          boxShadow: '-4px 0px 8px rgba(0, 0, 0, 0.1)',
+        }
+      }}
+    >
     <Box
       sx={{
         position: 'fixed',
@@ -300,6 +312,7 @@ return (
         </Tooltip>
       </Box>
     </Box>
+    </Drawer>
   );
 };
 

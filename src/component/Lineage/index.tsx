@@ -70,6 +70,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
   const [showSidePanel, setShowSidePanel] = useState(false);
   const [openSchemaInSidePanel, setOpenSchemaInSidePanel] = useState(false);
   const [showQueryPanel, setShowQueryPanel] = useState(false);
+  const [isColumnLineageLoading, setIsColumnLineageLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'graph' | 'list'>('graph');
   //const [zoomLevel, setZoomLevel] = useState(100);
   const [graphData, setGraphData] = useState<any|null>(null);
@@ -444,7 +445,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
       const index = gData.findIndex((obj:any) => obj.id === nodeData.id);
 
       if (index !== -1) {
-        gData[index].isUpStreamFetched = true; // Directly modify the property
+        gData[index].isDownStreamFetched = true; // Directly modify the property
       }
       if(data.sourceLinks.length === 0){
         if(index !== -1) {gData[index].showUpStreamIcon = false;}
@@ -496,6 +497,284 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
       console.log('An unknown error occurred');
     }
   };
+
+  const generateTargetLinks = (link:any, count:number, levelCounter:number, result: any[] = []) => {
+
+    if (link?.name) {
+      result.push({
+          id: `node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          name: link.source.fullyQualifiedName.split('.').pop(),
+          fqn: link.source.fullyQualifiedName,
+          linkData:link, 
+          type:"assetNode",
+          entryData:link.sourceEntry,
+          isRoot:false,
+          isSource:false,
+          level:0,
+          count:levelCounter,
+          showUpStreamIcon:false,
+          showDownStreamIcon:false,
+          isDownStreamFetched:true,
+          isUpStreamFetched:true,
+        });
+        result.push({
+          name: `query-${link.source.fullyQualifiedName.split('.').pop()}`,
+          linkData:link, 
+          source:`node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          target:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+          id: `node-query-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          type:"queryNode",
+          entryData:link.sourceEntry,
+          isSource:false,
+          isRoot:false,
+          level:1,
+          count:levelCounter,
+        });
+        levelCounter += levelCounter+1;
+    }
+    // else if (node.name && type=='target') {
+    //   result.push(node.target.fullyQualifiedName);
+    // }
+
+    if (Array.isArray(link?.children)) {
+      for (const child of link.children) {
+        generateTargetLinks(child, count, levelCounter, result);
+      }
+    }
+
+    return result;
+  }
+
+  const generateSourceLinks = (link:any, count:number, levelCounter:number, entry:any, result: any[] = []) => {
+    if (!link) return;
+
+
+    result.push({
+      id: `node-query-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+      name: `query-${link.target.fullyQualifiedName.split('.').pop()}`,
+      source:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+      target:`node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+      linkData:link, 
+      type:"queryNode",
+      entryData:link.targetEntry,
+      isSource:true,
+      isRoot:false,
+      level:3,
+      count:levelCounter,
+    });
+    result.push({
+      id: `node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+      name: link.target.fullyQualifiedName.split('.').pop(),
+      fqn: link.target.fullyQualifiedName,
+      linkData:link,
+      entryData:link.targetEntry, 
+      type:"assetNode",
+      isSource:true,
+      isRoot:false,
+      children:[],
+      level:4,
+      count:levelCounter,
+      showUpStreamIcon:false,
+      showDownStreamIcon:false,
+      isDownStreamFetched:true,
+      isUpStreamFetched:true,
+    });
+    levelCounter += 1;
+
+      if (Array.isArray(link?.children)) {
+        for (const child of link.children) {
+          generateSourceLinks(child, count, levelCounter, entry, result);
+        }
+      }
+      return result;
+  }
+
+  const resetLineageGraph = () => {
+      let graph:any = [];
+      let sourceGraph:any = [];
+      let sourceLinks:any = lineageSearchLinks.sourceLinks;
+      let targetLinks:any = lineageSearchLinks.targetLinks;
+      let count = 0;
+      let levelCounter = 1;
+
+      targetLinks.forEach((link: any) => {
+        graph.push({
+          id: `node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          name: link.source.fullyQualifiedName.split('.').pop(),
+          fqn: link.source.fullyQualifiedName,
+          linkData:link, 
+          type:"assetNode",
+          entryData:{},
+          isRoot:false,
+          isSource:false,
+          level:0,
+          count:levelCounter,
+          showUpStreamIcon:false,
+          showDownStreamIcon:true,
+          isDownStreamFetched:false,
+          isUpStreamFetched:true,
+        });
+        graph.push({
+          name: `query-${link.source.fullyQualifiedName.split('.').pop()}`,
+          linkData:link, 
+          source:`node-asset-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          target:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+          id: `node-query-${link.source.fullyQualifiedName.split('.').pop()}${count}`,
+          type:"queryNode",
+          entryData:{},
+          isSource:false,
+          isRoot:false,
+          level:1,
+          count:levelCounter,
+        });
+        levelCounter += 1;
+      });
+
+      let data = {
+        id: `node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+        name: entry.fullyQualifiedName.split('.').pop(),
+        fqn: entry.fullyQualifiedName,
+        linkData:null,
+        entryData:entry,
+        type:"assetNode",
+        isSource:false,
+        isRoot:true,
+        level:2,
+        count:1,
+        showUpStreamIcon:true,
+        showDownStreamIcon:true,
+        isDownStreamFetched:true,
+        isUpStreamFetched:true,
+      };
+
+      // Reset level counter for source links to start from 1 again so the graph of source links is balanced
+      levelCounter=1;
+
+      sourceLinks.forEach((link: any) => {
+        sourceGraph.push({
+          id: `node-query-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          name: `query-${link.target.fullyQualifiedName.split('.').pop()}`,
+          source:`node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+          target:`node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          linkData:link, 
+          type:"queryNode",
+          entryData:{},
+          isSource:true,
+          isRoot:false,
+          level:3,
+          count:levelCounter,
+        });
+        sourceGraph.push({
+          id: `node-asset-${link.target.fullyQualifiedName.split('.').pop()}${count}`,
+          name: link.target.fullyQualifiedName.split('.').pop(),
+          fqn: link.target.fullyQualifiedName,
+          linkData:link,
+          entryData:{}, 
+          type:"assetNode",
+          isSource:true,
+          isRoot:false,
+          children:[],
+          level:4,
+          count:levelCounter,
+          showUpStreamIcon:true,
+          showDownStreamIcon:false,
+          isDownStreamFetched:true,
+          isUpStreamFetched:false,
+        });
+        levelCounter += 1;
+      });
+      
+
+      graph = [...graph, ...[data], ...sourceGraph];
+
+      setGraphData(graph);
+  };
+
+  const fetchColumnLevelLineage = async (columnName:string|undefined, direction:'upstream' | 'downstream' | 'both') => {
+    // Implement the logic to fetch column level lineage based on columnName and direction
+    setIsColumnLineageLoading(true);
+    console.log(`Fetching ${direction} lineage for column: ${columnName}`);
+    //let graph:any = [];
+    //let gData = graphData;
+    try {
+      // search from your API endpoint 
+      axios.defaults.headers.common['Authorization'] = id_token ? `Bearer ${id_token}` : '';
+      let parent = entry.name.split('/').slice(0,4).join("/");
+      let fqn = entry.fullyQualifiedName;
+      
+      const response = await axios.post(URLS.API_URL + URLS.LINEAGE_SEARCH_COLUMN_LEVEL, {
+        parent: parent,
+        fqn:fqn,
+        direction:direction
+      });
+      const lineageData = await response.data;
+      //console.log(lineageData.targetLinks);
+      let graph:any = [];
+      let sourceGraph:any = [];
+      let sourceLinks:any = lineageData.sourceLinks;
+      let targetLinks:any = lineageData.targetLinks;
+      let count = 0;
+      let levelCounter = 1;
+
+      targetLinks.forEach((link: any) => {
+        const entryData = link.sourceEntry;
+        if(entryData){
+          const number = entryData.entryType.split('/')[1];
+          const schema = entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
+          if(schema.find((f:any) => (f.structValue.fields.name.stringValue === columnName)) || columnName === undefined || columnName === ""){
+            const res:any[] = generateTargetLinks(link, count, levelCounter) || [];
+            graph.push(...res);
+          }
+        }
+      });
+
+      let data = {
+        id: `node-asset-${entry.fullyQualifiedName.split('.').pop()}`,
+        name: entry.fullyQualifiedName.split('.').pop(),
+        fqn: entry.fullyQualifiedName,
+        linkData:null,
+        entryData:entry,
+        type:"assetNode",
+        isSource:false,
+        isRoot:true,
+        level:2,
+        count:1,
+        showUpStreamIcon:true,
+        showDownStreamIcon:true,
+        isDownStreamFetched:true,
+        isUpStreamFetched:true,
+      };
+
+      // Reset level counter for source links to start from 1 again so the graph of source links is balanced
+      levelCounter=1;
+
+      sourceLinks.forEach((link: any) => {
+        const entryData = link.targetEntry;
+        if(entryData){
+          const number = entryData.entryType.split('/')[1];
+          const schema = entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
+          if(schema.find((f:any) => (f.structValue.fields.name.stringValue === columnName)) || columnName === undefined || columnName === ""){
+            const res:any[] = generateSourceLinks(link, count, levelCounter, entry) || [];
+            sourceGraph.push(...res);
+          }
+        }
+      });
+      
+
+      graph = [...graph, ...[data], ...sourceGraph];
+      console.log(graph);
+      setGraphData(graph);
+      //setGraphData(data)
+
+    } catch (error) {
+      console.log(error);
+      if (error instanceof AxiosError) {
+        console.log(error.response?.data || error.message);
+      }
+      console.log('An unknown error occurred');
+    }
+    setIsColumnLineageLoading(false);
+  }
 
   return (
     <Box>
@@ -671,14 +950,20 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
                       }}>
                       {/* <LineageChartView graphData={graphData} handleSidePanelToggle={(data:any) => handleToggleSidePanel(data)} handleQueryPanelToggle={(data:any) => handleToggleQueryPanel(data)} zoomLevel={zoomLevel} isSidePanelOpen={showSidePanel} selectedNode={selectedNode}/> */}
                       <LineageChartViewNew 
+                        entry={entry}
                         graphData={graphData} 
                         handleSidePanelToggle={(data:any, showSchema:boolean) => handleToggleSidePanel(data, showSchema)} 
                         handleQueryPanelToggle={(data:any) => handleToggleQueryPanel(data)} 
                         fetchLineageDownStream={(nodeData:any) => fetchLineageDownStream(nodeData)} 
                         fetchLineageUpStream={(nodeData:any) => fetchLineageUpStream(nodeData)}  
+                        fetchColumnLevelLineage={(columnName:string|undefined, direction:'upstream' | 'downstream' | 'both')=>{
+                          fetchColumnLevelLineage(columnName, direction);
+                        }}
+                        resetLineageGraph={resetLineageGraph}
                         isSidePanelOpen={showSidePanel} 
                         selectedNode={selectedNode} 
-                        isFullScreen={isFullscreen} 
+                        isFullScreen={isFullscreen}
+                        isColumnLineageLoading={isColumnLineageLoading} 
                         toggleFullScreen={toggleFullscreen}
                       /> 
                     </div>

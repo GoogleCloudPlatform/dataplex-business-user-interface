@@ -338,9 +338,9 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         PaperProps={{ sx: { maxHeight: 260, width: 250, borderRadius: '8px' } }}
       >
-        {!selectedAnnotationProperty ? (
-          <>
+        {!selectedAnnotationProperty ? [
             <MenuItem 
+              key="placeholder"
               sx={{ 
                 fontSize: '0.6875rem', fontWeight: 450, backgroundColor: '#F8F9FA',
                 borderBottom: '1px solid #E0E0E0', height: "32px", minHeight: "32px",
@@ -353,8 +353,8 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                 fontWeight: 500,
                 fontSize: '12px',
               }}/>
-            </MenuItem>
-            {annotationPropertyNames.map((property) => (
+            </MenuItem>,
+            ...annotationPropertyNames.map((property) => (
               <MenuItem 
                 key={property} 
                 onClick={() => handleAnnotationPropertySelect(property)}
@@ -364,11 +364,10 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                   fontSize: '12px',
                 }}/>
               </MenuItem>
-            ))}
-          </>
-        ) : (
-          <>
+            ))
+        ] : [
             <MenuItem 
+              key="back-btn"
               onClick={() => setSelectedAnnotationProperty('')}
               sx={{ 
                 fontSize: '0.6875rem', fontWeight: 400, backgroundColor: '#F8F9FA',
@@ -379,10 +378,11 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               }}
             >
               <ListItemText primary={`← Back to Properties`} primaryTypographyProps={{
-          fontSize: '12px',
-        }}/>
-            </MenuItem>
+                fontSize: '12px',
+              }}/>
+            </MenuItem>,
             <MenuItem 
+              key="filter-header"
               sx={{ 
                 fontSize: '0.6875rem', fontWeight: 400, backgroundColor: '#F8F9FA',
                 borderBottom: '1px solid #E0E0E0'
@@ -390,10 +390,10 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               disabled
             >
               <ListItemText primary={`Filter by: ${selectedAnnotationProperty}`} primaryTypographyProps={{
-          fontSize: '12px',
-        }}/>
-            </MenuItem>
-            {annotationNames.map((value) => (
+                fontSize: '12px',
+              }}/>
+            </MenuItem>,
+            ...annotationNames.map((value) => (
               <MenuItem 
                 key={value} 
                 onClick={() => handleAnnotationValueToggle(value)}
@@ -416,9 +416,8 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                 />
                 <ListItemText primary={value} sx={{ '& .MuiTypography-root': { fontSize: '12px' } }}/>
               </MenuItem>
-            ))}
-          </>
-        )}
+            ))
+        ]}
       </Menu>
     </>
   );

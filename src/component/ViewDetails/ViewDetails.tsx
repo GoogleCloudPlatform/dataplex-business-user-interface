@@ -190,9 +190,11 @@ useEffect(() => {
   useEffect(() => {
     if(sampleDataStatus === 'succeeded') {
         // schema = <Schema entry={entry} css={{width:"100%"}} />;
-        if(entry.entrySource?.system.toLowerCase() === 'bigquery'){
-          setSampleTableData(sampleData);
-          console.log("Sample Data:", sampleData);
+        if(entry.entrySource?.system) {
+          if(entry.entrySource?.system.toLowerCase() === 'bigquery'){
+            setSampleTableData(sampleData);
+            //console.log("Sample Data:", sampleData);
+          }
         }
     }
   }, [sampleData]);
@@ -204,8 +206,8 @@ useEffect(() => {
   if(entryStatus === 'succeeded') {
       // schema = <Schema entry={entry} css={{width:"100%"}} />;
       setLoading(false);
-      if(getEntryType(entry.name, '/') == 'Tables' && entry.entrySource?.system.toLowerCase() === 'bigquery') {
-          dispatch(getSampleData({fqn: entry.fullyQualifiedName, id_token: id_token}));
+      if(getEntryType(entry.name, '/') == 'Tables' && entry.entrySource?.system != undefined && entry.entrySource?.system != "undefined" && entry.entrySource?.system.toLowerCase() === 'bigquery') {
+        dispatch(getSampleData({fqn: entry.fullyQualifiedName, id_token: id_token}));
       }
       // console.log("loader:", loading);
   }
@@ -301,7 +303,7 @@ useEffect(() => {
                     </label>
                     </Tooltip>
                     <Tag 
-                        text={entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.replace("_", " ").replace("-", " ").toLowerCase()} 
+                        text={entry.entrySource.system ? (entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.replace("_", " ").replace("-", " ").toLowerCase()) : 'Custom'} 
                         css={{
                             fontFamily: '"Google Sans Text", sans-serif',
                             backgroundColor: '#C2E7FF',

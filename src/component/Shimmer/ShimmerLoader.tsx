@@ -29,10 +29,141 @@ import { Box } from '@mui/material';
 
 interface ShimmerLoaderProps {
   count?: number;
-  type?: 'list' | 'table' | 'card';
+  type?: 'list' | 'table' | 'card'| 'simple-list'| 'header'| 'title';
 }
 
 const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' }) => {
+  const renderTitleShimmer = () => (
+    <>
+      <Box 
+        sx={{ 
+          width: '250px', // Typical length for a title
+          height: '24px', // Matches h5 line-height/font-size
+          backgroundColor: '#F0F0F0', 
+          borderRadius: '4px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+          {/* Shimmer Animation Overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
+            }}
+          />
+      </Box>
+    </>
+  );
+  const renderHeaderShimmer = () => (
+    <>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1, // Matches the gap={1} in your real header
+          width: '100%',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+          {/* Shimmer Animation Overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(240,240,240,0.8), transparent)',
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
+            }}
+          />
+
+          {/* Icon Placeholder: 24px square (matching your medium icon) */}
+          <Box 
+            sx={{ 
+              width: 24, 
+              height: 24, 
+              backgroundColor: '#F0F0F0', 
+              borderRadius: '4px',
+              flexShrink: 0 
+            }} 
+          />
+          
+          {/* Title Placeholder: Mimics h5 text height */}
+          <Box 
+            sx={{ 
+              width: '200px', 
+              height: '24px', 
+              backgroundColor: '#F0F0F0', 
+              borderRadius: '4px' 
+            }} 
+          />
+      </Box>
+    </>
+  );
+  const renderSimpleListShimmer = () => (
+    <>
+      {[...Array(count)].map((_, index) => (
+        <Box
+          key={index}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '12px',
+            padding: '8px 12px', // Minimal padding
+            // No border, No background color, No box shadow
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Shimmer Animation */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(240,240,240,0.8), transparent)', // Lighter gradient for white bg
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
+            }}
+          />
+
+          {/* Icon placeholder (Circle or small square) */}
+          <Box
+            sx={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '50%',
+              backgroundColor: '#F0F0F0',
+              flexShrink: 0
+            }}
+          />
+
+          {/* Text placeholder (Line) */}
+          <Box
+            sx={{
+              width: '70%',
+              height: '14px',
+              backgroundColor: '#F0F0F0',
+              borderRadius: '4px'
+            }}
+          />
+        </Box>
+      ))}
+    </>
+  );
   const renderListShimmer = () => (
     <>
       {[...Array(count)].map((_, index) => (
@@ -284,6 +415,12 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
 
   const renderShimmer = () => {
     switch (type) {
+      case 'title':
+        return renderTitleShimmer();
+      case 'header':
+        return renderHeaderShimmer();
+      case 'simple-list':
+        return renderSimpleListShimmer();
       case 'table':
         return renderTableShimmer();
       case 'card':

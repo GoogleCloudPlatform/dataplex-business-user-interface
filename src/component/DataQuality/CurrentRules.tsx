@@ -773,7 +773,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({dataQualtyScan}) => {
       {/* Table */}
       <Collapse in={isExpanded} timeout={300}>
         <TableContainer sx={{ 
-          maxHeight: '400px', 
+          maxHeight: 'calc(100vh - 280px)', 
           overflowY: 'auto',
           overflowX: 'hidden',
           border: '1px solid #DADCE0',

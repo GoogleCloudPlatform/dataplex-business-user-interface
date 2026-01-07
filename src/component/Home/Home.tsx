@@ -1,7 +1,6 @@
 import './Home.css'
 import SearchBar from '../SearchBar/SearchBar'
 import { CircularProgress, Grid } from '@mui/material'
-import { ChevronRight } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
@@ -11,6 +10,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch } from '../../app/store'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getProjects } from '../../features/projects/projectsSlice'
+import { fetchGlossaries } from '../../features/glossaries/glossariesSlice';
+import GlossaryIcon from '../../assets/svg/glossary.svg'
+import BrowseByIcon from '../../assets/svg/BrowseByIcon.svg'
 
 /**
  * @file Home.tsx
@@ -108,6 +110,11 @@ const Home = () => {
     navigate('/browse-by-annotation');
   };
 
+  const handleGlossaries = () => {
+    dispatch(fetchGlossaries({ id_token: user?.token }));
+    navigate('/glossaries');
+  };
+
   return (
     <div className="home">
       <div className='home-body'>
@@ -146,28 +153,83 @@ const Home = () => {
                     
                     <div style={{ 
                         display: 'flex', 
-                        justifyContent: 'flex-end',
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        marginTop: "0.5rem",
-                        paddingRight: "10px"
+                        justifyContent: 'center',
+                        padding: '0px',
+                        gap: '12px',
+                        marginTop: "1.25rem",
+                        width: '100%'
                     }}>
-                        <div style={{ 
-                            fontSize:"14px", 
-                            color:"#0B57D0", 
-                            fontWeight:"600", 
-                            fontStyle:"Medium",
+                        {/* Glossaries Button */}
+                        <a onClick={handleGlossaries} style={{
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: '8px 12px',
+                            gap: '6px',
+                            height: '36px',
+                            background: '#FFFFFF',
+                            border: '1px solid #DADCE0',
+                            borderRadius: '1000px',
+                            cursor: 'pointer',
+                            textDecoration: 'none'
                         }}>
-                            <a className='home-browse-button' onClick={handleBrowse} style={{
-                                color:"#0B57D0", 
-                                fontFamily: '"Roboto","Google Sans", sans-serif',
-                                cursor: 'pointer', 
-                                display: 'flex', 
-                                alignItems: 'center'
+                           <img 
+                              src={GlossaryIcon} 
+                              alt={'Glossary'} 
+                              style={{
+                                width: '16px',
+                                height: '16px'
+                              }}
+                            />
+                            <span style={{
+                                fontFamily: '"Product Sans", "Google Sans", sans-serif',
+                                fontStyle: 'normal',
+                                fontWeight: '400',
+                                fontSize: '14px',
+                                lineHeight: '20px',
+                                color: '#1F1F1F'
                             }}>
-                                Browse 
-                                <ChevronRight style={{ color:"#0B57D0" }} />
-                            </a>
-                        </div>
+                                Browse by Glossaries
+                            </span>
+                        </a>
+
+                        {/* Browse Button */}
+                        <a onClick={handleBrowse} style={{
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: '8px 12px',
+                            gap: '6px',
+                            height: '36px',
+                            background: '#FFFFFF',
+                            border: '1px solid #DADCE0',
+                            borderRadius: '1000px',
+                            cursor: 'pointer',
+                            textDecoration: 'none'
+                        }}>
+                            <img 
+                              src={BrowseByIcon} 
+                              alt={'Browse'} 
+                              style={{
+                                width: '16px',
+                                height: '16px'
+                              }}
+                            />
+                            <span style={{
+                                fontFamily: '"Product Sans", "Google Sans", sans-serif',
+                                fontStyle: 'normal',
+                                fontWeight: '400',
+                                fontSize: '14px',
+                                lineHeight: '20px',
+                                color: '#1F1F1F'
+                            }}>
+                                Browse by Aspects
+                            </span>
+                        </a>
                     </div>
                 </div>
               </Grid>

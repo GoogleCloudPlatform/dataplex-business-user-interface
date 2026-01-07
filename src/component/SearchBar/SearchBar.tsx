@@ -304,7 +304,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
-                zIndex: 150,
+                zIndex: 1000,
                 transition: 'all 0.2s ease',
                 boxShadow: isAnyDropdownOpen ? '0 1px 6px rgba(32,33,36,.28)' : 'none',
                  border: '1px solid transparent',
@@ -538,12 +538,19 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 <button
                     className={!semanticSearch ? "natural-language-btn-hover-effect" : ""}
                     onClick={(e) => {
-                        if (!semanticSearch) {
-                            setIsAnimating(true);
-                            setTimeout(() => setIsAnimating(false), 2500);
-                        }
                         handleSemanticSearchToggle();
-                        e.currentTarget.blur();
+                        if (!semanticSearch) {
+                          setIsAnimating(true);
+                          setTimeout(() => setIsAnimating(false), 2500);
+
+                          // 3. Trigger search if text exists (Acting as "Enter")
+                          const trimmedTerm = searchTerm?.toString().trim();
+                          if (trimmedTerm && trimmedTerm.length >= 3) {
+                              handleSearchSubmit(trimmedTerm);
+                              addToRecentSearches(trimmedTerm);
+                          }
+                      }
+                      e.currentTarget.blur();
                     }}
                     style={{
                         position: 'relative',
