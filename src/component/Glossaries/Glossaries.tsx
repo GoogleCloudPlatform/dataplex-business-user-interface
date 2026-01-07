@@ -126,6 +126,8 @@ const Glossaries = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
   const fetchedParentIds = React.useRef(new Set<string>());
+  const manualSelectionId = React.useRef<string | null>(null);
+  const wasSearching = React.useRef(false);
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
   const [isContentLoading, setIsContentLoading] = useState(false);
 
@@ -232,7 +234,7 @@ const Glossaries = () => {
     () => (selectedItem ? getAllTerms(selectedItem) : []),
     [selectedItem]
   );
-  const relations = selectedItem?.relations || [];
+  const relations = useMemo(() => selectedItem?.relations || [], [selectedItem]);
   const isTerm = selectedItem?.type === "term";
   const dynamicMaxHeight = "100%";
 
@@ -273,6 +275,11 @@ const Glossaries = () => {
     } else {
       // Closing logic
       newExpanded.delete(id);
+
+      if (item && item.children) {
+        const descendantIds = collectAllIds(item.children);
+        descendantIds.forEach((childId) => newExpanded.delete(childId));
+      }
     }
     setExpandedIds(newExpanded);
   };
@@ -600,9 +607,15 @@ const Glossaries = () => {
   // Auto-expand tree to show selected item (and collapse others)
   useEffect(() => {
     if (searchTerm.trim()) {
+      wasSearching.current = true;
       const allIds = collectAllIds(filteredGlossaries);
       setExpandedIds(new Set(allIds));
     } else if (selectedId) {
+      if (manualSelectionId.current === selectedId && !wasSearching.current) {
+        return;
+      }
+      
+      wasSearching.current = false;
       const ancestors = getAllAncestorIds(glossaryItems, selectedId);
       const newExpanded = new Set(ancestors);
 
@@ -720,6 +733,7 @@ const Glossaries = () => {
                   selectedId={selectedId}
                   expandedIds={expandedIds}
                   onSelect={(id) => {
+                    manualSelectionId.current = id;
                     const targetItem = findItem(glossaryItems, id);
                     if (
                       targetItem &&

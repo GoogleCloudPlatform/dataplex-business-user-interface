@@ -296,23 +296,24 @@ export const fetchGlossaryEntryDetails = createAsyncThunk(
 // Helper to map API Response to GlossaryItem
 const mapEntryToGlossaryItem = (apiResult: any): GlossaryItem => {
   const entry = apiResult.dataplexEntry;
-  const source = entry.entrySource;
-  
+  const source = entry.entrySource || {};
+  const name = entry.name;
+  const id = source.resource || `projects/${name.split('/')[1]}/locations/${name.split('/')[3]}/glossaries/${name.split('/').pop()}`;
+
   return {
-    id: source.resource, // Using the full entry name as unique ID
+    id: id,
     type: 'glossary',
     displayName: source.displayName || 'Untitled',
     description: source.description || '',
     longDescription: '',
-    project: extractProject(source.resource || ''),
+    project: extractProject(id),
     location: source.location || 'global',
-    // Convert ISO string to unix timestamp (seconds)
-    lastModified: source.updateTime ? new Date(source.updateTime).getTime() / 1000 : 0, 
+    lastModified: source.updateTime ? new Date(source.updateTime).getTime() / 1000 : 0,
     labels: source.labels ? Object.keys(source.labels).map(k => `${k}:${source.labels[k]}`) : [],
     contacts: [],
-    children: [], // Will be populated by subsequent API calls
+    children: [],
     relations: [],
-    entryType: entry.entryType
+    entryType: entry?.entryType
   };
 };
 
