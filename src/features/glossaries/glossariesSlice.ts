@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios, { AxiosError } from 'axios';
-import { type GlossaryItem, type GlossaryRelation } from '../../component/Glossaries/GlossaryData';
+import { type GlossaryItem, type GlossaryRelation } from '../../component/Glossaries/GlossaryDataType';
 
 // --- Helpers ---
 // Helper to extract Project ID from resource name if needed

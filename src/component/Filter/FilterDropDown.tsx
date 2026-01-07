@@ -442,7 +442,11 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
   }
 
 
-  const [filterData, setFilterData] = useState<any[]>([annotations, assets, products, projects]);
+  const [filterData, setFilterData] = useState<any[]>(
+    isGlossary 
+      ? [assets, products, projects] 
+      : [annotations, assets, products, projects]
+  );
 
   const [showSubAnnotationsPanel, setShowSubAnnotationsPanel] = useState(false);
   const [selectedAnnotationForSubPanel, setSelectedAnnotationForSubPanel] = useState<string>('');
@@ -570,13 +574,17 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
 
     const newProjects = { ...projects, items: pItems };
 
-    setFilterData([annotations, assets, products, newProjects]);
+    setFilterData(
+      isGlossary 
+        ? [assets, products, newProjects] 
+        : [annotations, assets, products, newProjects]
+    );
     
   }, [projectsLoaded, user?.appConfig]);
 
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-    'Aspects': isGlossary,
-    'Assets': false,
+    'Aspects': false,
+    'Assets': isGlossary,
     'Products': false,
     'Projects': false
   });
