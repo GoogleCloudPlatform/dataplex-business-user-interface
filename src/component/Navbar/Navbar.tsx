@@ -106,6 +106,10 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
+  const isGlossaryPage = ['/glossaries'].includes(location.pathname);
+  const isBrowsePage = ['/browse-by-annotation'].includes(location.pathname);
+  const isSearchOrDetailPage = ['/search', '/view-details'].includes(location.pathname);
+  const isGuidePage = ['/guide'].includes(location.pathname);
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   //const [anchorElHelp, setAnchorElHelp] = React.useState<null | HTMLElement>(null);
@@ -208,10 +212,10 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
 
   return (<>
     <AppBar position="static" sx={{
-      background: "#F8FAFD", 
-      boxShadow: "none", 
+      background: "#F8FAFD",
+      boxShadow: "none",
       height: "4rem", // 64px
-      flex: "0 0 auto"
+      flex: "0 0 auto",
     }}>
       <Container maxWidth="xl" sx={{
         padding: 0, 
@@ -231,38 +235,51 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
           padding: "0.5rem 0rem", // 8px 20px
           gap: 0,
         }}>
-          {/* Left Section - Logo */}
-          <Box onClick={handleLogoClick} sx={{
-            display: { xs: 'none', md: 'flex' }, 
-            flex: "0 0 auto",
-            width: "11.75rem", 
-            height: "2.875rem", // 46px
-            marginLeft: "-0.5rem", // Shift 0.75rem left
-            cursor: "pointer",
-          }}>
-            <div className="logo-container" style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-              <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="CS Studio Logo" className="navbar-logo-img" />
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', cursor: "pointer",}}>
-                <label style={{fontSize:"19px", fontWeight:700, color:"#0B57D0", lineHeight: 1, cursor: "pointer",}}>Dataplex</label>
-                <label style={{fontSize:"12px", fontWeight:700, color:"#0B57D0", lineHeight: 1, cursor: "pointer",}}>Universal Catalog</label>
-              </div>
-            </div>
-          </Box>
+          {/* Left Section - Logo (only on home page) */}
+          {location.pathname === '/home' && (
+            <Box onClick={handleLogoClick} sx={{
+              display: { xs: 'none', md: 'flex' },
+              flex: "0 0 auto",
+              width: "157px",
+              height: "46px",
+              marginLeft: "-0.5rem",
+              cursor: "pointer",
+            }}>
+              <img
+                src="/assets/svg/dataplex-universal-catalog-logo.svg"
+                alt="Dataplex Universal Catalog"
+                style={{ width: '157px', height: '46px' }}
+              />
+            </Box>
+          )}
           
           {/* Center Section - Search Bar */}
           {
-            searchBar && location.pathname !== '/admin-panel' ? 
+            searchBar && location.pathname !== '/admin-panel' ?
             (
               <Box sx={{
-                display: { lg: 'flex' }, 
+                display: { lg: 'flex' },
                 flex: "1 1 41rem",
                 alignItems: "center",
-                height: "3rem", 
-                margin: "0", 
+                justifyContent: "flex-start",
+                height: "3rem",
+                margin: "0",
+                ...(isGlossaryPage && {
+                  marginLeft: "calc(250px)", // Logo width + padding
+                }),
+                ...(isBrowsePage && {
+                  marginLeft: "202px",
+                }),
+                ...(isSearchOrDetailPage && {
+                  marginLeft: "202px",
+                }),
+                ...(isGuidePage && {
+                  marginLeft: "calc(250px)",
+                }),
               }}>
-                <div style={{ width: '100%', marginLeft: '1.5rem' }}>
-                  <SearchBar 
-                    handleSearchSubmit={handleNavSearch} 
+                <div style={{ width: 'calc(100% - 10.2%)', marginLeft: '0' }}>
+                  <SearchBar
+                    handleSearchSubmit={handleNavSearch}
                     dataSearch={[
                       { name: 'BigQuery' },
                       { name: 'Data Warehouse' },

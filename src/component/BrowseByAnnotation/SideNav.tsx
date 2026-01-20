@@ -2,11 +2,15 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ExpandMore } from '@mui/icons-material';
+import AnnotationsIconBlue from '../../assets/svg/annotations-icon-blue.svg';
+import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
 
 /**
  * @file SideNav.tsx
@@ -14,12 +18,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
  *
  * @description
  * This component displays a list of "Aspects" (from the `annotationsData` prop)
- * as a series of Material-UI `Accordion` components. Only one accordion
- * (Aspect) can be expanded at a time, which is managed by the internal
- * `expandedItem` state.
+ * using Material-UI `ListItemButton` components with a pill-shaped design matching
+ * the Glossary sidebar. Only one aspect can be expanded at a time, which is managed
+ * by the internal `expandedItem` state.
  *
- * Each expanded accordion reveals a list of its `subItems`. When a user
- * clicks on a `subItem`:
+ * Each expanded aspect reveals a list of its `subItems`. When a user clicks on a `subItem`:
  * 1.  It calls the `onItemClick` prop function, passing the parent aspect item.
  * 2.  It calls the `onSubItemClick` prop function, passing the specific sub-item
  * that was clicked.
@@ -27,12 +30,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
  * These callbacks allow the parent component (e.g., `BrowseByAnnotation`) to
  * update the application's main content area.
  *
- * The component also uses the `selectedSubItem` prop to apply active
- * (blue, bold) styling to the sub-item that is currently selected.
+ * The component uses the `selectedSubItem` prop to apply active styling
+ * (light blue background, bold text) to the sub-item that is currently selected.
  *
  * @param {object} props - The props for the SideNav component.
- * @param {any} props.selectedItem - The currently selected top-level aspect
- * item.
+ * @param {any} props.selectedItem - The currently selected top-level aspect item.
  * @param {() => void} props.onItemClick - Callback function to notify the
  * parent when an item (aspect) is selected (triggered by clicking a sub-item).
  * @param {any} props.selectedSubItem - The currently selected sub-item. This
@@ -57,10 +59,6 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
     
   const [expandedItem, setExpandedItem] = React.useState<number | false>(false);
 
-  const handleAccordionChange = (panelIndex: number) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedItem(isExpanded ? panelIndex : false);
-  };
-
   const handleSubItemClick = (subItem:any, item:any) => {
     console.log(selectedItem);
     if (selectedItem?.title !== item?.title) {
@@ -79,126 +77,153 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
         height: 'calc(100vh - 1.5rem)',
         marginTop: "0px",
         marginRight: "10px",
-        padding: 2,
+        py: '20px',
         overflowY: 'auto',
       }}
     >
       <Typography
+        variant="h6"
         sx={{
+          fontFamily: 'Google Sans Text',
+          fontSize: '16px',
           fontWeight: 500,
-          fontSize: '1rem',
-          lineHeight: '3rem',
-          marginBottom: 2,
-          paddingLeft: '10px',
+          lineHeight: '24px',
           color: '#000000',
+          mb: 2,
+          px: 2.5,
         }}
       >
         Aspects
       </Typography>
 
-      <Box>
-        <Box
-          sx={{
-            height: '0.1px',
-            backgroundColor: '#E0E0E0',
-            marginLeft: '5px',
-            marginRight: '3.5px',
-          }}
-        />
-        {annotationsData.map((annotation: any, index: number) => (
-          <Accordion
-            key={index}
-            expanded={expandedItem === index}
-            onChange={handleAccordionChange(index)}
-            disableGutters
-            style={{ background: 'none', boxShadow: 'none', margin: 0 }}
-            sx={{
-              '&:not(:first-of-type)::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                backgroundColor: '#E0E0E0',
-                height: '1px',
-                left: '5px',
-                right: '3.5px',
-                opacity: 1,
-              },
-              '&:before': {
-                  height: 0,
-              }
-            }}
-           >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls={`panel${index}-content`}
-              id={`panel${index}-header`}
-              sx={{
-                padding: '0rem 0.3215rem 0rem 0.65rem',
-                height: '48px',
-                '& .MuiAccordionSummary-content': {
-                  lineHeight: '48px',
-                  margin: '14px -4.8px',
-                },
-                '& .MuiAccordionSummary-expandIconWrapper': {
-                  marginRight: '-3px',
-                },
-                '&.Mui-expanded': {
-                  minHeight: 'auto',
-                  '& .MuiAccordionSummary-content': {
-                    lineHeight: '48px',
-                    margin: '14px -4.8px',
-                  },
-                },
-              }}
-            >
-              <Typography
+      <List component="div" disablePadding>
+        {annotationsData.map((annotation: any, index: number) => {
+          const isExpanded = expandedItem === index;
+
+          return (
+            <Box key={index}>
+              {/* Parent Item - Aspect */}
+              <ListItemButton
+                onClick={() => {
+                  setExpandedItem(isExpanded ? false : index);
+                }}
                 sx={{
-                  fontWeight: 500,
-                  fontSize: '14px',
-                  lineHeight: '20px',
-                  color: '#1F1F1F',
-                  fontFamily: 'Google Sans Text, sans-serif',
+                  ml: '15px',
+                  mr: '20px',
+                  pl: '8px',
+                  pr: '12px',
+                  py: '8px',
+                  height: '32px',
+                  borderRadius: '200px',
+                  mb: 0.5,
+                  backgroundColor: undefined,
+                  '&:hover': {
+                    backgroundColor: '#F1F3F4',
+                  },
                 }}
               >
-                {annotation.title}
-              </Typography>
-            </AccordionSummary>
-
-            <AccordionDetails
-              sx={{
-                paddingTop: 0,
-                marginTop: '-10px',
-                paddingBottom: '0.5rem',
-                paddingLeft: '0.35rem',
-                paddingRight: '0.5rem',
-              }}
-            >
-              {annotation.subItems.map((subItem: any, subIndex: number) => (
+                {/* Chevron Icon */}
                 <Box
-                  key={subIndex}
-                  onClick={() => handleSubItemClick(subItem, annotation)}
+                  component="span"
                   sx={{
-                    padding: '6px 0',
-                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    mr: 0.5,
+                    transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    transition: 'transform 0.2s',
                   }}
                 >
-                  <Typography
-                    sx={{
-                      fontWeight: selectedSubItem?.title === subItem.title ? 500: 400,
-                      fontSize: '12px',
-                      fontFamily: 'Google Sans Text, sans-serif',
-                      lineHeight: '16px',
-                      color: selectedSubItem?.title === subItem.title ? '#0B57D0' : '#1F1F1F',
-                    }}
-                  >
-                    {subItem.title}
-                  </Typography>
+                  <ExpandMore
+                    sx={{ fontSize: 16, color: '#1F1F1F' }}
+                  />
                 </Box>
-              ))}
-            </AccordionDetails>
-          </Accordion>
-        ))}
-      </Box>
+
+                {/* Annotation Icon */}
+                <ListItemIcon sx={{ minWidth: 20, mr: 0.1, color: '#1F1F1F' }}>
+                  <img
+                    src={AnnotationsIconBlue}
+                    alt=""
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                </ListItemIcon>
+
+                {/* Title */}
+                <ListItemText
+                  primary={annotation.title}
+                  primaryTypographyProps={{
+                    fontFamily: 'Product Sans',
+                    fontSize: '12px',
+                    fontWeight: isExpanded ? 500 : 400,
+                    color: '#1F1F1F',
+                    noWrap: true,
+                    letterSpacing: '0.1px',
+                  }}
+                />
+              </ListItemButton>
+
+              {/* Sub-Items - Collapsed */}
+              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {annotation.subItems.map((subItem: any, subIndex: number) => {
+                    const isSelected = selectedSubItem?.title === subItem.title;
+
+                    return (
+                      <ListItemButton
+                        key={subIndex}
+                        selected={isSelected}
+                        onClick={() => handleSubItemClick(subItem, annotation)}
+                        sx={{
+                          ml: '40px',
+                          mr: '20px',
+                          pl: '8px',
+                          pr: '12px',
+                          py: '8px',
+                          height: '32px',
+                          borderRadius: '200px',
+                          mb: 0.5,
+                          backgroundColor: undefined,
+                          '&.Mui-selected': {
+                            backgroundColor: '#C2E7FF',
+                            color: '#1F1F1F',
+                            '&:hover': { backgroundColor: '#C2E7FF' },
+                            '& .MuiListItemIcon-root': { color: '#1F1F1F' },
+                            '& .MuiTypography-root': { fontWeight: 500 },
+                          },
+                          '&:hover': {
+                            backgroundColor: isSelected ? '#C2E7FF' : '#F1F3F4',
+                          },
+                        }}
+                      >
+                        {/* Sub-item Icon */}
+                        <ListItemIcon sx={{ minWidth: 20, mr: 0.1, color: '#1F1F1F' }}>
+                          <img
+                            src={AnnotationSubitemIcon}
+                            alt=""
+                            style={{ width: '16px', height: '16px' }}
+                          />
+                        </ListItemIcon>
+
+                        {/* Sub-item Title */}
+                        <ListItemText
+                          primary={subItem.title}
+                          primaryTypographyProps={{
+                            fontFamily: 'Google Sans',
+                            fontSize: '12px',
+                            fontWeight: isSelected ? 500 : 400,
+                            color: '#1F1F1F',
+                            noWrap: true,
+                            letterSpacing: '0.1px',
+                          }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </Box>
+          );
+        })}
+      </List>
     </Box>
   );
 };

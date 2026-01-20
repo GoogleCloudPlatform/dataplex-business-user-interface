@@ -10,6 +10,7 @@ import dataScanReducer from '../features/dataScan/dataScanSlice';
 import lineageReducer from '../features/lineage/lineageSlice';
 import projectsReducer from '../features/projects/projectsSlice';
 import glossariesReducer from '../features/glossaries/glossariesSlice';
+import dataProductsReducer from '../features/dataProducts/dataProductsSlice';
 import { loadStateFromStorage, saveStateToStorage } from '../utils/persistence';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -30,6 +31,7 @@ const store = configureStore({
     lineage:lineageReducer,
     projects:projectsReducer,
     glossaries: glossariesReducer,
+    dataProducts: dataProductsReducer,
   },
   preloadedState: persistedState,
   middleware: (getDefaultMiddleware) => 

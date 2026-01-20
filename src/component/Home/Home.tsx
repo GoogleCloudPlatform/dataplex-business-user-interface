@@ -10,9 +10,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch } from '../../app/store'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getProjects } from '../../features/projects/projectsSlice'
-import { fetchGlossaries } from '../../features/glossaries/glossariesSlice';
-import GlossaryIcon from '../../assets/svg/glossary.svg'
-import BrowseByIcon from '../../assets/svg/BrowseByIcon.svg'
 
 /**
  * @file Home.tsx
@@ -32,14 +29,12 @@ import BrowseByIcon from '../../assets/svg/BrowseByIcon.svg'
  * 3.  **Search Handling**: It renders the `SearchBar` component. When a user
  * submits a search (via `handleSearch`), it again resets Redux state and
  * navigates to the `/search` page.
- * 4.  **Browse Navigation**: It provides a "Browse" link that navigates the user
- * to the `/browse-by-annotation` page when clicked.
  *
  * @param {object} props - This component accepts no props.
  *
  * @returns {React.ReactElement} A React element displaying either:
  * - A `CircularProgress` loader while fetching application configuration.
- * - The main home page layout with the `SearchBar` and "Browse" link.
+ * - The main home page layout with the `SearchBar`.
  */
 
 const Home = () => {
@@ -49,7 +44,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [loader, setLoader] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
-  
+
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
   //const searchTerm = useSelector((state:any) => state.search.term);
 
@@ -103,16 +98,7 @@ const Home = () => {
     dispatch({ type: 'resources/setItems', payload: [] });
     // Dispatch the setSearchTerm action with the new value
     navigate('/search');
-    
-  };
 
-  const handleBrowse = () => {
-    navigate('/browse-by-annotation');
-  };
-
-  const handleGlossaries = () => {
-    dispatch(fetchGlossaries({ id_token: user?.token }));
-    navigate('/glossaries');
   };
 
   return (
@@ -129,7 +115,7 @@ const Home = () => {
           >
             <CircularProgress />
           </Grid>
-          </>) : 
+          </>) :
           ( <div className='home-banner'>
               <Grid
                 container
@@ -150,87 +136,6 @@ const Home = () => {
                         { name: 'Data Pipeline' },
                         { name: 'GCS' }
                     ]}/>
-                    
-                    <div style={{ 
-                        display: 'flex', 
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0px',
-                        gap: '12px',
-                        marginTop: "1.25rem",
-                        width: '100%'
-                    }}>
-                        {/* Glossaries Button */}
-                        <a onClick={handleGlossaries} style={{
-                            boxSizing: 'border-box',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: '8px 12px',
-                            gap: '6px',
-                            height: '36px',
-                            background: '#FFFFFF',
-                            border: '1px solid #DADCE0',
-                            borderRadius: '1000px',
-                            cursor: 'pointer',
-                            textDecoration: 'none'
-                        }}>
-                           <img 
-                              src={GlossaryIcon} 
-                              alt={'Glossary'} 
-                              style={{
-                                width: '16px',
-                                height: '16px'
-                              }}
-                            />
-                            <span style={{
-                                fontFamily: '"Product Sans", "Google Sans", sans-serif',
-                                fontStyle: 'normal',
-                                fontWeight: '400',
-                                fontSize: '14px',
-                                lineHeight: '20px',
-                                color: '#1F1F1F'
-                            }}>
-                                Browse by Glossaries
-                            </span>
-                        </a>
-
-                        {/* Browse Button */}
-                        <a onClick={handleBrowse} style={{
-                            boxSizing: 'border-box',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: '8px 12px',
-                            gap: '6px',
-                            height: '36px',
-                            background: '#FFFFFF',
-                            border: '1px solid #DADCE0',
-                            borderRadius: '1000px',
-                            cursor: 'pointer',
-                            textDecoration: 'none'
-                        }}>
-                            <img 
-                              src={BrowseByIcon} 
-                              alt={'Browse'} 
-                              style={{
-                                width: '16px',
-                                height: '16px'
-                              }}
-                            />
-                            <span style={{
-                                fontFamily: '"Product Sans", "Google Sans", sans-serif',
-                                fontStyle: 'normal',
-                                fontWeight: '400',
-                                fontSize: '14px',
-                                lineHeight: '20px',
-                                color: '#1F1F1F'
-                            }}>
-                                Browse by Aspects
-                            </span>
-                        </a>
-                    </div>
                 </div>
               </Grid>
             </div>

@@ -95,21 +95,27 @@ const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
     if (!entry?.aspects) return [];
     const keys = Object.keys(entry.aspects);
     const number = entry.entryType?.split('/')[1];
-    
+
     const names = keys
       .filter(key => {
         const aspect = entry.aspects[key];
-        return aspect.data !== null 
-          && key !== `${number}.global.schema` 
+        return aspect.data !== null
+          && key !== `${number}.global.schema`
           && key !== `${number}.global.overview`
           && key !== `${number}.global.contacts`
-          && key !== `${number}.global.usage`;
+          && key !== `${number}.global.usage`
+          && !key.endsWith('.global.glossary-term-aspect');
       })
       .map(key => entry.aspects[key].aspectType.split('/').pop())
       .filter((name): name is string => !!name);
-      
+
     return Array.from(new Set(names)).sort();
   }, [entry]);
+
+  // Don't render filter if there are no annotations to display
+  if (annotationNames.length === 0) {
+    return null;
+  }
 
   // Filter annotations based on both dropdown and text input
   const filteredAnnotationNames = useMemo(() => {

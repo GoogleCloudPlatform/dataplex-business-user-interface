@@ -17,6 +17,8 @@ import type { AppDispatch } from '../../app/store';
 import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink, getFormattedDateTimePartsByDateTime } from '../../utils/resourceUtils';
 // import { useFavorite } from '../../hooks/useFavorite';
 import { useAuth } from '../../auth/AuthProvider';
+import { usePreviewEntry } from '../../hooks/usePreviewEntry';
+import { useAccessRequest } from '../../contexts/AccessRequestContext';
 
 /**
  * @file ResourcePreview.tsx
@@ -74,10 +76,14 @@ interface ResourcePreviewProps {
   // Preview props
   previewData: any | null;
   onPreviewDataChange: (data: any | null) => void;
-  
+
   // Access control props
   id_token: string;
   demoMode?: boolean;
+
+  // Preview mode control
+  previewMode?: 'redux' | 'isolated'; // Default: 'redux' for backward compatibility
+
   // Event handlers
   onViewDetails?: (entry: any) => void;
   onRequestAccess?: (entry: any) => void;
@@ -91,11 +97,13 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   onViewDetails,
   onRequestAccess,
   demoMode = false,
-  isGlossary = false
+  isGlossary = false,
+  previewMode = 'redux' // Default to existing behavior for backward compatibility
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { setAccessPanelOpen } = useAccessRequest();
 
   // Local state
   const [tabValue, setTabValue] = useState(0);
@@ -110,12 +118,38 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   // Use shared favorite state
   // const { isFavorite: isFavorited, toggleFavorite } = useFavorite(previewData?.name || '');
 
-  // Redux selectors
+  // Redux selectors (used in 'redux' mode)
   const reduxEntry = useSelector((state: any) => state.entry.items);
   const reduxEntryStatus = useSelector((state: any) => state.entry.status);
-  const entryError = useSelector((state: any) => state.entry.error);
-  const entry = demoMode ? previewData : reduxEntry;
-  const entryStatus = demoMode ? 'succeeded' : reduxEntryStatus;
+  const reduxEntryError = useSelector((state: any) => state.entry.error);
+
+  // Isolated preview hook (used in 'isolated' mode)
+  const {
+    entry: isolatedEntry,
+    status: isolatedStatus,
+    error: isolatedError
+  } = usePreviewEntry({
+    entryName: previewMode === 'isolated' ? previewData?.name : null,
+    id_token,
+    enabled: previewMode === 'isolated' && !demoMode
+  });
+
+  // Determine which data source to use based on mode
+  const entry = demoMode
+    ? previewData
+    : previewMode === 'isolated'
+      ? isolatedEntry
+      : reduxEntry;
+
+  const entryStatus = demoMode
+    ? 'succeeded'
+    : previewMode === 'isolated'
+      ? isolatedStatus
+      : reduxEntryStatus;
+
+  const entryError = previewMode === 'isolated'
+    ? isolatedError
+    : reduxEntryError;
   const number = entry?.entryType?.split('/')[1];
   const contacts = entry?.aspects?.[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || [];
   const schemaData = entry?.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
@@ -221,11 +255,18 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   }
 };
   // Effects
+  // Sync local panel state with global context
   useEffect(() => {
-    if (previewData !== null && !demoMode) {
+    setAccessPanelOpen(isSubmitAccessOpen);
+  }, [isSubmitAccessOpen, setAccessPanelOpen]);
+
+  useEffect(() => {
+    // Only dispatch Redux action in 'redux' mode
+    if (previewData !== null && !demoMode && previewMode === 'redux') {
        dispatch(fetchEntry({ entryName: previewData.name, id_token: id_token }));
     }
-  }, [previewData, dispatch, id_token, demoMode]);
+    // In 'isolated' mode, the hook handles fetching automatically
+  }, [previewData, dispatch, id_token, demoMode, previewMode]);
 
   // Sync filtered entries with fetched entry
   useEffect(() => {
@@ -976,7 +1017,12 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
             height: '100vh',
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             zIndex: 1000,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            animation: 'fadeIn 0.3s ease-in-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            }
           }}
           onClick={handleCloseSubmitAccess}
         />

@@ -1,0 +1,82 @@
+/* Layout Styles */
+
+/* Root layout container for non-home routes */
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #F8FAFD;
+}
+
+/* Home Layout - Navbar at top, then sidebar + content */
+.home-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #F8FAFD;
+}
+
+.home-layout .navbar-section {
+  flex-shrink: 0;
+}
+
+.home-layout .content-with-sidebar {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+}
+
+.home-layout .home-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Main content area takes remaining space */
+.main-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Critical: allows flex item to shrink below content size */
+  overflow-x: hidden;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+/* Page content wrapper */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Responsive: Full width on mobile when sidebar is hidden */
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .main-content-area {
+    width: 100%;
+    height: 100vh;
+  }
+
+  .home-layout .home-content-area {
+    width: 100%;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .main-content-area {
+    width: calc(100% - 64px);
+  }
+}

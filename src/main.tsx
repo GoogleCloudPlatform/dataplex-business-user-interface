@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthWithProvider } from './auth/AuthProvider';
 import { ThemeProvider } from '@mui/material/styles';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { AccessRequestProvider } from './contexts/AccessRequestContext';
 import './utils/apiInterceptor'; // Set up axios interceptors
 import theme from './theme';
 import store from './app/store'
@@ -16,11 +17,13 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <Provider store={store}>
       <BrowserRouter>
         <NotificationProvider>
-          <AuthWithProvider>
-            <ThemeProvider theme={theme}>
-              <App />
-            </ThemeProvider>
-          </AuthWithProvider>
+          <AccessRequestProvider>
+            <AuthWithProvider>
+              <ThemeProvider theme={theme}>
+                <App />
+              </ThemeProvider>
+            </AuthWithProvider>
+          </AccessRequestProvider>
         </NotificationProvider>
       </BrowserRouter>
     </Provider>
