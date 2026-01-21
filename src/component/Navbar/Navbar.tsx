@@ -110,6 +110,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const isBrowsePage = ['/browse-by-annotation'].includes(location.pathname);
   const isSearchOrDetailPage = ['/search', '/view-details'].includes(location.pathname);
   const isGuidePage = ['/guide'].includes(location.pathname);
+  const isDataProductsPage = location.pathname.startsWith('/data-product');
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   //const [anchorElHelp, setAnchorElHelp] = React.useState<null | HTMLElement>(null);
@@ -276,6 +277,9 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                 ...(isGuidePage && {
                   marginLeft: "calc(250px)",
                 }),
+                ...(isDataProductsPage && {
+                  marginLeft: "calc(250px)",
+                })
               }}>
                 <div style={{ width: 'calc(100% - 10.2%)', marginLeft: '0' }}>
                   <SearchBar

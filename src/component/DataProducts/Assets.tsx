@@ -5,11 +5,8 @@ import {
   Paper,
   Skeleton
 } from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import DataProductAssets from './DataProductAssets';
-import ResourcePreview from '../Common/ResourcePreview';
-import { fetchEntry, pushToHistory } from '../../features/entry/entrySlice';
-import type { AppDispatch } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
 import axios from 'axios';
 
@@ -129,25 +126,26 @@ const FieldRenderer = ({ field } : any) => {
   }
 };
 
-// //interface for the filter dropdown Props
+// //interface for the component props
 interface AssetsProps {
   entry: any;
   css?: React.CSSProperties; // Optional CSS properties for the button
+  onAssetPreviewChange?: (data: any) => void;
 }
 
 // Tab component
-const Assets: React.FC<AssetsProps> = ({ entry, css }) => {
+const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) => {
 
 
-    const dispatch = useDispatch<AppDispatch>();
+    //const dispatch = useDispatch<AppDispatch>();
     const {dataProductAssets, dataProductAssetsStatus }= useSelector((state: any) => state.dataProducts);
     const [dataProductsAssetsList, setDataProductsAssetsList] = useState([]);
     const [assetListLoader, setAssetListLoader] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const { user } = useAuth();
     const id_token = user?.token;
-    const [assetPreviewData, setAssetPreviewData] = useState<any | null>(null);
-    const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
+    // const [assetPreviewData, setAssetPreviewData] = useState<any | null>(null);
+    // const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
       
 
     const number = entry?.entryType?.split('/')[1];
@@ -205,33 +203,6 @@ const Assets: React.FC<AssetsProps> = ({ entry, css }) => {
     //     }
     // }, [dataProductAssets]);
 
-    const handleResourceClick = (id: string) => {
-        dispatch(pushToHistory());
-    
-        // Convert resource ID to entry name format for fetchEntry
-        // Resource ID format: projects/{project}/locations/{location}/glossaries/{glossary}/[categories/{category}/]terms/{term}
-        // Entry name format: projects/{project}/locations/{location}/entryGroups/@dataplex/entries/{resource}
-        let entryName = id;
-    
-        // Check if this is already in entry name format or needs conversion
-        if (!id.includes('/entryGroups/')) {
-          // Extract project and location from the resource ID
-          const parts = id.split('/');
-          const projectIndex = parts.indexOf('projects');
-          const locationIndex = parts.indexOf('locations');
-    
-          if (projectIndex !== -1 && locationIndex !== -1) {
-            const project = parts[projectIndex + 1];
-            const location = parts[locationIndex + 1];
-    
-            // Build entry name format
-            entryName = `projects/${project}/locations/${location}/entryGroups/@dataplex/entries/${id}`;
-          }
-        }
-    
-        dispatch(fetchEntry({ entryName: entryName, id_token: id_token }));
-      };
-
     //sorting handlers
     // const handleSortMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     //     setSortAnchorEl(event.currentTarget);
@@ -268,12 +239,11 @@ const Assets: React.FC<AssetsProps> = ({ entry, css }) => {
 
 
   return (
-    <div>
+    <div> 
       <Paper
         elevation={0} 
         sx={{ 
           flex: 1,
-          height: 'calc(100vh - 110px)',
           borderRadius: '24px', 
           backgroundColor: '#fff', 
           border: 'transparent',
@@ -427,7 +397,7 @@ const Assets: React.FC<AssetsProps> = ({ entry, css }) => {
                 display: 'flex',
                 flexDirection: 'column',
                 padding: ' 0px 20px',
-                height: 'calc(100vh - 180px)',
+                height: 'calc(100vh - 200px)',
                 overflowY: 'auto'
             }}>
                 {
@@ -485,58 +455,15 @@ const Assets: React.FC<AssetsProps> = ({ entry, css }) => {
                         onSearchTermChange={setSearchTerm}
                         idToken={id_token || ''}
                         onAssetPreviewChange={(data) => {
-                            setAssetPreviewData(data);
-                            setIsAssetPreviewOpen(!!data);
+                            onAssetPreviewChange && onAssetPreviewChange(data);
                         }}
                         />
                     </Box>
                 )}  
-                {/* Asset Preview Panel - Sticky Sidebar */}
-                <Box
-                    sx={{
-                    width: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
-                    minWidth: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
-                    height: "calc(100vh - 2rem)",
-                    marginBottom: "2rem",
-                    borderRadius: "20px",
-                    backgroundColor: "#fff",
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    boxShadow: isAssetPreviewOpen ? "0px 4px 12px rgba(0,0,0,0.1)" : "none",
-                    transition: "width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out",
-                    opacity: isAssetPreviewOpen ? 1 : 0,
-                    }}
-                >
-                    <ResourcePreview
-                    previewData={assetPreviewData}
-                    onPreviewDataChange={(data) => {
-                        if (data) {
-                        setAssetPreviewData(data);
-                        setIsAssetPreviewOpen(true);
-                        } else {
-                        setIsAssetPreviewOpen(false);
-                        }
-                    }}
-                    onViewDetails={(previewEntry) => {
-                        // Close the preview panel
-                        setIsAssetPreviewOpen(false);
-                        setAssetPreviewData(null);
-                        // Navigate to the asset using handleResourceClick
-                        if (previewEntry?.name) {
-                        handleResourceClick(previewEntry.name);
-                        }
-                    }}
-                    id_token={id_token || ''}
-                    isGlossary={true}
-                    previewMode="isolated"
-                    />
-                </Box>
                 </Box>
         </Box>
         </Paper>
-
-    </div>
+        </div>
     
   );
 }

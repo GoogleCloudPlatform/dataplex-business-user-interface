@@ -158,3 +158,14 @@ export const typeAliases = [
   "Listing","Look","Model","Repository","Resource","Routine","Service",
   "Table","View","Other"
 ];
+
+const signatures:any = {
+      R0lGODdh: 'image/gif',
+      R0lGODlh: 'image/gif',
+      iVBORw0KGgo: 'image/png',
+      '/9j/': 'image/jpg',
+  };
+
+export const getMimeType = (base64:string)=>{
+    for(const sign in signatures)if(base64.startsWith(sign))  return signatures[sign];
+};

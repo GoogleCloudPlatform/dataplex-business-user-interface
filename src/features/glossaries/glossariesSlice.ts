@@ -1048,6 +1048,7 @@ export const glossariesSlice = createSlice({
                 aspects: existingItem.aspects,
                 linkedAssets: existingItem.linkedAssets,
                 relations: existingItem.relations,
+                longDescription: existingItem.longDescription,
               };
             }
 

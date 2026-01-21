@@ -19,6 +19,7 @@ import { GridFilterListIcon } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
 import Tag from '../Tags/Tag';
 import axios from 'axios';
+import { getMimeType } from '../../utils/resourceUtils';
 
 const DataProducts = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -32,13 +33,16 @@ const DataProducts = () => {
   const [sortBy, setSortBy] = useState<'name' | 'lastModified'>('name');
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
   const [dataProductsList, setDataProductsList] = useState<any>([]);
-  const [searchLoader, setSearchLoader] = useState(false);  
+  const [searchLoader, setSearchLoader] = useState(false);
+
+
 
   useEffect(() => {
     if (dataProductsItems.length === 0 && status === 'idle' && user?.token) {
        dispatch(fetchDataProductsList({ id_token: user?.token }));
     }
     if(status=== 'succeeded'){
+        localStorage.removeItem('selectedDataProduct');
         setDataProductsList(dataProductsItems);
     }
   }, [dispatch, dataProductsItems.length, status, user?.token]);
@@ -111,7 +115,10 @@ const DataProducts = () => {
         });
     }
     if (searchTerm.length === 0) {
-        setDataProductsList(sortItems(dataProductsItems));
+        setTimeout(() => {
+            setSearchLoader(false);
+            setDataProductsList(dataProductsItems);
+        }, 1000);
     }
   }, [searchTerm]);
 
@@ -143,7 +150,8 @@ const DataProducts = () => {
           border: 'transparent',
           display: 'flex', 
           flexDirection: 'column', 
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          overflowY: 'auto',
           position: 'relative'
         }}
       >
@@ -265,7 +273,7 @@ const DataProducts = () => {
                 {/* Grid container with spacing between items */}
                 <Grid container spacing={4}>
                     {
-                        status === 'loading' || searchLoader &&
+                        (status === 'loading' || searchLoader) &&
                             Array.from(new Array(6)).map((_, index) => (
                                 <Grid size={4} key={index}>
                                     <Box sx={{ 
@@ -291,147 +299,149 @@ const DataProducts = () => {
                     }
                     { status === 'succeeded' && searchLoader === false &&
                         dataProductsList.map((dataProducts:any) => (
-                    // Grid item for each card, defining its responsive width
-                    <Grid
-                        size={4} // One-third width (3 columns) on medium screens (4 out of 12 columns)
-                        key={dataProducts.name}
-                    >
-                        <Box sx={{ 
-                                border: '1px solid #E0E0E0', 
-                                borderRadius: '16px',
-                                padding: '16px',
-                                height: '100%',
-                                boxSizing: 'border-box',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'space-between'
-                            }}
-                            onClick={() => {
-                                // Handle card click, e.g., navigate to details page
-                                dispatch(getDataProductDetails({dataProductId:dataProducts.name, id_token:user?.token}));
-                                navigate(`/data-products-details?dataProductId=${encodeURIComponent(dataProducts.name)}`);
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <img 
-                                    src={dataProducts.iconUrl || '/assets/images/data-product-card.png'} 
-                                    alt={dataProducts.displayName} 
-                                    style={{ width: '40px', height: '40px', marginBottom: '12px' }} 
-                                />
-                                <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: '17px', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', marginLeft: '12px', maxWidth: 'calc(100% - 150px)', lineHeight:1.3, marginTop: '-10px' }}>
-                                    {dataProducts.displayName}
-                                </Typography>
-                                <Box sx={{ alignSelf: "flex-end", marginLeft: 'auto', position: 'relative', top: '-25px' }}>
-                                    <Tag text={`${dataProducts.assetCount || 0} assets`} css={{
-                                        fontFamily: '"Google Sans Text", sans-serif',
-                                        color: '#004A77',
-                                        margin: 0,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        padding: "0.25rem 0.5rem",
-                                        fontWeight: 500,
-                                        borderRadius: '12px',
-                                        textTransform:'capitalize',
-                                        flexShrink: 0 // Prevent tag from shrinking
-                                    }}/>
-                                </Box>
-                            </Box>
-                            <Box>
-                                
-                                <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', lineHeight: 1.4, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {dataProducts.description || 'No description available.'}
-                                </Typography>
-                            </Box>
-                            <Box sx={{display: 'flex', alignItems: 'center', marginTop: '16px', gap: 1 }}>
-                                <Tooltip title={`Owner: ${dataProducts.ownerEmails.join(', ') || 'Unknown'}`} arrow>
-                                    <>
-                                        <span style={{ 
-                                            color: "#575757", 
-                                            fontSize: "1rem", 
-                                            fontWeight: 500, 
-                                            display: "flex", 
-                                            alignItems: "center",
-                                            flex: '0 1 auto', // Allow shrinking for owner email
-                                            gap: '0.25rem',
-                                            minWidth: 0
-                                        }}>
-                                            <div style={{
-                                                width: '1.25rem',
-                                                height: '1.25rem',
-                                                borderRadius: '50%',
-                                                backgroundColor: '#FFDCD2', // Fallback color
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: '#9C3A1F', // Fallback color
-                                                fontSize: '0.75rem',
-                                                fontWeight: 500,
-                                                flexShrink: 0
-                                            }}>
-                                                {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0].charAt(0).toUpperCase()}
-                                            </div>
-                                        </span>
-                                        <span style={{ 
-                                            color: "#575757", 
-                                            fontSize: "12px", 
-                                            fontWeight: 500, 
-                                            display: "flex", 
-                                            alignItems: "center",
-                                            flex: '0 0 auto', // Fixed size, don't grow or shrink
-                                            gap: '0.25rem'
-                                        }}>
-                                        {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0]}
-                                        { dataProducts.ownerEmails.length > 1 ? (`+${dataProducts.ownerEmails.length - 1}`) : '' }
-                                        </span>
-                                    </>
-                                </Tooltip>
+                            // Grid item for each card, defining its responsive width
+                            <Grid
+                                size={4} // One-third width (3 columns) on medium screens (4 out of 12 columns)
+                                key={dataProducts.name}
+                            >
                                 <Box sx={{ 
-                                    marginLeft: 'auto',
-                                    alignSelf: 'flex-end',
-                                    display: 'flex',
-                                    gap: 2
-                                }}>
-                                    <Tooltip title={`Last Modified at ${dataProducts.updateTime.split('T')[0]}`} arrow placement='top'>
-                                        <span style={{ 
-                                            color: "#575757", 
-                                            fontSize: "12px", 
-                                            fontWeight: 500, 
-                                            display: "flex", 
-                                            alignItems: "center",
-                                            flex: '0 0 auto', // Fixed size, don't grow or shrink
-                                            gap: '0.25rem'
+                                        border: '1px solid #E0E0E0', 
+                                        borderRadius: '16px',
+                                        padding: '16px',
+                                        height: '100%',
+                                        boxSizing: 'border-box',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between'
+                                    }}
+                                    onClick={() => {
+                                        // Handle card click, e.g., navigate to details page
+                                        dispatch(getDataProductDetails({dataProductId:dataProducts.name, id_token:user?.token}));
+                                        localStorage.setItem('selectedDataProduct', JSON.stringify(dataProducts));
+                                        navigate(`/data-products-details?dataProductId=${encodeURIComponent(dataProducts.name)}`);
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <img 
+                                            src={dataProducts.icon ? `data:image/${getMimeType(dataProducts.icon)};base64,${dataProducts.icon}` : '/assets/images/data-product-card.png'} 
+                                            alt={dataProducts.displayName} 
+                                            style={{ width: '40px', height: '40px', marginBottom: '12px' }} 
+                                        />
+                                        <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: '17px', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', marginLeft: '12px', maxWidth: 'calc(100% - 150px)', lineHeight:1.3, marginTop: '-10px' }}>
+                                            {dataProducts.displayName}
+                                        </Typography>
+                                        <Box sx={{ alignSelf: "flex-end", marginLeft: 'auto', position: 'relative', top: '-25px' }}>
+                                            <Tag text={`${dataProducts.assetCount || 0} assets`} css={{
+                                                fontFamily: '"Google Sans Text", sans-serif',
+                                                color: '#004A77',
+                                                margin: 0,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                padding: "0.25rem 0.5rem",
+                                                fontWeight: 500,
+                                                borderRadius: '12px',
+                                                textTransform:'capitalize',
+                                                flexShrink: 0 // Prevent tag from shrinking
+                                            }}/>
+                                        </Box>
+                                    </Box>
+                                    <Box>
+                                        
+                                        <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', lineHeight: 1.4, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {dataProducts.description || 'No description available.'}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{display: 'flex', alignItems: 'center', marginTop: '16px', gap: 1 }}>
+                                        <Tooltip title={`Owner: ${dataProducts.ownerEmails.join(', ') || 'Unknown'}`} arrow>
+                                            <>
+                                                <span style={{ 
+                                                    color: "#575757", 
+                                                    fontSize: "1rem", 
+                                                    fontWeight: 500, 
+                                                    display: "flex", 
+                                                    alignItems: "center",
+                                                    flex: '0 1 auto', // Allow shrinking for owner email
+                                                    gap: '0.25rem',
+                                                    minWidth: 0
+                                                }}>
+                                                    <div style={{
+                                                        width: '1.25rem',
+                                                        height: '1.25rem',
+                                                        borderRadius: '50%',
+                                                        backgroundColor: '#FFDCD2', // Fallback color
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#9C3A1F', // Fallback color
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 500,
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0].charAt(0).toUpperCase()}
+                                                    </div>
+                                                </span>
+                                                <span style={{ 
+                                                    color: "#575757", 
+                                                    fontSize: "12px", 
+                                                    fontWeight: 500, 
+                                                    display: "flex", 
+                                                    alignItems: "center",
+                                                    flex: '0 0 auto', // Fixed size, don't grow or shrink
+                                                    gap: '0.25rem'
+                                                }}>
+                                                {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0]}
+                                                { dataProducts.ownerEmails.length > 1 ? (`+${dataProducts.ownerEmails.length - 1}`) : '' }
+                                                </span>
+                                            </>
+                                        </Tooltip>
+                                        <Box sx={{ 
+                                            marginLeft: 'auto',
+                                            alignSelf: 'flex-end',
+                                            display: 'flex',
+                                            gap: 2
                                         }}>
-                                            <AccessTime style={{fontSize: 12}}/>
-                                            <span>{dataProducts.updateTime.split('T')[0]}</span>
-                                        </span>
-                                    </Tooltip>
-                                    <Tooltip title={`Location - ${dataProducts.name.split('/')[3]}`} arrow placement='top'>
-                                    <span style={{ 
-                                        color: "#575757", 
-                                        fontSize: "12px", 
-                                        fontWeight: 500, 
-                                        display: "flex", 
-                                        alignItems: "center",
-                                        flex: '0 1 auto', // Allow shrinking for location text
-                                        gap: '0.125rem',
-                                        minWidth: 0
-                                    }}>
-                                        <LocationOnOutlined style={{fontSize: 12, flexShrink: 0}}/>
-                                        <span style={{
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                        }}>
-                                        {dataProducts.name.split('/')[3]}
-                                        </span>
-                                    </span>
-                                    </Tooltip>
+                                            <Tooltip title={`Last Modified at ${dataProducts.updateTime.split('T')[0]}`} arrow placement='top'>
+                                                <span style={{ 
+                                                    color: "#575757", 
+                                                    fontSize: "12px", 
+                                                    fontWeight: 500, 
+                                                    display: "flex", 
+                                                    alignItems: "center",
+                                                    flex: '0 0 auto', // Fixed size, don't grow or shrink
+                                                    gap: '0.25rem'
+                                                }}>
+                                                    <AccessTime style={{fontSize: 12}}/>
+                                                    <span>{dataProducts.updateTime.split('T')[0]}</span>
+                                                </span>
+                                            </Tooltip>
+                                            <Tooltip title={`Location - ${dataProducts.name.split('/')[3]}`} arrow placement='top'>
+                                            <span style={{ 
+                                                color: "#575757", 
+                                                fontSize: "12px", 
+                                                fontWeight: 500, 
+                                                display: "flex", 
+                                                alignItems: "center",
+                                                flex: '0 1 auto', // Allow shrinking for location text
+                                                gap: '0.125rem',
+                                                minWidth: 0
+                                            }}>
+                                                <LocationOnOutlined style={{fontSize: 12, flexShrink: 0}}/>
+                                                <span style={{
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                                }}>
+                                                {dataProducts.name.split('/')[3]}
+                                                </span>
+                                            </span>
+                                            </Tooltip>
+                                        </Box>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </Box>
-                    </Grid>
-                    ))}
+                            </Grid>
+                        ))
+                    }
                 </Grid>
             </Box>
         </Box>
