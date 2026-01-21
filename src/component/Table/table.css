@@ -2,3 +2,11 @@
     background: #F0F4F8 !important;
     color: #444746 !important;
 }
+
+.table-multiline{
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    height: auto !important;
+    align-items: flex-start !important;
+    padding-top: 8px !important;
+}

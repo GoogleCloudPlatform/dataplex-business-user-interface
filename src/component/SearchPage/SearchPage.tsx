@@ -258,8 +258,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
             {/* Filters Component - Absolute Overlay */}
             <div style={{
                 position: 'absolute',
-                left: isFiltersOpen ? '1rem' : '-210px',
-                top: '5px',
+                left: isFiltersOpen ? '0' : '-210px',
+                top: '0',
                 width: '210px',
                 height: 'calc(100vh - 3.9rem)',
                 transition: 'left 0.3s ease-in-out',
@@ -273,7 +273,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
             </div>
 
             {/* Main Content - Always Stable Layout */}
-            <Grid container spacing={0} style={{padding:"5px 10px", height: 'calc(100vh - 3.9rem)'}}>
+            <Grid container spacing={0} style={{padding:"0 10px", height: 'calc(100vh - 3.9rem)'}}>
                 <Grid size={previewData ? 8.5 : 12}>
                     <div style={{
                         transition: 'margin-left 0.3s ease-in-out',

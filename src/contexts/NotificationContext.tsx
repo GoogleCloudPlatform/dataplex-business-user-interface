@@ -127,8 +127,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
             vertical: 'bottom', 
             horizontal: 'center' 
           }}
-          sx={{ 
+          sx={{
             zIndex: 1500 + index,
+            bottom: `${24 + (index * 70)}px !important`,
+            transition: 'bottom 0.3s ease-out',
             '& .MuiSnackbarContent-root': {
               minWidth: '300px'
             }

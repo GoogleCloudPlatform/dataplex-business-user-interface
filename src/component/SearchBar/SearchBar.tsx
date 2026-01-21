@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
 import { useLocation } from 'react-router-dom';
+import { useAccessRequest } from '../../contexts/AccessRequestContext';
 
 /**
  * @file SearchBar.tsx
@@ -57,6 +58,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const { user } = useAuth();
   const location = useLocation();
+  const { isAccessPanelOpen } = useAccessRequest();
   const [searchData, setSearchData] = useState([
     { name: 'BigQuery' }, { name: 'Data Warehouse' }, { name: 'Data Lake' }, { name: 'Data Pipeline' }
   ]);
@@ -287,28 +289,28 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   const isAnyDropdownOpen = isDropdownOpen;
 
   return (
-        <div 
-            id="search-bar" 
+        <div
+            id="search-bar"
             className={`${variant === 'navbar' ? 'navbar-variant' : ''} ${isAnimating ? 'google-glow-animation' : ''}`}
             data-route={location.pathname === '/browse-by-annotation' ? 'browse-by-annotation' : ''}
-            style={{ 
+            style={{
                 height:  '3.09rem',
-                display: 'flex', 
-                alignItems: 'center', 
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
-                borderRadius: isAnyDropdownOpen ? '24px 24px 0 0' : '24px', 
-                background: isAnyDropdownOpen ? '#ffffff' : '#E9EEF6', 
+                borderRadius: isAnyDropdownOpen ? '24px 24px 0 0' : '24px',
+                background: isAnyDropdownOpen ? '#ffffff' : '#E9EEF6',
                 padding: '0rem 0.5rem 0rem 1.125rem',
                 width: variant === 'navbar' ? 'calc(100%)' : 'calc(100% - 0.9375rem)',
                 maxWidth: '820px',
                 marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
-                zIndex: 1000,
-                transition: 'all 0.2s ease',
+                zIndex: isAccessPanelOpen ? 999 : 1100,
+                transition: 'border-radius 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
                 boxShadow: isAnyDropdownOpen ? '0 1px 6px rgba(32,33,36,.28)' : 'none',
                  border: '1px solid transparent',
-                 boxSizing: 'border-box'
+                 boxSizing: 'border-box',
             }}>
             <SearchIcon style={{
                 color: '#5F6368', 

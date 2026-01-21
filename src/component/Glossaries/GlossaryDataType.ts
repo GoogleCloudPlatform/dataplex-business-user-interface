@@ -28,6 +28,9 @@ export interface GlossaryItem {
   // Structure
   children?: GlossaryItem[];
   relations?: GlossaryRelation[];
+  // Filter-related fields
+  isInaccessible?: boolean; // true if user doesn't have access to this item
+  isFilterMatch?: boolean; // true if this item matched the filter query
 }
 
 // const SAMPLE_LINKED_ASSETS = [
@@ -742,3 +745,57 @@ export interface GlossaryItem {
 //     }
 //   }
 // ];
+
+// =========================================================
+// FILTER GLOSSARIES TYPES
+// =========================================================
+
+export type FilterFieldType =
+  | "name"
+  | "parent"
+  | "synonym"
+  | "contact"
+  | "labels"
+  | "aspect";
+
+export type FilterConnector = "AND" | "OR";
+
+export interface FilterChip {
+  id: string;
+  field: FilterFieldType;
+  value: string;
+  displayLabel: string;
+  connector?: FilterConnector;
+  showFieldLabel?: boolean; // false when defaulting to name without explicit selection
+}
+
+export interface FilterGlossariesRequest {
+  filters: FilterChip[];
+  pageSize?: number;
+  pageToken?: string;
+}
+
+export interface FilterGlossariesResponse {
+  items: GlossaryItem[];
+  totalSize: number;
+  nextPageToken: string;
+  query: string;
+}
+
+export const FILTER_FIELD_LABELS: Record<FilterFieldType, string> = {
+  name: "Name",
+  parent: "Parent",
+  synonym: "Synonym",
+  contact: "Contact",
+  labels: "Labels",
+  aspect: "Aspect",
+};
+
+export const VALID_FILTER_FIELDS: FilterFieldType[] = [
+  "name",
+  "parent",
+  "synonym",
+  "contact",
+  "labels",
+  "aspect",
+];

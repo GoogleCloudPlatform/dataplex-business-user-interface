@@ -33,16 +33,17 @@ interface TabPanelProps {
 function CustomTabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
-  return ( 
+  return (
     <>
       <div
         role="tabpanel"
         hidden={value !== index}
         id={`tabpanel-${index}`}
         aria-labelledby={`tab-${index}`}
+        style={{ height: '100%' }}
         {...other}
       >
-        {value === index && <Box sx={{ padding:"5px 0px"  }}>{children}</Box>}
+        {value === index && <Box sx={{ padding:"5px 0px", height: '100%' }}>{children}</Box>}
       </div>
     </>
   );

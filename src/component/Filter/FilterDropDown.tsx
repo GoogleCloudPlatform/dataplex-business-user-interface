@@ -914,8 +914,8 @@ const handleCheckboxChange = (filter: any) => {
                   gap: "0.5rem",
                   flex: "0 1 auto",
                 }}>
-                  <Typography component="span" 
-                    sx={{fontWeight:"500", fontSize:"14px", lineHeight:"20px", color:"#1F1F1F", fontStyle:"Regular"}}>
+                  <Typography component="span"
+                    sx={{fontWeight: expandedSections[filter.title] || filter.defaultExpanded ? 500 : 400, fontSize:"12px", lineHeight:"20px", color:"#1F1F1F", fontFamily:"Product Sans", letterSpacing:"0.1px"}}>
                       {filter.title}
                   </Typography>
                 </div>

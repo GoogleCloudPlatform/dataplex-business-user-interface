@@ -100,24 +100,25 @@ const UserGuide: React.FC = () => {
   sectionId: string
 ) => {
   event.preventDefault();
+  setExpanded(sectionId);
 
-  setExpanded((prevExpanded) => (prevExpanded === sectionId ? false : sectionId));
-
+  // Wait for accordion expansion animation to complete before scrolling
   setTimeout(() => {
     const element = document.getElementById(sectionId);
     if (element) {
-      const navbarHeight = 80; 
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - navbarHeight;
+      const container = element.closest('[style*="overflow"]') as HTMLElement;
+      if (container) {
+        const elementRect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const scrollOffset = elementRect.top - containerRect.top + container.scrollTop - 20;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth',
-      });
+        container.scrollTo({
+          top: scrollOffset,
+          behavior: 'smooth'
+        });
+      }
     }
-  }, 100);
+  }, 300);
 };
 
   const codeBlockBaseStyles = {
@@ -859,8 +860,9 @@ const UserGuide: React.FC = () => {
               mb: 1,
               backgroundColor: '#f8fafd',
               borderRadius: '8px',
-              overflow: 'hidden', 
+              overflow: 'hidden',
               border: '1px solid #e0e0e0',
+              scrollMarginTop: '20px',
               '&:first-of-type': {
                 borderTopLeftRadius: '8px',
                 borderTopRightRadius: '8px',
@@ -948,6 +950,11 @@ const UserGuide: React.FC = () => {
               </ListItemIcon>
               <ListItemText
                 primary={section.title}
+                slotProps={{
+                  primary: {
+                    fontWeight: expanded === section.id ? 'bold' : 'normal',
+                  },
+                }}
               />
             </ListItem>
           ))}

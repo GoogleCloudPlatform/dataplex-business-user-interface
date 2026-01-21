@@ -55,9 +55,10 @@ interface SubmitAccessProps {
   entry?: any; // Add entry data to extract contacts
   onSubmitSuccess: (assetName: string) => void;
   previewData?: any; 
+  isLookup?: boolean;
 }
 
-const SubmitAccess: React.FC<SubmitAccessProps> = ({ isOpen, onClose, assetName, entry, onSubmitSuccess, previewData }) => {
+const SubmitAccess: React.FC<SubmitAccessProps> = ({ isOpen, onClose, assetName, entry, onSubmitSuccess, previewData, isLookup }) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,14 +75,14 @@ const SubmitAccess: React.FC<SubmitAccessProps> = ({ isOpen, onClose, assetName,
     const number = entryData.entryType?.split('/')[1];
     if (!number) return [];
 
-    return entryData.aspects[`${number}.global.contacts`]?.data.fields.identities.listValue.values || [];
+    return isLookup ? entryData.aspects[`${number}.global.contacts`]?.data.identities : (entryData.aspects[`${number}.global.contacts`]?.data.fields.identities.listValue.values || []);
   };
 
   const extractContactEmails = (entryData: any): string[] => {
     const contacts = extractContacts(entryData);
     
     return (contacts.length > 0) ? contacts.map((contact: any) => {
-      const nameValue = contact.structValue.fields.name.stringValue;
+      const nameValue = isLookup? contact.name : contact.structValue.fields.name.stringValue;
       // Extract email from format like "Name <email@example.com>"
       const emailMatch = nameValue.match(/<(.+?)>/);
       return emailMatch ? emailMatch[1] : null;
@@ -202,8 +203,8 @@ const SubmitAccess: React.FC<SubmitAccessProps> = ({ isOpen, onClose, assetName,
     return { date, time }; 
   };
 
-const { date: creationDate, time: creationTime } = getFormattedDateTimeParts(previewData?.createTime?.seconds);
-const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(previewData?.updateTime?.seconds);
+const { date: createDate, time: createTime } = isLookup ? {date : previewData?.createTime.split('T')[0], time:previewData?.createTime.split('T')[1]?.slice(0, 8)} : getFormattedDateTimeParts(previewData?.createTime?.seconds);
+const { date: updateDate, time: updateTime } = isLookup ? {date : previewData?.updateTime.split('T')[0], time:previewData?.updateTime.split('T')[1]?.slice(0, 8)} : getFormattedDateTimeParts(previewData?.updateTime?.seconds);
 
 return ((previewData != null || previewData != undefined) && entry) ?(
     <Box
@@ -315,9 +316,9 @@ return ((previewData != null || previewData != undefined) && entry) ?(
                   color: '#1F1F1F'
                 }}
               >
-                {creationDate}
+                {createDate}
                 <br />
-                {creationTime}
+                {createTime}
               </Typography>
             </Box>
 
@@ -383,7 +384,7 @@ return ((previewData != null || previewData != undefined) && entry) ?(
                           marginBottom: '4px'
                         }}
                       >
-                        {contact.structValue.fields.role.stringValue}
+                        {isLookup ? contact.role : contact.structValue.fields.role.stringValue}
                       </Typography>
                       <Typography
                         sx={{
@@ -393,12 +394,19 @@ return ((previewData != null || previewData != undefined) && entry) ?(
                           color: '#1F1F1F'
                         }}
                       >
-                        {
-                          contact.structValue.fields.name.stringValue.split('<').length > 1 
+                        {isLookup ?
+                          (contact.name.split('<').length > 1 
+                          ? contact.name.split('<')[1].slice(0, -1) 
+                          : contact.name.length > 0 
+                            ? contact.name 
+                            : "--")
+                          :
+
+                          (contact.structValue.fields.name.stringValue.split('<').length > 1 
                           ? contact.structValue.fields.name.stringValue.split('<')[1].slice(0, -1) 
                           : contact.structValue.fields.name.stringValue.length > 0 
                             ? contact.structValue.fields.name.stringValue 
-                            : "--"
+                            : "--")
                         }
                       </Typography>
           </Box>

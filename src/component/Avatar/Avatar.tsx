@@ -53,18 +53,21 @@ const Avatar: React.FC<AvatarProps> = ({ text }) => {
 
   const { bg, text: textColor } = generateAvatarColor(text);
 
-  const style = {
+  const style: React.CSSProperties = {
     backgroundColor: bg,
     color: textColor,
     width: 40,
     height: 40,
+    minWidth: 40,
+    minHeight: 40,
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 'bold',
     fontSize: 18,
-    marginRight: 12
+    marginRight: 12,
+    flexShrink: 0
   };
 
   return <div style={style}>{firstChar}</div>;

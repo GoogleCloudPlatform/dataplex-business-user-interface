@@ -74,13 +74,37 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
   isGlossary = false 
 }) => {
   
-  const aspects = entry?.aspects;
+
   const number = entry?.entryType?.split('/').length > 0 ? entry?.entryType.split('/')[1] : '0';
-  const keys = Object.keys(aspects ?? {});
+
+  const globalAspectsToExclude = [
+    `${number}.global.refresh-cadence`
+  ];
   
+
+  const aspects = { ...entry?.aspects };
+
+  // Remove global aspects that should be excluded as it has some other display components
+  globalAspectsToExclude.forEach(key => {
+    delete aspects?.[key];
+  });
+  
+  //const number = entry?.entryType?.split('/').length > 0 ? entry?.entryType.split('/')[1] : '0';
+  const keys = Object.keys(aspects ?? {});
+
+  // Filter out global aspects to check if there are any displayable aspects
+  const displayableKeys = keys.filter((key) => {
+    const isSchema = key === `${number}.global.schema`;
+    const isOverview = key.endsWith('.global.overview');
+    const isContacts = key === `${number}.global.contacts`;
+    const isUsage = key === `${number}.global.usage`;
+    const isGlossaryTermAspect = key.endsWith('.global.glossary-term-aspect');
+    return !(isSchema || isOverview || isContacts || isUsage || isGlossaryTermAspect);
+  });
+
   // State to track which accordions are expanded
   // const [expandedAccordions, setExpandedAccordions] = useState<Set<string>>(new Set());
-  
+
   const [sortConfigs, setSortConfigs] = useState<Record<string, { key: 'name' | 'value'; direction: 'asc' | 'desc' } | null>>({});
   const [hoveredInfo, setHoveredInfo] = useState<{ aspectKey: string; column: 'name' | 'value' } | null>(null);
 
@@ -336,7 +360,27 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
         })}
       </div>
     );
-};
+  };
+
+  // Show empty state if no displayable aspects
+  if (displayableKeys.length === 0) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        minHeight: '200px',
+        color: 'rgba(0, 0, 0, 0.6)',
+        fontSize: '1rem',
+        fontFamily: 'Google Sans, sans-serif',
+        ...css
+      }}>
+        No aspects available for this resource
+      </div>
+    );
+  }
 
   return (
     <>

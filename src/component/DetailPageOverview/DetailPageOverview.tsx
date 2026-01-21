@@ -9,6 +9,7 @@ import {
   Box
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Schema from '../Schema/Schema';
 import SchemaFilter from '../Schema/SchemaFilter';
 import TableFilter from '../Filter/TableFilter';
@@ -140,11 +141,12 @@ interface DetailPageOverviewProps {
   entry: any;
   sampleTableData?: any; // Optional prop for sample data
   css: React.CSSProperties; // Optional CSS properties for the button
+  accessDenied?: boolean; // True when user doesn't have permission to view this resource
 }
 
 // FilterDropdown component
-const DetailPageOverview: React.FC<DetailPageOverviewProps> = ({ entry, sampleTableData, css }) => {
-  
+const DetailPageOverview: React.FC<DetailPageOverviewProps> = ({ entry, sampleTableData, css, accessDenied }) => {
+
 //   const aspects = entry.aspects;
 //   const number = entry.entryType.split('/')[1];
 //   const keys = Object.keys(aspects);
@@ -195,13 +197,13 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
     return (`${eType[0].toUpperCase()}${eType.slice(1)}`);
   };
 
-  const number = entry.entryType.split('/')[1];
+  const number = entry?.entryType?.split('/')[1] || '';
 
   let schema = <Schema entry={filteredSchemaEntry || entry} sx={{width:"100%", borderTopRightRadius:"0px", borderTopLeftRadius:"0px"}} />;
-  const schemaData = entry.aspects[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
-  let contacts = entry.aspects[`${number}.global.contacts`]?.data.fields.identities.listValue.values || [];
-  let usage = entry.aspects[`${number}.global.usage`]?.data.fields || {};
-  let documentation = entry.aspects[`${number}.global.overview`]?.data.fields.content?.stringValue || 'No Documentation Available';
+  const schemaData = entry?.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
+  let contacts = entry?.aspects?.[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || [];
+  let usage = entry?.aspects?.[`${number}.global.usage`]?.data?.fields || {};
+  let documentation = entry?.aspects?.[`${number}.global.overview`]?.data?.fields?.content?.stringValue || 'No Documentation Available';
 
   // Always compute memoized helpers at top-level (avoid conditional hooks)
   const firstRow = React.useMemo(() => {
@@ -224,6 +226,49 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
   ), [columnKeys]);
 
   const columnNames = columnKeys;
+
+  // If access denied, show permission denied UI (after all hooks are called)
+  if (accessDenied) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "60px 40px",
+          gap: "16px",
+          minHeight: "300px",
+          backgroundColor: "#FAFAFA",
+          borderRadius: "8px",
+          margin: "16px",
+        }}
+      >
+        <LockOutlinedIcon sx={{ fontSize: 56, color: "#5F6368" }} />
+        <Typography
+          variant="h6"
+          sx={{
+            color: "#3C4043",
+            fontFamily: "'Google Sans', sans-serif",
+            fontWeight: 500,
+          }}
+        >
+          Access Denied
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "#5F6368",
+            fontFamily: "'Google Sans', sans-serif",
+            textAlign: "center",
+            maxWidth: "400px",
+          }}
+        >
+          You don&apos;t have permission to view this resource. Contact your administrator if you need access.
+        </Typography>
+      </Box>
+    );
+  }
 
   let sampleDataView = <div style={{padding:"10px"}}>Sample Data is not available.</div>;
   

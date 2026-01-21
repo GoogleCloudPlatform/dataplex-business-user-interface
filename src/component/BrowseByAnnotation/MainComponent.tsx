@@ -279,7 +279,7 @@ const MainComponent: React.FC<SideNavProps> = ({ selectedCard, onItemClick, sele
               <Card
                 onClick={() => handleCardClick(item)}
                 sx={{
-                  width: '289px', // Changed from responsive to fixed width
+                  width: '270px',
                   height: '72px', // Changed from 65px
                   cursor: 'pointer',
                   borderRadius: '16px',
@@ -482,7 +482,7 @@ const MainComponent: React.FC<SideNavProps> = ({ selectedCard, onItemClick, sele
             <Card
               onClick={() => handleSubItemClick(subItem)}
               sx={{
-                width: '289px', // Changed from responsive to fixed width
+                width: '289px',
                 height: '72px', // Changed from 65px
                 cursor: 'pointer',
                 borderRadius: '16px',
