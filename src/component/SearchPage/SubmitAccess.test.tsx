@@ -26,6 +26,8 @@ describe('SubmitAccess', () => {
     email: 'testuser@example.com',
     picture: 'https://example.com/avatar.jpg',
     token: 'random-token',
+    tokenExpiry: Math.floor(Date.now() / 1000) + 3600,
+    tokenIssuedAt: Math.floor(Date.now() / 1000),
     hasRole: true,
     roles: [],
     permissions: [],
@@ -44,6 +46,7 @@ describe('SubmitAccess', () => {
     login: vi.fn(),
     logout: vi.fn(),
     updateUser: vi.fn(),
+    silentLogin: vi.fn().mockResolvedValue(true),
   };
 
   const mockEntry = {

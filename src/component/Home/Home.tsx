@@ -66,6 +66,8 @@ const Home = () => {
             email: user?.email,
             picture: user?.picture,
             token: user?.token,
+            tokenExpiry: user?.tokenExpiry,
+            tokenIssuedAt: user?.tokenIssuedAt,
             hasRole: true,
             roles: [],
             permissions: [],

@@ -245,6 +245,8 @@ const AdminPanel = () => {
         email: user?.email,
         picture: user?.picture,
         token: user?.token,
+        tokenExpiry: user?.tokenExpiry,
+        tokenIssuedAt: user?.tokenIssuedAt,
         hasRole: user?.hasRole,
         roles: user?.roles,
         permissions: user?.permissions,

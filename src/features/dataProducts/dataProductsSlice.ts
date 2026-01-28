@@ -162,6 +162,7 @@ export const dataproductsSlice = createSlice({
       })
       .addCase(fetchDataProductsAssetsList.pending, (state) => {
         state.dataProductAssetsStatus = 'loading';
+        state.dataProductAssets = [];  // Clear old assets when fetching new ones
       })
       .addCase(fetchDataProductsAssetsList.fulfilled, (state, action) => {
         state.dataProductAssetsStatus = 'succeeded';

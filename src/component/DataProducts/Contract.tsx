@@ -161,6 +161,27 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                         <Box sx={{
                             display: "flex",
                             alignItems: "center",
+                            gap: "8px",
+                            marginBottom: "12px"
+
+                        }}>
+                              <Typography 
+                                  component="span"
+                                  variant="heading2Medium"
+                                  sx={{
+                                      fontWeight: 500, 
+                                      fontSize: "16px", 
+                                      lineHeight: "1.33em",
+                                      color: "#1F1F1F", 
+                                      textTransform: "capitalize",
+                                  }}
+                              >
+                              Contracts
+                          </Typography>
+                        </Box>
+                        <Box sx={{
+                            display: "flex",
+                            alignItems: "center",
                             gap: "8px"
                         }}>
                                 <Typography 

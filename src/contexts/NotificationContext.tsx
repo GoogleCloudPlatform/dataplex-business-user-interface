@@ -98,7 +98,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     setNotifications([]);
   }, []);
 
-  const handleClose = useCallback((id: string) => {
+  const handleClose = useCallback((id: string, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
     clearNotification(id);
   }, [clearNotification]);
 
@@ -122,7 +125,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
           key={notification.id}
           open={true}
           autoHideDuration={notification.duration}
-          onClose={() => handleClose(notification.id)}
+          onClose={(_event, reason) => handleClose(notification.id, reason)}
           anchorOrigin={{ 
             vertical: 'bottom', 
             horizontal: 'center' 

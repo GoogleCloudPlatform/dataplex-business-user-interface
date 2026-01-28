@@ -2,6 +2,8 @@ import React from 'react'
 import './Login.css'
 import { useAuth } from '../../../auth/AuthProvider';
 import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { sanitizeRedirectURL } from '../../../services/urlPreservationService';
 
 /**
  * @file Login.tsx
@@ -27,18 +29,34 @@ import { useGoogleLogin } from '@react-oauth/google';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       const { access_token } = tokenResponse;
-      login({
+      await login({
         credential: access_token,
       });
+
+      // Check for redirect URL after successful login
+      const continueParam = searchParams.get('continue');
+      if (continueParam) {
+        const sanitizedURL = sanitizeRedirectURL(continueParam);
+        if (sanitizedURL) {
+          console.log('[Login] Redirecting to:', sanitizedURL);
+          navigate(sanitizedURL, { replace: true });
+          return;
+        }
+      }
+
+      // Default redirect to home
+      navigate('/home', { replace: true });
     },
     onError: () => console.error('Google Login Failed'),
     flow: 'implicit', // or 'auth-code' depending on your OAuth setup
     scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
-      
+
   });
   
   return (<div className='login-container-parent'>

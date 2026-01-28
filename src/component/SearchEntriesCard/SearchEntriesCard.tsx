@@ -340,7 +340,8 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 variant="heading2Medium"
                 sx={{ 
                   color: "#0B57D0", 
-                  fontSize: "1.125rem", 
+                  fontSize: "1.125rem",
+                  fontFamily: '"Google Sans", sans-serif',
                   fontWeight: 400,
                   flex: '0 1 auto', // Allow shrinking but don't grow
                   minWidth: 0, // Allow text truncation

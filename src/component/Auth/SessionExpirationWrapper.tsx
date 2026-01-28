@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSessionExpiration } from '../../hooks/useSessionExpiration';
-import { useNotification } from '../../contexts/NotificationContext';
+import { useSessionManagement } from '../../hooks/useSessionManagement';
 import SessionExpired from './SessionExpired';
+import { SessionWarningModal } from '../../components/Auth/SessionWarningModal';
+import { setSessionExpirationModalActive } from '../../utils/apiInterceptor';
 
 /**
  * @file SessionExpirationWrapper.tsx
@@ -9,20 +11,12 @@ import SessionExpired from './SessionExpired';
  *
  * @description
  * This component acts as a gatekeeper for session-protected parts of an application
- * (e.g., wrapping the main layout). It uses the `useSessionExpiration` hook to
- * periodically check the user's authentication status (both for session inactivity
- * and auth token expiry).
+ * (e.g., wrapping the main layout). It uses two hooks:
+ * - `useSessionExpiration`: Checks if token has fully expired (redirects to login)
+ * - `useSessionManagement`: Shows warning modal 5 minutes before token expires
  *
- * When the hook determines an expiration has occurred:
- * 1.  It calls internal handlers (`handleSessionExpired` or `handleTokenExpired`)
- * which use the `useNotification` context to display an appropriate
- * warning or error message.
- * 2.  It executes optional callback props (`onSessionExpired` or `onTokenExpired`).
- * 3.  It renders the `<SessionExpired />` component, which blocks the UI
- * and informs the user.
- *
- * If the session is active (`isExpired` is false), it renders its `children`
- * normally.
+ * When token is about to expire, the warning modal allows users to re-authenticate
+ * via popup without losing their current page state.
  *
  * @param {object} props - The props for the SessionExpirationWrapper component.
  * @param {React.ReactNode} props.children - The React components to render
@@ -30,7 +24,7 @@ import SessionExpired from './SessionExpired';
  * @param {number} [props.checkInterval=30000] - The interval (in milliseconds)
  * to check for expiration. Defaults to 30,000ms (30 seconds).
  * @param {() => void} [props.onSessionExpired] - An optional callback function
- * to run when the session expires from inactivity.
+ * to run when the session expires.
  * @param {() => void} [props.onTokenExpired] - An optional callback function
  * to run when the authentication token expires.
  * @param {string} [props.customExpiredMessage] - An optional custom message to
@@ -55,23 +49,43 @@ const SessionExpirationWrapper: React.FC<SessionExpirationWrapperProps> = ({
   onTokenExpired,
   customExpiredMessage
 }) => {
-  const { showError, showWarning } = useNotification();
-  
   const handleSessionExpired = () => {
-    showWarning('Your session has expired due to inactivity. Please sign in again.', 5000);
+    // Notification already shown by useSessionExpiration hook
     onSessionExpired?.();
   };
 
   const handleTokenExpired = () => {
-    showError('Your access token has expired. Please sign in again.', 5000);
+    // Notification already shown by useSessionExpiration hook
     onTokenExpired?.();
   };
 
+  // Existing token expiration hook (checks every 30s)
   const { isExpired, expirationReason, resetExpiration } = useSessionExpiration({
     checkInterval,
     onSessionExpired: handleSessionExpired,
     onTokenExpired: handleTokenExpired
   });
+
+  // Token expiration warning hook (shows modal 5 min before expiry)
+  const {
+    isWarningModalOpen,
+    remainingTime,
+    handleStayLoggedIn,
+    handleLogOut,
+  } = useSessionManagement({
+    enabled: !isExpired, // Disable warning when already expired
+  });
+
+  // Set global flag when session expiration UI is active
+  useEffect(() => {
+    if (isExpired) {
+      setSessionExpirationModalActive(true);
+    } else {
+      setSessionExpirationModalActive(false);
+    }
+
+    return () => setSessionExpirationModalActive(false);
+  }, [isExpired]);
 
   // If session is expired, show the session expired page
   if (isExpired) {
@@ -79,13 +93,23 @@ const SessionExpirationWrapper: React.FC<SessionExpirationWrapperProps> = ({
       <SessionExpired
         reason={expirationReason}
         customMessage={customExpiredMessage}
-        onRetry={resetExpiration}
+        onRetry={expirationReason === 'unauthorized' ? resetExpiration : undefined}
       />
     );
   }
 
-  // Otherwise, render the children normally
-  return <>{children}</>;
+  // Otherwise, render the children normally with the warning modal
+  return (
+    <>
+      {children}
+      <SessionWarningModal
+        open={isWarningModalOpen}
+        remainingTime={remainingTime}
+        onStayLoggedIn={handleStayLoggedIn}
+        onLogOut={handleLogOut}
+      />
+    </>
+  );
 };
 
 export default SessionExpirationWrapper;

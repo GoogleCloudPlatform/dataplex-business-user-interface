@@ -1,4 +1,4 @@
-# Dataplex Universal Catalog Business Interface - 1.2.0
+# Dataplex Universal Catalog Business Interface - 1.2.1
 
 An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Dataplex** Universal Catalog (formerly Data Catalog).
 ## Key objectives of the application include:
@@ -322,15 +322,15 @@ gcloud run deploy [SERVICE_NAME] \
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
 
 
-## Release Note : 1.2.0
+## Release Note : 1.2.1
 This is a minor release with features, identified bug/fixes and some user interface changes.
 Feature Enhancements:
 
-  - Data Product is also available to browse.
-  - New navigation sidebar.
   - Creating consisteny between the UI/UX of multiple componenets.
+  - Reducing defaults zoom for single node lineage view.
 
 Bug Fixes:
 
-  - Bug fix in glossary.
+  - Bug fix in data products.
+  - Search filter was not working with natural language enabled search, is fixed in this version of release.
 

@@ -9,6 +9,7 @@ import type { AppDispatch } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
 import { useLocation } from 'react-router-dom';
 import { useAccessRequest } from '../../contexts/AccessRequestContext';
+import { useNotification } from '../../contexts/NotificationContext';
 
 /**
  * @file SearchBar.tsx
@@ -59,6 +60,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   const { user } = useAuth();
   const location = useLocation();
   const { isAccessPanelOpen } = useAccessRequest();
+  const { showError } = useNotification();
   const [searchData, setSearchData] = useState([
     { name: 'BigQuery' }, { name: 'Data Warehouse' }, { name: 'Data Lake' }, { name: 'Data Pipeline' }
   ]);
@@ -244,7 +246,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 handleSearchSubmit(trimmedValue);
                 addToRecentSearches(trimmedValue);
             } else if (trimmedValue && trimmedValue.length > 0 && trimmedValue.length < 3) {
-                alert('Please type at least 3 characters to search');
+                showError('Please type at least 3 characters to search');
             }
         }
   };

@@ -18,6 +18,7 @@ import ViewDetails from '../component/ViewDetails/ViewDetails';
 import AdminPanel from '../component/AdminPanel/AdminPanel';
 import { useAuth } from '../auth/AuthProvider';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
+import { RedirectGuard } from '../auth/RedirectGuard';
 import BrowseByAnnotation from '../component/BrowseByAnnotation/BrowseByAnnotation';
 import SessionExpirationWrapper from '../component/Auth/SessionExpirationWrapper';
 import UserGuide from '../component/Guide/UserGuide';
@@ -71,9 +72,12 @@ const Routing = () => {
       <Route
         path="/login"
         element={
-          user && user.email ?
-            <Navigate to="/home" replace />
-            : <Login />
+          <RedirectGuard isAuthenticated={!!(user && user.email)}>
+            {user && user.email ?
+              <Navigate to="/home" replace />
+              : <Login />
+            }
+          </RedirectGuard>
         }
       />
 

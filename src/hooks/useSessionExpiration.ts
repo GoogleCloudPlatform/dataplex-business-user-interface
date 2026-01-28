@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useNotification } from '../contexts/NotificationContext';
+import { isAuthNotificationShown, setAuthNotificationShown } from '../services/authErrorService';
 
 interface SessionExpirationConfig {
   checkInterval?: number; // milliseconds
@@ -33,7 +34,10 @@ export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
       const storedData = JSON.parse(localStorage.getItem('sessionUserData') || 'null');
       if (storedData?.tokenExpiry && storedData.tokenExpiry < now) {
         setExpirationReason('token_expired');
-        showError('Your access token has expired. You will be redirected to the login page.', 5000);
+        if (!isAuthNotificationShown()) {
+          setAuthNotificationShown(true);
+          showError('Your access token has expired. You will be redirected to the login page.', 5000);
+        }
         // Delay the expiration to allow user to see the notification
         setTimeout(() => {
           setIsExpired(true);
@@ -51,7 +55,10 @@ export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
       const storedToken = localStorage.getItem('sessionUserData');
       if (!storedToken) {
         setExpirationReason('session_expired');
-        showWarning('Your session has expired due to inactivity. You will be redirected to the login page.', 5000);
+        if (!isAuthNotificationShown()) {
+          setAuthNotificationShown(true);
+          showWarning('Your session has expired. You will be redirected to the login page.', 5000);
+        }
         // Delay the expiration to allow user to see the notification
         setTimeout(() => {
           setIsExpired(true);

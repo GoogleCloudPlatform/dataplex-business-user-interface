@@ -170,8 +170,8 @@ const Glossaries = () => {
   );
   const [assetPreviewData, setAssetPreviewData] = useState<any | null>(null);
   const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [sortBy, setSortBy] = useState<"name" | "lastModified">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<"name" | "lastModified">("lastModified");
   const fetchedParentIds = React.useRef(new Set<string>());
   const manualSelectionId = React.useRef<string | null>(null);
   const wasSearching = React.useRef(false);

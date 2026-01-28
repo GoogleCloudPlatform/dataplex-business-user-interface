@@ -294,29 +294,30 @@ const tabProps = (index: number)  => {
 
 
   return selectedDataProductStatus == 'succeeded' ? (
-    <div style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#F8FAFD", height: "100vh", overflow: "hidden" }}>
+    <div style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#F8FAFD", height: "90vh", overflow: "hidden" }}>
       <div style={{display: "flex", flexDirection: "row", gap: "1rem", flex: 1, minHeight: 0, overflow: "hidden"}}>
         <div style={{display: "flex", flexDirection: "column",flex: 1, minHeight: 0, overflow: "hidden"}}>
         
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'flex-start', 
-      px: 3,
-      pb: 3,
-      pt: '8px',
+    <Box sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+      px: 0,
+      pb: 2,
+      pt: 0,
       width: '100%',
       overflow: 'hidden'
     }}>
-      <Paper 
-        elevation={0} 
-        sx={{ 
+      <Paper
+        elevation={0}
+        sx={{
           flex: 1,
-          borderRadius: '24px', 
-          backgroundColor: '#fff', 
+          height: 'calc(100vh - 80px)',
+          borderRadius: '24px',
+          backgroundColor: '#fff',
           border: 'transparent',
-          display: 'flex', 
-          flexDirection: 'column', 
+          display: 'flex',
+          flexDirection: 'column',
           overflowY: 'auto',
           overflowX: 'hidden',
           position: 'relative'
@@ -333,10 +334,10 @@ const tabProps = (index: number)  => {
                 >
                     <ArrowBack fontSize="small" />
                 </Button>
-                <img 
-                    src={selectedDataProduct.icon ? `data:image/${getMimeType(selectedDataProduct.icon)};base64,${selectedDataProduct.icon}` : '/assets/images/data-product-card.png'} 
-                    alt={selectedDataProductDetails.entrySource?.displayName} 
-                    style={{ width: '40px', height: '40px', marginBottom: '12px' }} 
+                <img
+                    src={selectedDataProduct.icon ? `data:image/${getMimeType(selectedDataProduct.icon)};base64,${selectedDataProduct.icon}` : '/assets/images/data-product-card.png'}
+                    alt={selectedDataProductDetails.entrySource?.displayName}
+                    style={{ width: '40px', height: '40px' }}
                 />
                 <Typography variant="h5" sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 400, fontSize: '22px', lineHeight: '24px', color: '#1F1F1F', maxWidth: 'calc(100% - 400px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {selectedDataProductDetails.entrySource?.displayName}
@@ -438,7 +439,7 @@ const tabProps = (index: number)  => {
 
             {/* Tab Panels */}
             {/* Tab Content - Non-sticky */}
-                        <div style={{paddingTop:"0px", marginTop:"0px", marginLeft: "2.5rem", marginRight: isAssetPreviewOpen ? "1px" : "2rem", minHeight: 'calc(100vh - 210px)', overflowY: 'auto' }}>
+                        <div style={{paddingTop:"0px", marginTop:"0px", marginLeft: "0.25rem", marginRight: isAssetPreviewOpen ? "1px" : "0.25rem", minHeight: 'calc(100vh - 210px)', overflowY: 'auto' }}>
                                 <CustomTabPanel value={tabValue} index={0}>
                                     {overviewTab}
                                 </CustomTabPanel>
@@ -554,39 +555,70 @@ const tabProps = (index: number)  => {
       </Box>
     </div>
     </div>
-  ):(<Box sx={{ padding: "0px 20px" }}>
-            {/* Header Skeleton: Back button + Title + Tags */}
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              padding: '24px 0px 16px 0px'
-            }}>
-              <Skeleton variant="circular" width={32} height={32} />
-              <Skeleton variant="text" width={250} height={28} />
-              <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: '8px' }} />
-              <Skeleton variant="rounded" width={60} height={24} sx={{ borderRadius: '8px' }} />
+  ):(
+    <div style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#F8FAFD", height: "100vh", overflow: "hidden" }}>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        px: 0,
+        pb: 2,
+        pt: 0,
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <Paper
+          elevation={0}
+          sx={{
+            flex: 1,
+            height: 'calc(100vh - 80px)',
+            borderRadius: '24px',
+            backgroundColor: '#fff',
+            border: 'transparent',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            position: 'relative'
+          }}
+        >
+          {/* Header Skeleton: Back button + Title + Tags */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '24px 20px 16px 20px'
+          }}>
+            <Skeleton variant="circular" width={32} height={32} />
+            <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '8px' }} />
+            <Skeleton variant="text" width={250} height={28} />
+            <Box sx={{ marginLeft: 'auto', marginRight: '2rem' }}>
+              <Skeleton variant="rounded" width={120} height={34} sx={{ borderRadius: '100px' }} />
             </Box>
+          </Box>
 
-            {/* Tabs Skeleton */}
-            <Box sx={{
-              display: 'flex',
-              gap: '24px',
-              paddingLeft: '28px',
-              paddingBottom: '12px',
-              borderBottom: '1px solid #E0E0E0'
-            }}>
-              <Skeleton variant="text" width={80} height={20} />
-              <Skeleton variant="text" width={70} height={20} />
-              <Skeleton variant="text" width={65} height={20} />
-              <Skeleton variant="text" width={90} height={20} />
-            </Box>
+          {/* Tabs Skeleton */}
+          <Box sx={{
+            display: 'flex',
+            gap: '24px',
+            paddingLeft: '28px',
+            paddingBottom: '12px',
+            borderBottom: '1px solid #E0E0E0'
+          }}>
+            <Skeleton variant="text" width={80} height={20} />
+            <Skeleton variant="text" width={70} height={20} />
+            <Skeleton variant="text" width={65} height={20} />
+            <Skeleton variant="text" width={90} height={20} />
+          </Box>
 
-            {/* Body Skeleton */}
-            <Box sx={{ margin: '24px 40px', minHeight: '400px' }}>
-              <Skeleton variant="rounded" width="100%" height={400} sx={{ borderRadius: '8px' }} />
-            </Box>
-          </Box>);
+          {/* Body Skeleton */}
+          <Box sx={{ margin: '24px 40px', minHeight: '400px' }}>
+            <Skeleton variant="rounded" width="100%" height={400} sx={{ borderRadius: '8px' }} />
+          </Box>
+        </Paper>
+      </Box>
+    </div>
+  );
 }
 
 export default DataProductsDetailView;
