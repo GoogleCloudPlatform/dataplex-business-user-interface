@@ -279,7 +279,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
               >
                 <TableCell 
                    sx={{
-                     fontFamily: '"Google Sans Text",sans-serif',
+                     fontFamily: '"Google Sans", sans-serif',
                      fontSize: '11px',
                      color: '#1F1F1F',
                      padding: '10px 6px',

@@ -20,7 +20,7 @@ const GlossariesLinkedAssets: React.FC<GlossariesLinkedAssetsProps> = ({
   idToken,
   onAssetPreviewChange,
 }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
   const [assetViewMode, setAssetViewMode] = useState<"list" | "table">("list");
   const [assetPageSize, setAssetPageSize] = useState(20);
@@ -147,14 +147,51 @@ const GlossariesLinkedAssets: React.FC<GlossariesLinkedAssetsProps> = ({
           height: "100%",
           width: "100%",
           borderRadius: "16px",
-          overflow: "hidden",
+          overflow: "visible",
           bgcolor: "#fff",
           display: "flex",
           flexDirection: "row",
           gap: "16px",
         }}
       >
-        {/* LEFT SECTION: Search + List */}
+        {/* LEFT SECTION: Filter Card (Collapsible) */}
+        <Box
+          sx={{
+            width: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
+            minWidth: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
+            transition:
+              "width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, opacity 0.3s ease",
+            opacity: isFilterOpen ? 1 : 0,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            padding: isFilterOpen ? "20px" : "0px",
+            marginTop: "8px",
+            gap: "20px",
+            backgroundColor: "#FFFFFF",
+            border: isFilterOpen ? "1px solid #DADCE0" : "none",
+            borderRadius: "16px",
+            height: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              overflowY: "auto",
+            }}
+          >
+            <FilterDropdown
+              filters={activeFilters}
+              onFilterChange={(newFilters) => setActiveFilters(newFilters)}
+              isGlossary={true}
+            />
+          </div>
+        </Box>
+
+        {/* RIGHT SECTION: Search + List */}
         <Box
           sx={{
             flex: 1,
@@ -163,49 +200,16 @@ const GlossariesLinkedAssets: React.FC<GlossariesLinkedAssetsProps> = ({
             minWidth: 0,
           }}
         >
-          {/* Toolbar: Search + Tune Icon */}
+          {/* Toolbar: Tune Icon + Search */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
               mb: 2,
               pt: 1,
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                backgroundColor: "#fff",
-                border: "1px solid #DADCE0",
-                borderRadius: "54px",
-                px: 1.5,
-                py: 0.5,
-                height: "32px",
-                width: "309px",
-                boxSizing: "border-box",
-              }}
-            >
-              <Search sx={{ color: "#575757", mr: 1, fontSize: 20 }} />
-              <InputBase
-                placeholder="Search linked assets"
-                value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
-                sx={{
-                  fontFamily: "Google Sans Text",
-                  fontSize: "12px",
-                  fontWeight: 500,
-                  color: "#5E5E5E",
-                  width: "100%",
-                  "& ::placeholder": {
-                    opacity: 1,
-                    color: "#5E5E5E",
-                  },
-                }}
-              />
-            </Box>
-
             {/* Tune Icon - Toggles Filter */}
             <Tooltip title="Toggle Filters">
               <Box
@@ -222,12 +226,45 @@ const GlossariesLinkedAssets: React.FC<GlossariesLinkedAssetsProps> = ({
                   backgroundColor: isFilterOpen ? "#E7F0FE" : "transparent",
                   color: isFilterOpen ? "#0E4DCA" : "#575757",
                   transition: "all 0.2s ease",
-                  mr: 2.5,
+                  mr: 1,
                 }}
               >
                 <Tune sx={{ fontSize: 20 }} />
               </Box>
             </Tooltip>
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#fff",
+                border: "1px solid #DADCE0",
+                borderRadius: "54px",
+                px: 1.5,
+                py: 0.5,
+                height: "32px",
+                width: "309px",
+                boxSizing: "border-box",
+              }}
+            >
+              <Search sx={{ color: "#575757", mr: 1, fontSize: 20 }} />
+              <InputBase
+                placeholder="Filter linked assets by name or description"
+                value={searchTerm}
+                onChange={(e) => onSearchTermChange(e.target.value)}
+                sx={{
+                  fontFamily: "Google Sans Text",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  color: "#5E5E5E",
+                  width: "100%",
+                  "& ::placeholder": {
+                    opacity: 1,
+                    color: "#5E5E5E",
+                  },
+                }}
+              />
+            </Box>
           </Box>
 
           {/* Resource Viewer Content */}
@@ -261,45 +298,11 @@ const GlossariesLinkedAssets: React.FC<GlossariesLinkedAssetsProps> = ({
               contentStyle={{
                 minHeight: "auto",
                 maxHeight: "100%",
+                margin: 0,
+                padding: 0,
               }}
             />
           </Box>
-        </Box>
-
-        {/* RIGHT SECTION: Filter Card (Collapsible) */}
-        <Box
-          sx={{
-            width: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
-            minWidth: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
-            transition:
-              "width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, opacity 0.3s ease",
-            opacity: isFilterOpen ? 1 : 0,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            padding: isFilterOpen ? "20px" : "0px",
-            gap: "20px",
-            backgroundColor: "#FFFFFF",
-            border: isFilterOpen ? "1px solid #DADCE0" : "none",
-            borderRadius: "16px",
-            height: "100%",
-            boxSizing: "border-box",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              overflowY: "auto",
-            }}
-          >
-            <FilterDropdown
-              filters={activeFilters}
-              onFilterChange={(newFilters) => setActiveFilters(newFilters)}
-              isGlossary={true}
-            />
-          </div>
         </Box>
       </Box>
     </Box>

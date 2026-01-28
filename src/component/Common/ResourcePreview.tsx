@@ -269,10 +269,17 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   }, [previewData, dispatch, id_token, demoMode, previewMode]);
 
   // Sync filtered entries with fetched entry
+  // Only react to entryStatus when we have previewData (i.e., we've actually requested data)
+  // This prevents reacting to stale Redux state from previous operations elsewhere in the app
   useEffect(() => {
-     if (entryStatus === 'loading') {
+    // Skip if no previewData - we haven't requested any entry yet
+    if (!previewData) {
+      return;
+    }
+
+    if (entryStatus === 'loading') {
       setViewDetailAccessable(false);
-     }
+    }
     if (entryStatus === 'succeeded') {
       setFilteredSchemaEntry(entry);
       setFilteredAnnotationEntry(entry);
@@ -286,7 +293,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
         navigate('/login');
       }
     }
-  }, [entry, entryStatus]);
+  }, [entry, entryStatus, previewData]);
 
   // Preview content rendering logic
   let schema;

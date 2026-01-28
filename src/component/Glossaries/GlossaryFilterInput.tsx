@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Box, InputBase, CircularProgress, ClickAwayListener } from "@mui/material";
+import { Box, InputBase, CircularProgress, ClickAwayListener, MenuList, MenuItem } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   type FilterChip,
@@ -260,13 +260,8 @@ const GlossaryFilterInput: React.FC<GlossaryFilterInputProps> = ({
         {showDropdown && (
           <Box
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              padding: "16px 12px",
-              gap: "12px",
               position: "absolute",
-              top: "40px",
+              top: "35px",
               left: "20px",
               right: "20px",
               backgroundColor: "#FFFFFF",
@@ -275,54 +270,38 @@ const GlossaryFilterInput: React.FC<GlossaryFilterInputProps> = ({
               zIndex: 1000,
             }}
           >
-            {/* OR option - only show when filters exist and last filter is not OR */}
-            {filters.length > 0 && !isOrConnector(filters[filters.length - 1]) && (
-              <Box
-                onClick={(e) => handleOrSelect(e)}
-                sx={{
-                  width: "100%",
-                  height: "16px",
-                  cursor: "pointer",
-                  fontFamily: "'Product Sans', 'Google Sans', sans-serif",
-                  fontSize: "12px",
-                  fontWeight: 400,
-                  lineHeight: "16px",
-                  letterSpacing: "0.1px",
-                  color: "#0B57D0",
-                  display: "flex",
-                  alignItems: "center",
-                  "&:hover": {
-                    backgroundColor: "#F1F3F4",
-                  },
-                }}
-              >
-                OR
-              </Box>
-            )}
-            {VALID_FILTER_FIELDS.map((field) => (
-              <Box
-                key={field}
-                onClick={(e) => handleFieldSelect(e, field)}
-                sx={{
-                  width: "100%",
-                  height: "16px",
-                  cursor: "pointer",
-                  fontFamily: "'Product Sans', 'Google Sans', sans-serif",
-                  fontSize: "12px",
-                  fontWeight: 400,
-                  lineHeight: "16px",
-                  letterSpacing: "0.1px",
-                  color: "#1F1F1F",
-                  display: "flex",
-                  alignItems: "center",
-                  "&:hover": {
-                    backgroundColor: "#F1F3F4",
-                  },
-                }}
-              >
-                {FILTER_FIELD_LABELS[field]}
-              </Box>
-            ))}
+            <MenuList dense sx={{ py: 1 }}>
+              {/* OR option - only show when filters exist and last filter is not OR */}
+              {filters.length > 0 && !isOrConnector(filters[filters.length - 1]) && (
+                <MenuItem
+                  onClick={(e) => handleOrSelect(e)}
+                  sx={{
+                    fontFamily: "'Product Sans', sans-serif",
+                    fontSize: "12px",
+                    color: "#1F1F1F",
+                    py: 0.5,
+                    px: 1.5,
+                  }}
+                >
+                  OR
+                </MenuItem>
+              )}
+              {VALID_FILTER_FIELDS.map((field) => (
+                <MenuItem
+                  key={field}
+                  onClick={(e) => handleFieldSelect(e, field)}
+                  sx={{
+                    fontFamily: "'Product Sans', sans-serif",
+                    fontSize: "12px",
+                    color: "#1F1F1F",
+                    py: 0.5,
+                    px: 1.5,
+                  }}
+                >
+                  {FILTER_FIELD_LABELS[field]}
+                </MenuItem>
+              ))}
+            </MenuList>
           </Box>
         )}
 

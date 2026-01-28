@@ -152,10 +152,21 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
 
     useEffect(() => {
         console.log('num', number);
-        if(dataProductAssets.length === 0) return;
-        if(dataProductAssetsStatus !== 'succeeded') return;
-        if(dataProductAssetsStatus === 'succeeded' && dataProductAssets.length === 0){
+        // Reset loader when loading new data product
+        if(dataProductAssetsStatus === 'loading'){
+            setAssetListLoader(false);
+            return;
+        }
+        // Handle failed state (API returns error when no assets)
+        if(dataProductAssetsStatus === 'failed'){
             setDataProductsAssetsList([]);
+            setAssetListLoader(true);
+            return;
+        }
+        if(dataProductAssetsStatus !== 'succeeded') return;
+        if(dataProductAssets.length === 0){
+            setDataProductsAssetsList([]);
+            setAssetListLoader(true);
             return;
         }
 
@@ -184,13 +195,17 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
             ).then((response:any) => {
                 console.log('fet Ass', response.data);
                 //response.data.results.map()
-                setDataProductsAssetsList(response.data.results || []);
-                setAssetListLoader(true);
+                setDataProductsAssetsList(response.data.results);
+                console.log(dataProductsAssetsList);
+                setTimeout(() => {
+                  setAssetListLoader(true);
+                }, 300)
+                
             }).catch((error:any) => {
                 console.error('Error fetching data product assets details:', error);
             });
         }
-    }, [dataProductAssets]);
+    }, [dataProductAssets, dataProductAssetsStatus]);
 
 
     // useEffect(() => {
@@ -397,8 +412,8 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
                 display: 'flex',
                 flexDirection: 'column',
                 padding: ' 0px 20px',
-                height: 'calc(100vh - 200px)',
-                overflowY: 'auto'
+                height: '100%',
+                overflowY: 'visible'
             }}>
                 {
                     !assetListLoader && (
@@ -410,11 +425,10 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
                         </Box>
                     )
                 }
-                {dataProductAssetsStatus === 'loading' && (
-                    <Typography sx={{ fontSize: '14px', color: '#575757', marginTop:40}}>Loading data product assets...</Typography>
-                )}
-                {dataProductAssetsStatus === 'succeeded' && dataProductAssets.length === 0 && assetListLoader && (
-                    <Typography sx={{ fontSize: '14px', color: '#575757', marginTop:40 }}>No data product assets found.</Typography>
+                {(dataProductAssetsStatus === 'succeeded' || dataProductAssetsStatus === 'failed') && dataProductAssets.length === 0 && assetListLoader && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 300px)', width: '100%' }}>
+                        <Typography sx={{ fontSize: '14px', color: '#575757' }}>No data product assets found</Typography>
+                    </Box>
                 )}
                 {dataProductAssetsStatus === 'succeeded' && dataProductAssets.length > 0 && assetListLoader && (
                     // dataProductsAssetsList.map((resource: any, index: number) => {

@@ -96,7 +96,7 @@ const StructRenderer = ({ fields }: any) => {
         <div key={key}>
             <span style={{fontWeight:"600", fontSize:"12px", textTransform:"capitalize"}}>{key.replace(/_/g, ' ')}:</span>
             <FieldRenderer field={value} />
-        </div>   
+        </div>
       ))}
       <br/>
     </Box>
@@ -172,7 +172,10 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
     }
 }, [dataProductAssets]);
 
-  let accessGroups = entry.aspects[`${number}.global.data-product`]?.data.accessGroups || [];
+  let selectedDataProduct = localStorage.getItem('selectedDataProduct') ? 
+  JSON.parse(localStorage.getItem('selectedDataProduct') || '{}') : null;
+
+  let accessGroups = selectedDataProduct ? selectedDataProduct.accessGroups : (entry.aspects[`${number}.global.data-product`]?.data.accessGroups || []);
   //let usage = entry.aspects[`${number}.global.usage`]?.data.fields || {};
 
   // Always compute memoized helpers at top-level (avoid conditional hooks)
@@ -202,12 +205,13 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     lineHeight: 1,
+                    minWidth: '350px',
                 }}
             >
             {  params.row['Mapped-Permissions'].map((mp:any) => (<>
                     <Box sx={{display:"flex", alignItems:"center", padding:"2px 0px"}}>
-                        <p style={{fontWeight:"600", fontSize:"12px",}}>{mp.split(':')[0]} :</p>
-                        <p style={{fontSize:"12px", padding:"0px 5px"}}>{mp.split(':')[1]}</p>
+                        <p style={{fontWeight:"600", fontSize:"12px", margin:'5px 0px'}}>{mp.split(':')[0]} :</p>
+                        <p style={{fontSize:"12px", padding:"0px 5px", margin:'5px 0px'}}>{mp.split(':')[1]}</p>
                     </Box>
                 </>))}
             </div>)
@@ -289,7 +293,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
             rows={displayRows} 
             columns={columns}
             columnHeaderHeight={37}
-            rowHeight={36}
+            rowHeight={55}
             sx={{
               '& .MuiDataGrid-columnHeader .MuiDataGrid-columnSeparator': {
                 opacity: 0,
@@ -329,7 +333,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                     // border: "1px solid #DADCE0", 
                     // borderRadius: "8px", 
                     marginTop: "10px", 
-                    padding: "16px",
+                    padding: "10px 16px 5px 16px",
                     overflow: "hidden",
                     backgroundColor: "#FFFFFF"
                 }}>
@@ -343,7 +347,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                     variant="heading2Medium"
                                     sx={{
                                         fontWeight: 500, 
-                                        fontSize: "18px", 
+                                        fontSize: "16px", 
                                         lineHeight: "1.33em",
                                         color: "#1F1F1F", 
                                         textTransform: "capitalize",
@@ -353,7 +357,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                             </Typography>
                             </Box>
                         
-                            <Box 
+                            <Box
                                 sx={{
                                     fontFamily: '"Google Sans Text", sans-serif',
                                     fontSize: "12px",
@@ -362,22 +366,25 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                     lineHeight: "1.43em",
                                 }}
                             >
-                                <Typography sx={{marginTop:"10px"}}>
-                                Define access groups which will be used by Data product consumers to request access. Asset permissions will be assigned 
+                                <Typography sx={{fontWeight: 400, 
+                                        fontSize: "13px", 
+                                        lineHeight: "2rem",
+                                        color: "#1F1F1F",}}>
+                                Define access groups which will be used by Data product consumers to request access. Asset permissions will be assigned
                                 to the access groups defined here.
                                 </Typography>
                             </Box>
                             <Grid container spacing={4}>
-                                { accessGroups.map((accessGroup:any) => (
+                                { Object.keys(accessGroups).map((key:any) => (
                                                     // Grid item for each card, defining its responsive width
                                     <Grid
                                         size={4} // One-third width (3 columns) on medium screens (4 out of 12 columns)
-                                        key={accessGroup.id}
-                                        sx={{ marginTop: '16px' }}
+                                        key={accessGroups[key].id}
+                                        sx={{ marginTop: '5px', borderBottom: '1px solid #E0E0E0', paddingBottom: '2px' }}
                                     >
                                         <Box sx={{ 
-                                                border: '1px solid #E0E0E0', 
-                                                borderRadius: '16px',
+                                                // border: '1px solid #E0E0E0', 
+                                                // borderRadius: '16px',
                                                 height: '100%',
                                                 boxSizing: 'border-box',
                                                 display: 'flex',
@@ -385,14 +392,15 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                                 justifyContent: 'space-between'
                                             }}
                                         >
-                                            <Box sx={{ display: 'flex', alignItems: 'center', padding: '15px 20px' }}>
-                                                <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: '16px', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', lineHeight:1.3, textTransform: 'capitalize' }}>
-                                                    {accessGroup.displayName}
+                                            <Box sx={{ display: 'flex', alignItems: 'center', padding: '5px' }}>
+                                                <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', lineHeight:1.3, textTransform: 'capitalize' }}>
+                                                    {accessGroups[key].displayName} :
                                                 </Typography>
-                                            </Box>
-                                            <Box sx={{display: 'flex', alignItems: 'center', padding: '15px', gap: 1, color: '#575757', }}>
-                                                <EmailOutlined sx={{ color: '#575757', fontSize: '16px' }} />
-                                                {`${accessGroup.id}@cloudsufi.com`}
+                                                
+                                                <Box sx={{display: 'flex', alignItems: 'center', padding: '5px', gap: 0.5, color: '#575757', fontSize: '14px', marginLeft:'20px' }}>
+                                                    <EmailOutlined sx={{ color: '#575757', fontSize: '14px', fontWeight:500 }} />
+                                                    {`${accessGroups[key]?.principal?.googleGroup || 'No group defined'}`}
+                                                </Box>
                                             </Box>
                                         </Box>
                                     </Grid>
@@ -402,8 +410,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                 <Box sx={{ 
                     // border: "1px solid #DADCE0", 
                     // borderRadius: "8px", 
-                    marginTop: "10px", 
-                    padding: "16px",
+                    padding: "5px 16px 5px 16px",
                     overflow: "hidden",
                     backgroundColor: "#FFFFFF"
                 }}>
@@ -417,7 +424,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                     variant="heading2Medium"
                                     sx={{
                                         fontWeight: 500, 
-                                        fontSize: "18px", 
+                                        fontSize: "16px", 
                                         lineHeight: "1.33em",
                                         color: "#1F1F1F", 
                                         textTransform: "capitalize",
@@ -426,16 +433,19 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                 Asset permissions
                             </Typography>
                         </Box>
-                        <Box 
+                        <Box
                             sx={{
-                                fontFamily: '"Google Sans Text", sans-serif',
+                                fontFamily: '"Google Sans", sans-serif',
                                 fontSize: "12px",
                                 color: "#575757",
                                 fontWeight: 400,
                                 lineHeight: "1.43em",
                             }}
                         >
-                            <Typography sx={{marginTop:"10px"}}>
+                            <Typography sx={{fontWeight: 400, 
+                                        fontSize: "13px", 
+                                        lineHeight: "2rem",
+                                        color: "#1F1F1F",}}>
                                 View which permissions are mapped to each asset in this data product. Each asset shows the access groups and their corresponding IAM roles.
                             </Typography>
                         </Box>
@@ -443,7 +453,8 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                     <Box sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        padding: '16px',
+                        paddingTop: '0px',
+                        paddingLeft: '16px',
                     }}>
                         {dataProductAssetsStatus === 'succeeded' && accessPermissionView}
                     </Box>

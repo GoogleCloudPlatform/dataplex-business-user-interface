@@ -7,6 +7,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AccessRequestProvider } from './contexts/AccessRequestContext';
 import './utils/apiInterceptor'; // Set up axios interceptors
+import './utils/testHelpers'; // Load testing helpers (available in console)
 import theme from './theme';
 import store from './app/store'
 import App from './App'

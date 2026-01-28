@@ -68,7 +68,7 @@ const nodeTypes = {
   lineageNode: LineageNode,
   queryNode: QueryNode,
 };
-const defaultViewport = { x: 0, y: 0, zoom: 4 };
+const defaultViewport = { x: 0, y: 0, zoom: 1.1 };
 
 interface LineageChartViewProps {
   handleSidePanelToggle?: (data:any, showSchema:boolean) => void;
@@ -103,6 +103,24 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
     const edgesArray:any = [];
 
     graphData.map((item:any, index:number) => {
+      if(graphData.length === 1){
+        //single node case
+        if(item.type === 'assetNode' ){
+              nodesArray.push({
+                id: item.id,
+                type: 'lineageNode', // 'output' is another default node type 
+                data: { label: item.name, columnName : columnName, columnLineageApplied: columnLineageApplied, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
+                position: {x:250,y:50},
+                className: `${selectedNode === item.id ? 'card' : ''}`,
+                style: {
+                    border: '1px solid #bdbdbdff',
+                    padding: '0px',
+                    backgroundColor: '#ffffff'
+                },
+              });
+        }
+      }
+      else{
       // Create node object
         if(item.type === 'assetNode' ){
               nodesArray.push({
@@ -144,13 +162,14 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
                 style: { stroke: '#2b75d0ff', strokeWidth: 3 }
             });
         }
+      }
     }); 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       nodesArray,
       edgesArray,
       'LR',
     );
-    setNodes([...layoutedNodes]);
+    setNodes(graphData.length===1 ? nodesArray : [...layoutedNodes]);
     setEdges([...layoutedEdges]);
   }, [selectedNode]);
   
@@ -159,6 +178,24 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
     const nodesArray:any = [];
     const edgesArray:any = [];
     graphData.map((item:any, index:number) => {
+      if(graphData.length === 1){
+        //single node case
+        if(item.type === 'assetNode' ){
+              nodesArray.push({
+                id: item.id,
+                type: 'lineageNode', // 'output' is another default node type 
+                data: { label: item.name, columnName : columnName, columnLineageApplied: columnLineageApplied, handleSidePanelToggle, handleQueryPanelToggle, setRefresh, isSidePanelOpen, selectedNode, nodeData:item, fetchLineageDownStream, fetchLineageUpStream},
+                position: {x:200,y:50},
+                className: `${selectedNode === item.id ? 'card' : ''}`,
+                style: {
+                    border: '1px solid #bdbdbdff',
+                    padding: '0px',
+                    backgroundColor: '#ffffff'
+                },
+              });
+        }
+      }
+      else{
       // Create node object
         if(item.type === 'assetNode' ){
             nodesArray.push({
@@ -200,13 +237,14 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
                 style: { stroke: '#2b75d0ff', strokeWidth: 3 }
             });
         }
+      }
     }); 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       nodesArray,
       edgesArray,
       'LR',
     );
-    setNodes([...layoutedNodes]);
+    setNodes(graphData.length===1 ? nodesArray : [...layoutedNodes]);
     setEdges([...layoutedEdges]);
   }, [graphData, refresh]);
 
@@ -223,7 +261,7 @@ const LineageChartViewNew : React.FC<LineageChartViewProps> = ({ handleSidePanel
       snapToGrid={true}
       snapGrid={snapGrid}
       defaultViewport={defaultViewport}
-      fitView
+      fitView={graphData.length > 1 ? true : false}
       attributionPosition="bottom-left"
     >
       {isFullScreen && (

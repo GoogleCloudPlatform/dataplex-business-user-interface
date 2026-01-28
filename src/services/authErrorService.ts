@@ -4,6 +4,14 @@ import { AxiosError } from 'axios';
 let globalShowError: (message: string, duration?: number) => void;
 let globalLogout: () => void;
 
+// Flag to prevent duplicate notifications
+let authNotificationShown = false;
+
+export const isAuthNotificationShown = () => authNotificationShown;
+export const setAuthNotificationShown = (shown: boolean) => {
+  authNotificationShown = shown;
+};
+
 export const setGlobalAuthFunctions = (
   showError: (message: string, duration?: number) => void,
   logout: () => void
@@ -42,9 +50,10 @@ export const isAuthenticationError = (error: AxiosError | unknown): boolean => {
 // Handle authentication error with notification and redirect
 export const handleAuthenticationError = (error?: AxiosError | unknown) => {
   console.log('Authentication error detected:', (error as AxiosError)?.response?.data || error);
-  
-  // Show notification
-  if (globalShowError) {
+
+  // Only show notification once
+  if (globalShowError && !authNotificationShown) {
+    authNotificationShown = true;
     globalShowError('Your session has expired. You will be redirected to the login page.', 5000);
   }
 

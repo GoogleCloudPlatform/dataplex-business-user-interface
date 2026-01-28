@@ -45,19 +45,32 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         let system = '';
         let typeAliases = '';
         let project = '';
+        let semanticSearchFlags = '';
 
         requestData.filters.forEach((filter: any) => {
           if(filter.type === 'aspectType') {
             //let aspect = filter.name.replace(' ', '-');
             const name = getAspectName(filter.name);
-            if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
-              filter.subAnnotationData.forEach((subAspect:any) => {
-                let subAspectName = `${name}.${subAspect.fieldName}`;
-                let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(aspect:${subAspectName}:${subAspect.value})` : `-(aspect:(${subAspectName}:${subAspect.value})`) : '';
-                aspectType += (aspectType != '' ? '|' : '') + `aspect=(${subAspectName}) AND ${subAspectNameVal}`;
-              });
-            }else {
-              aspectType += (aspectType != '' ? '|' : '') + `aspect=(${name})`;
+            if(requestData.semanticSearch) {
+              if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
+                filter.subAnnotationData.forEach((subAspect:any) => {
+                  let subAspectName = `${name}.${subAspect.fieldName}`;
+                  let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(${subAspectName}:${subAspect.value})` : `-(${subAspectName}:${subAspect.value})`) : '';
+                  aspectType += (aspectType != '' ? '|' : '') + `(has=${name} AND ${subAspectNameVal})`;
+                });
+              }else {
+                aspectType += (aspectType != '' ? '|' : '') + `(has=${name})`;
+              }
+            } else {
+              if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
+                filter.subAnnotationData.forEach((subAspect:any) => {
+                  let subAspectName = `${name}.${subAspect.fieldName}`;
+                  let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(aspect:${subAspectName}:${subAspect.value})` : `-(aspect:(${subAspectName}:${subAspect.value})`) : '';
+                  aspectType += (aspectType != '' ? '|' : '') + `aspect=(${subAspectName}) AND ${subAspectNameVal}`;
+                });
+              }else {
+                aspectType += (aspectType != '' ? '|' : '') + `aspect=(${name})`;
+              }
             }
           }
           if(filter.type === 'system') {
@@ -68,9 +81,9 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
             let assetType = '';
 
             if (filterName === 'exchange') {
-                assetType = 'data_exchange|exchange'; 
+                assetType = `data_exchange|exchange`; 
             } else {
-                assetType = filter.name.replaceAll(' ', '_').replace('/','').toLowerCase();
+                assetType = `${filter.name.replaceAll(' ', '_').replace('/','').toLowerCase()}`;
             }
             
             typeAliases += (typeAliases != '' ? '|' : '') + assetType;
@@ -79,6 +92,11 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
             project += (project != '' ? '|' : '') + `${filter.name}`;
           }
         });
+
+        if(requestData.semanticSearch) {
+          semanticSearchFlags = '-has=dataplex-types.global.bigquery-row-access-policy AND -has=dataplex-types.global.bigquery-data-policy';
+        }
+
         // Example search string format: 
         // name:searchTerm|description:searchTerm|title:searchTerm|tags:searchTerm|
         // fully_qualified_name:searchTerm|category:searchTerm|displayName:searchTerm
@@ -89,15 +107,16 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         //  )
 
         searchString += aspectType != '' ? ((searchString != '' ? ' ' : '') + `(${aspectType})`) : '';
-        searchString += system != '' ? ((searchString != '' ? ',' : '') + `(system=(${system}))`) : '';
-        searchString += typeAliases != '' ? ((searchString != '' ? ',' : '') + `(type=(${typeAliases}))`) : '';
-        searchString += project != '' ? ((searchString != '' ? ',' : '') + `(project=(${project}))`) : '';
+        searchString += system != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(system=(${system}))`) : '';
+        searchString += typeAliases != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(type=(${typeAliases}))`) : '';
+        searchString += project != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(project=(${project}))`) : '';
+        searchString += semanticSearchFlags != '' ? ((searchString != '' ? ' ' : '') + `${semanticSearchFlags}`) : '';
       }
       requestResourceData = {
         query: searchString,
         pageSize: requestData.semanticSearch ? 100 : 20,
         pageToken: requestData.nextPageToken ?? '', // Optional: for pagination
-        //orderBy: '', // Optional: specify ordering  
+        orderBy: requestData.semanticSearch ? 'relevance' : '', // Optional: specify ordering  
         semanticSearch: requestData.semanticSearch || false,
       };
     }

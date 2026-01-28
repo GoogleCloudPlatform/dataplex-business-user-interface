@@ -21,7 +21,7 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
   idToken,
   onAssetPreviewChange,
 }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState<any[]>([]);
   const [assetViewMode, setAssetViewMode] = useState<"list" | "table">("list");
   const [assetPageSize, setAssetPageSize] = useState(20);
@@ -150,14 +150,51 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
           height: "100%",
           width: "100%",
           borderRadius: "16px",
-          overflow: "hidden",
+          overflow: "visible",
           bgcolor: "#fff",
           display: "flex",
           flexDirection: "row",
           gap: "16px",
         }}
       >
-        {/* LEFT SECTION: Search + List */}
+        {/* LEFT SECTION: Filter Card (Collapsible) */}
+        <Box
+          sx={{
+            width: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
+            minWidth: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
+            transition:
+              "width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, opacity 0.3s ease",
+            opacity: isFilterOpen ? 1 : 0,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            padding: isFilterOpen ? "20px" : "0px",
+            marginTop: "8px",
+            gap: "20px",
+            backgroundColor: "#FFFFFF",
+            border: isFilterOpen ? "1px solid #DADCE0" : "none",
+            borderRadius: "16px",
+            height: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              overflowY: "auto",
+            }}
+          >
+            <FilterDropdown
+              filters={activeFilters}
+              onFilterChange={(newFilters) => setActiveFilters(newFilters)}
+              isGlossary={true}
+            />
+          </div>
+        </Box>
+
+        {/* RIGHT SECTION: Search + List */}
         <Box
           sx={{
             flex: 1,
@@ -166,16 +203,39 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
             minWidth: 0,
           }}
         >
-          {/* Toolbar: Search + Tune Icon */}
+          {/* Toolbar: Tune Icon + Search */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-start",
               mb: 2,
               pt: 1,
             }}
           >
+            {/* Tune Icon - Toggles Filter */}
+            <Tooltip title="Toggle Filters">
+              <Box
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "40px",
+                  height: "32px",
+                  borderRadius: "59px",
+                  cursor: "pointer",
+                  border: isFilterOpen ? "none" : "1px solid #DADCE0",
+                  backgroundColor: isFilterOpen ? "#E7F0FE" : "transparent",
+                  color: isFilterOpen ? "#0E4DCA" : "#575757",
+                  transition: "all 0.2s ease",
+                  mr: 1,
+                }}
+              >
+                <Tune sx={{ fontSize: 20 }} />
+              </Box>
+            </Tooltip>
+
             <Box
               sx={{
                 display: "flex",
@@ -208,29 +268,6 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
                 }}
               />
             </Box>
-
-            {/* Tune Icon - Toggles Filter */}
-            <Tooltip title="Toggle Filters">
-              <Box
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "40px",
-                  height: "32px",
-                  borderRadius: "59px",
-                  cursor: "pointer",
-                  border: isFilterOpen ? "none" : "1px solid #DADCE0",
-                  backgroundColor: isFilterOpen ? "#E7F0FE" : "transparent",
-                  color: isFilterOpen ? "#0E4DCA" : "#575757",
-                  transition: "all 0.2s ease",
-                  mr: 2.5,
-                }}
-              >
-                <Tune sx={{ fontSize: 20 }} />
-              </Box>
-            </Tooltip>
           </Box>
 
           {/* Resource Viewer Content */}
@@ -264,45 +301,11 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
               contentStyle={{
                 minHeight: "auto",
                 maxHeight: "100%",
+                margin: 0,
+                padding: 0,
               }}
             />
           </Box>
-        </Box>
-
-        {/* RIGHT SECTION: Filter Card (Collapsible) */}
-        <Box
-          sx={{
-            width: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
-            minWidth: isFilterOpen ? "clamp(230px, 18vw, 280px)" : "0px",
-            transition:
-              "width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, opacity 0.3s ease",
-            opacity: isFilterOpen ? 1 : 0,
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            padding: isFilterOpen ? "20px" : "0px",
-            gap: "20px",
-            backgroundColor: "#FFFFFF",
-            border: isFilterOpen ? "1px solid #DADCE0" : "none",
-            borderRadius: "16px",
-            height: "100%",
-            boxSizing: "border-box",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              overflowY: "auto",
-            }}
-          >
-            <FilterDropdown
-              filters={activeFilters}
-              onFilterChange={(newFilters) => setActiveFilters(newFilters)}
-              isGlossary={true}
-            />
-          </div>
         </Box>
       </Box>
     </Box>
