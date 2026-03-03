@@ -18,6 +18,7 @@ import axios, { AxiosError } from 'axios';
 import LineageChartViewNew from './LineageChartViewNew.tsx';
 import { OpenInFull } from '@mui/icons-material';
 import useFullScreenStatus from '../../hooks/useFullScreenStatus';
+import { useNotification } from '../../contexts/NotificationContext.tsx';
 
 /**
  * @file index.tsx
@@ -64,6 +65,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
   const { user } = useAuth();
   const id_token = user?.token || '';
   const dispatch = useDispatch<AppDispatch>();
+  const { showError } = useNotification();
 
   const { elementRef, isFullscreen, toggleFullscreen } = useFullScreenStatus();
 
@@ -324,7 +326,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
       }catch(error){
         console.log(error);
         setQueryPanelDataStatus('failed');
-        throw new Error('Failed to submit access request');
+        showError('Failed to submit access request', 2000);
       }
     }
     else{

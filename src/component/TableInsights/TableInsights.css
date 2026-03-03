@@ -1,0 +1,337 @@
+/* Insights Tab Styles */
+
+.insights-container {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-top: 20px;
+  min-height: 400px;
+}
+
+.insights-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+/* Section Styles (Table Description & Generated Queries) */
+.insights-section {
+  background: #FFFFFF;
+  border: 1px solid #DADCE0;
+  border-radius: 8px;
+  overflow: hidden;
+  height:auto;
+}
+
+.insights-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  height: 64px;
+  box-sizing: border-box;
+  background: #F8FAFD;
+}
+
+.insights-section__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insights-section__title {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 24px;
+  display: flex;
+  align-items: center;
+  color: #1F1F1F;
+}
+
+.insights-section__content {
+  padding: 20px;
+}
+
+.insights-section__description {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1F1F1F;
+  margin-bottom: 16px;
+}
+
+.insights-section__link {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 16px;
+  color: #0B57D0;
+  cursor: pointer;
+}
+
+.insights-section__link:hover {
+  text-decoration: underline;
+}
+
+/* Filter Bar */
+.insights-filter-bar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 16px;
+  gap: 8px;
+  height: 52px;
+  border-width: 1px 0px;
+  border-style: solid;
+  border-color: #DADCE0;
+  background: #FFFFFF;
+}
+
+.insights-filter-bar__label {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 20px;
+  color: #1F1F1F;
+}
+
+.insights-filter-bar__input {
+  flex: 1;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #575757;
+}
+
+/* Date Group */
+.insights-date-group {
+  box-sizing: border-box;
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.insights-date-group__header {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  gap: 8px;
+  height: 56px;
+  background: #F8FAFD;
+  border: 1px solid #E1E3E1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-radius 0.15s ease-out 0.25s, background 0.2s ease;
+}
+
+.insights-date-group--expanded .insights-date-group__header {
+  border-radius: 8px 8px 0px 0px;
+  transition: border-radius 0s, background 0.2s ease;
+}
+
+.insights-date-group__header:hover {
+  background: #F0F4F8;
+}
+
+.insights-date-group__title {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: #1F1F1F;
+}
+
+.insights-date-group__queries {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0px 16px 0px;
+  border: 1px solid #E1E3E1;
+  border-top: none;
+  border-radius: 0px 0px 8px 8px;
+  background: #FFFFFF;
+  margin: 0;
+}
+
+/* Query Item */
+.insights-query-item {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* First query item - negative margin for full-width hover (no top border, header provides it) */
+.insights-query-item:first-child {
+  margin: 0 -16px;
+  width: calc(100% + 32px);
+}
+
+.insights-query-item:first-child .insights-query-item__header {
+  padding: 16px;
+}
+
+/* Middle and last query items - only top border to avoid doubling, negative margin for full width */
+.insights-query-item:not(:first-child) {
+  border-top: 1px solid #E1E3E1;
+  margin: 0 -16px;
+  width: calc(100% + 32px);
+}
+
+/* Last query item - rounded bottom corners to match parent container */
+.insights-query-item:last-child {
+  border-radius: 0px 0px 8px 8px;
+}
+
+.insights-query-item:last-child .insights-query-item__header {
+  border-radius: 0px 0px 8px 8px;
+}
+
+.insights-query-item__header {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  min-height: 56px;
+  cursor: pointer;
+}
+
+.insights-query-item__header:hover {
+  background: #FAFAFA;
+}
+
+
+.insights-query-item__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding-right: 16px;
+}
+
+.insights-query-item__description {
+  font-family: 'Google Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  color: #1F1F1F;
+}
+
+.insights-query-item__code-container {
+  position: relative;
+  margin: 0 16px 16px 16px;
+  border: 1px solid #DADCE0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #F2F3F5;
+}
+
+/* First query item code container - same margin as others since all items now have negative margins */
+.insights-query-item:first-child .insights-query-item__code-container {
+  margin: 0 16px 16px 16px;
+}
+
+/* When first item is expanded, remove bottom radius from header hover */
+.insights-query-item:first-child .insights-query-item__header:hover {
+  border-radius: 0;
+}
+
+.insights-query-item__copy-btn {
+  position: absolute !important;
+  top: 15px;
+  right: 5px;
+  background: #F2F3F5;
+  z-index: 1;
+}
+
+.insights-query-item__copy-btn:hover {
+  background: #E8E8E8;
+}
+
+.insights-query-item__code {
+  margin: 0;
+  padding: 16px;
+  padding-right: 48px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  line-height: 18px;
+  color: #1F1F1F;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.insights-query-item__code code {
+  font-family: inherit;
+}
+
+/* Queries List */
+.insights-queries-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px 16px 20px 16px;
+  gap: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.insights-queries-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #575757;
+}
+
+/* Empty State */
+.insights-empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  margin-top: 20px;
+  background: #FFFFFF;
+  border: 1px solid #DADCE0;
+  border-radius: 8px;
+}
+
+.insights-empty-state__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.insights-empty-state__title {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: #1F1F1F;
+  margin: 0;
+}
+
+.insights-empty-state__subtitle {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: #575757;
+  margin: 0;
+}
+
+/* Skeleton */
+.insights-skeleton {
+  margin-top: 20px;
+}

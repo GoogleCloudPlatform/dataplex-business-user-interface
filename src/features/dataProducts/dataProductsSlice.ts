@@ -67,7 +67,17 @@ export const getDataProductDetails = createAsyncThunk('dataProducts/getDataProdu
 
   } catch (error) {
     if (error instanceof AxiosError) {
-      return rejectWithValue(error.response?.data || error.message);
+      const axiosError = error as AxiosError;
+      // Handle 403 Forbidden separately - don't trigger global logout
+      console.log("axiosError.response?.status", axiosError.response);
+      if (axiosError.response?.status === 403) {
+        return rejectWithValue(JSON.stringify({
+          type: "PERMISSION_DENIED",
+          message: "You don't have access to this resource",
+          itemId: requestData.dataProductId,
+        }));
+      }
+      return rejectWithValue(axiosError.response?.data || axiosError.message);
     }
     return rejectWithValue('An unknown error occurred');
   }

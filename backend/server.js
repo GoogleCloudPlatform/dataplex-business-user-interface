@@ -9,10 +9,11 @@ const { ProjectsClient } = require('@google-cloud/resource-manager');
 const { DataCatalogClient } = require('@google-cloud/datacatalog');
 const path = require('path');
 const cors = require('cors');
-const authMiddleware = require('./middlewares/authMiddleware');
 const { querySampleFromBigQuery } = require('./utility');
 const { sendAccessRequestEmail, sendFeedbackEmail } = require('./services/emailService');
 const { BigQuery } = require('@google-cloud/bigquery');
+const rateLimit = require('express-rate-limit');
+const { default: axios } = require('axios');
 
 
 class CustomGoogleAuth extends GoogleAuth {
@@ -74,7 +75,45 @@ const getEntryByName = async (dataplexClientv1, entryName) => {
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors());
+// Define the rate limiting options
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+//app.use(apiLimiter);
+
+
+
+const whitelist = []; // Your allowed origins
+// Use the cors middleware with options for all routes
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const host = req.headers.host.split(':')[0]; // Get the server's current host (no port)
+
+  cors({
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin) return callback(null, true);
+      
+      const requestHostname = new URL(requestOrigin).hostname;
+
+      // Automatically allow if the origin hostname matches the host header
+      if (requestHostname === host || whitelist.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS unauthorized'));
+      }
+    },
+    credentials: true
+  })(req, res, next);
+});
+
+
+
+
 
 // Middleware to parse JSON request bodies
 app.use(express.json());
@@ -84,6 +123,28 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // --- File Path for Local Data ---
 const dataFilePath = path.join(__dirname, 'configData.json');
+
+function checkErrorAndSendResponse(res, error, customMessage) {
+    console.error(customMessage, error);
+    if (error?.code === 403 || ((error.message).toLowerCase().includes('permission_denied')) || (error.errors && error.errors[0] && error.errors[0].reason === 'FORBIDDEN')) {
+      return res.status(403).json({
+          error: 'Permission Denied: The service account does not have the necessary permissions to perform this action.',
+          details: error.message
+      });
+    }
+    else if (error.code === 401 || ((error.message).toLowerCase().includes('unauthorized')) || (error.errors && error.errors[0] && error.errors[0].reason === 'UNAUTHENTICATED')) {
+      return res.status(401).json({ error: 'Unauthorized: Authentication is required and has failed or has not yet been provided.', details: error.message });
+    }
+    else if (error.code === 404 || ((error.message).toLowerCase().includes('notFound'))) {
+      return res.status(404).json({ error: 'Resource Not Found: The specified resource could not be found.', details: error.message });
+    }
+    else if (error.code === 400 || (error.errors && error.errors[0] && error.errors[0].reason === 'badRequest')) {
+      return res.status(400).json({ error: 'Bad Request: The request was invalid or cannot be served.', details: error.message });
+    }
+    else{
+      return res.status(500).json({ error: 'An internal server error occurred.', details: error.message });
+    }
+}
 
 
 /**
@@ -197,7 +258,7 @@ app.post('/api/v1/check-iam-role', async (req, res) => {
                 details: error.message
             });
         }
-        return res.status(500).json({ error: 'An internal server error occurred.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while checking IAM role:');
     }
 });
 
@@ -212,7 +273,7 @@ app.post('/api/v1/check-iam-role', async (req, res) => {
  * }
  */
 app.post('/api/v1/search', async (req, res) => {
-  const { query, pageSize, pageToken } = req.body;
+  const { query, pageSize, pageToken, orderBy } = req.body;
 
   // Validate that a search query was provided
   if (!query) {
@@ -242,6 +303,7 @@ app.post('/api/v1/search', async (req, res) => {
       query: query,
       pageSize: pageSize ?? 20,
       pageToken: pageToken ?? '',
+      orderBy: orderBy ?? '',
     };
 
     console.log('Performing Dataplex search with query:', query);
@@ -255,7 +317,7 @@ app.post('/api/v1/search', async (req, res) => {
   } catch (error) {
     console.error('Error during Dataplex search:', error);
     // Return a generic error message to the client
-    res.status(500).json({ message: 'An error occurred while searching Dataplex.', details: error.message });
+    return checkErrorAndSendResponse( res, error, 'An error occurred while searching Dataplex.');
   }
 });
 
@@ -275,7 +337,7 @@ app.post('/api/v1/aspects', async (req, res) => {
 
   // Validate that an entryName was provided
   if (!entryName) {
-    return res.status(400).json({ message: 'Bad Request: An "entryName" field is required in the request body.' });
+    return checkErrorAndSendResponse( res, error, 'Bad Request: An "entryName" field is required in the request body.' );
   }
 
   try {
@@ -304,7 +366,7 @@ app.post('/api/v1/aspects', async (req, res) => {
   } catch (error) {
     console.error(`Error fetching aspects for entry ${entryName}:`, error);
     // Return a generic error message to the client
-    res.status(500).json({ message: 'An error occurred while fetching aspects from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching aspects from Dataplex.');
   }
 });
 
@@ -314,7 +376,7 @@ app.post('/api/v1/batch-aspects', async (req, res) => {
 
     // Validate that entryNames is provided and is an array
     if (!entryNames || !Array.isArray(entryNames)) {
-        return res.status(400).json({ message: 'Bad Request: An "entryNames" field (array of strings) is required.' });
+        return checkErrorAndSendResponse(res, error, 'Bad Request: An "entryNames" field (array of strings) is required.' );
     }
 
     // if (entryNames.length === 0) {
@@ -349,7 +411,7 @@ app.post('/api/v1/batch-aspects', async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching aspects for batch:', error);
-        res.status(500).json({ message: 'An error occurred while fetching aspects for the batch.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while fetching aspects for the batch.');
     }
 });
 
@@ -384,7 +446,7 @@ app.get('/api/v1/aspect-types', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    res.status(500).json({ message: 'An error occurred while listing aspect types from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
   }
 });
 
@@ -419,7 +481,7 @@ app.get('/api/v1/entry-list', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    res.status(500).json({ message: 'An error occurred while listing aspect types from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
   }
 });
 
@@ -454,7 +516,7 @@ app.get('/api/v1/entry-types', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    res.status(500).json({ message: 'An error occurred while listing aspect types from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
   }
 });
 
@@ -477,7 +539,7 @@ app.get('/api/v1/get-entry', async (req, res) => {
     });
 
     if (!entryName) {
-        return res.status(500).json({ message: 'Entry name is required' });
+        return  checkErrorAndSendResponse(res, error, 'Entry name is required');
     }
 
     // The getEntry method returns an entry.
@@ -487,7 +549,7 @@ app.get('/api/v1/get-entry', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    res.status(500).json({ message: 'An error occurred while fetching entry from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
   }
 });
 
@@ -533,7 +595,7 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
     const entryName = response.length > 0 ? response[0].dataplexEntry.name : null ; // Get entryName from query parameters
 
     if (!entryName) {
-        return res.status(500).json({ message: 'FQN is not provided or incorrect' });
+        return checkErrorAndSendResponse(res, error, 'FQN is not provided or incorrect' );
     }
 
     // The getEntry method returns an entry.
@@ -543,7 +605,7 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    res.status(500).json({ message: 'An error occurred while fetching entry from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
   }
 });
 
@@ -560,7 +622,7 @@ app.get('/api/v1/lookup-entry', async (req, res) => {
     });
 
     if (!entryName) {
-        return res.status(500).json({ message: 'Entry name is required' });
+        return checkErrorAndSendResponse(res, error, 'Entry name is required');
     }
 
     // The getEntry method returns an entry.
@@ -570,7 +632,7 @@ app.get('/api/v1/lookup-entry', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    res.status(500).json({ message: 'An error occurred while fetching entry from Dataplex.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
   }
 });
 
@@ -581,7 +643,7 @@ app.get('/api/v1/get-sample-data', async (req, res) => {
     const accessToken = req.headers.authorization?.split(' ')[1]; // Expect
 
     if (!fqn) {
-        return res.status(500).json({ message: 'fqn is required' });
+        return checkErrorAndSendResponse(res, error, 'fqn is required');
     }
 
     // const oauth2Client = new CustomGoogleAuth(accessToken);
@@ -598,7 +660,7 @@ app.get('/api/v1/get-sample-data', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    res.status(500).json({ message: 'An error occurred while fetching sample data from bigquery.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching sample data from bigquery.');
   }
 });
 
@@ -689,7 +751,7 @@ app.post('/api/v1/lineage', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage.');
   }
 });
 
@@ -724,7 +786,7 @@ app.post('/api/v1/lineage-downstream', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage.');
   }
 });
 
@@ -759,7 +821,7 @@ app.post('/api/v1/lineage-upstream', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage.');
   }
 });
 
@@ -791,7 +853,7 @@ app.post('/api/v1/lineage-processes', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage.');
   }
 });
 
@@ -838,7 +900,7 @@ app.post('/api/v1/get-process-and-job-details', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage query.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage query.');
   }
 });
 
@@ -1115,7 +1177,7 @@ app.post('/api/v1/lineage-column-level', async (req, res) => {
 
   } catch (error) {
     console.error('Error searching for lineage links:', error);
-    res.status(500).json({ message: 'An error occurred while fetching data lineage.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data lineage.');
   }
 });
 
@@ -1137,7 +1199,7 @@ app.get('/api/v1/projects', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing projects:', error);
-    res.status(500).json({ message: 'An error occurred while listing projects.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing projects.');
   }
 });
 
@@ -1173,7 +1235,7 @@ app.get('/api/v1/tag-templates', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing tag templates:', error);
-    res.status(500).json({ message: 'An error occurred while listing tag templates.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing tag templates.');
   }
 });
 
@@ -1181,21 +1243,21 @@ app.get('/api/v1/tag-templates', async (req, res) => {
  * POST /api/data
  * A protected endpoint to write data to a local data.json file.
  */
-app.post('/api/v1/admin/configure', async (req, res) => {
-  try {
-    // The data to be written is the entire request body.
-    const dataToWrite = req.body;
-    // Convert the JSON object to a string with pretty printing (2-space indentation).
-    const jsonString = JSON.stringify(dataToWrite, null, 2);
-    // Write the string to the specified file path.
-    await fs.writeFile(dataFilePath, jsonString, 'utf8');
-    // Send a success response.
-    res.status(200).json({ message: 'Data saved successfully.' });
-  } catch (error) {
-    console.error('Error writing data file:', error);
-    res.status(500).json({ message: 'Failed to save data.', details: error.message });
-  }
-});
+// app.post('/api/v1/admin/configure', async (req, res) => {
+//   try {
+//     // The data to be written is the entire request body.
+//     const dataToWrite = req.body;
+//     // Convert the JSON object to a string with pretty printing (2-space indentation).
+//     const jsonString = JSON.stringify(dataToWrite, null, 2);
+//     // Write the string to the specified file path.
+//     await fs.writeFile(dataFilePath, jsonString, 'utf8');
+//     // Send a success response.
+//     res.status(200).json({ message: 'Data saved successfully.' });
+//   } catch (error) {
+//     console.error('Error writing data file:', error);
+//     return checkErrorAndSendResponse(res, error, 'Failed to save data.');
+//   }
+// });
 
 app.post('/api/v1/get-aspect-detail', async (req, res) => {
     const { name } = req.body;
@@ -1220,7 +1282,7 @@ app.post('/api/v1/get-aspect-detail', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing configs:', error);
-    res.status(500).json({ message: 'An error occurred while getting aspect detail.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while getting aspect detail.');
   }
 });
 
@@ -1288,7 +1350,7 @@ app.get('/api/v1/app-configs', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing configs:', error);
-    res.status(401).json({ message: 'An error occurred while generating app configs.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while generating app configs.');
   }
 });
 
@@ -1423,7 +1485,7 @@ app.get('/api/v1/get-projects', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing projects:', error);
-    res.status(401).json({ message: 'An error occurred while generating app configs.', details: error.message });
+    return checkErrorAndSendResponse(res, error, 'An error occurred while generating app configs.');
   }
 });
 
@@ -1457,7 +1519,7 @@ app.get('/api/v1/data-scans', async (req, res) => {
 
     } catch (error) {
         console.error('Error listing data quality scans:', error);
-        res.status(500).json({ message: 'An error occurred while listing data quality scans.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while listing data quality scans.');
     }
 });
 
@@ -1497,7 +1559,59 @@ app.get('/api/v1/data-quality-scan-jobs/:scanId', async (req, res) => {
 
     } catch (error) {
         console.error(`Error listing data quality scan jobs for scan ${scanId}:`, error);
-        res.status(500).json({ message: 'An error occurred while listing data quality scan jobs.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while listing data quality scan jobs.');
+    }
+});
+
+/**
+ * GET /api/v1/get-data-scan-jobs
+ * A protected endpoint to list the jobs (runs and results) for a specific data quality scan.
+ */
+app.get('/api/v1/get-data-scan-jobs', async (req, res) => {
+    const { parent } = req.query;
+
+    if (!parent) {
+        return res.status(400).json({ message: 'Bad Request: A "scanId" URL parameter is required.' });
+    }
+
+    try {
+        const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+        const location = process.env.GCP_LOCATION;
+
+        if (!projectId || !location) {
+            return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
+        }
+
+        //const parent = `projects/${projectId}/locations/${location}/dataScans/${scanId}`;
+        console.log(`Listing data quality scan jobs for parent: ${parent}`);
+
+        const accessToken = req.headers.authorization?.split(' ')[1]; // Expect
+
+        const oauth2Client = new CustomGoogleAuth(accessToken);
+
+        const dataplexDataScanClientv1 = new DataScanServiceClient({
+            auth: oauth2Client,
+        });
+
+        // The listDataScanJobs method returns recent jobs. The result of each job contains the quality metrics.
+        const [jobs] = await dataplexDataScanClientv1.listDataScanJobs({ parent: parent });
+
+        for (const job of jobs) {
+            //const [jobDetails] = await dataplexDataScanClientv1.getDataScanJob({ name: job.name, view:'FULL' });
+            const jobDetails = await axios.get(`https://dataplex.googleapis.com/v1/${job.name}?view=FULL`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            //console.log(`Fetched details for job ${job.name}`, jobDetails);
+            job.full_details = jobDetails.data;
+        }
+        res.json(jobs);
+
+    } catch (error) {
+        console.error(`Error listing data quality scan jobs for scan ${parent}:`, error);
+        checkErrorAndSendResponse(res, error, 'An error occurred while getting data quality scan jobs.');
     }
 });
 
@@ -1557,7 +1671,7 @@ app.post('/api/v1/entry-data-quality', async (req, res) => {
 
     } catch (error) {
         console.error(`Error fetching data quality for entry ${resourceName}:`, error);
-        res.status(500).json({ message: 'An error occurred while fetching data quality for the entry.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data quality for the entry.');
     }
 });
 
@@ -1599,7 +1713,7 @@ app.get('/api/v1/get-data-scan', async (req, res) => {
 
     } catch (error) {
         console.error(`Error fetching data scan for scan ${name}:`, error);
-        res.status(500).json({ message: 'An error occurred while fetching data scan for scan ${name}.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data scan for scan ${name}.');
     }
 });
 
@@ -1631,7 +1745,7 @@ app.post('/api/v1/get-jobs-scan', async (req, res) => {
 
     } catch (error) {
         console.error(`Error fetching data scan for scan ${name}:`, error);
-        res.status(500).json({ message: 'An error occurred while fetching data scan for scan ${name}.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data scan for scan ${name}.');
     }
 });
 
@@ -1678,7 +1792,7 @@ app.post('/api/batch-data-quality-scan-jobs', async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching data quality scan jobs for batch:', error);
-        res.status(500).json({ message: 'An error occurred while fetching data quality scan jobs for the batch.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while fetching data quality scan jobs for the batch.');
     }
 });
 
@@ -1712,7 +1826,7 @@ app.post('/api/v1/get-dataset-entries', async (req, res) => {
 
     } catch (error) {
         console.error(`Error listing entries for parent ${parent}:`, error);
-        res.status(500).json({ message: 'An error occurred while listing entries.', details: error.message });
+        return checkErrorAndSendResponse(res, error, 'An error occurred while listing entries.');
     }
 });
 

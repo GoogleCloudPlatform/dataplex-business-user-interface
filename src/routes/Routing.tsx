@@ -7,7 +7,7 @@ interface RootState {
     token?: string;
   };
 }
-import Login from '../component/Auth/Login/Login';
+import LoginV2 from '../component/Auth/Login/LoginV2';
 import Layout from '../component/Layout/Layout';
 import Home from '../component/Home/Home';
 import { useSelector } from 'react-redux';
@@ -75,7 +75,7 @@ const Routing = () => {
           <RedirectGuard isAuthenticated={!!(user && user.email)}>
             {user && user.email ?
               <Navigate to="/home" replace />
-              : <Login />
+              : <LoginV2 />
             }
           </RedirectGuard>
         }

@@ -23,7 +23,7 @@ export const setGlobalAuthFunctions = (
 // Check if error is an authentication error
 export const isAuthenticationError = (error: AxiosError | unknown): boolean => {
   // Check for HTTP status codes
-  if ((error as AxiosError)?.response?.status === 401 || (error as AxiosError)?.response?.status === 403) {
+  if ((error as AxiosError)?.response?.status === 401 ) { // || (error as AxiosError)?.response?.status === 403
     return true;
   }
 

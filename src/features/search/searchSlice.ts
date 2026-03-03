@@ -13,7 +13,7 @@ const initialState : searchState = {
   searchResult: null,
   searchType: 'All', // Default to 'All',
   searchFilters:[],
-  semanticSearch: false,
+  semanticSearch: true,
 };
 
 export const searchSlice = createSlice({
@@ -34,7 +34,7 @@ export const searchSlice = createSlice({
     },
     setSemanticSearch: (state, action) => {
       state.semanticSearch = action.payload.semanticSearch;
-    }
+    },
   },
 });
 

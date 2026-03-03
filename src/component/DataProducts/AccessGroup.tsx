@@ -148,11 +148,12 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
 
   useEffect(() => {
     if(dataProductAssetsStatus === 'succeeded') {
+      console.log(number);
         // schema = <Schema entry={entry} css={{width:"100%"}} />;
         // if(entry.entrySource?.system) {
         // if(entry.entrySource?.system.toLowerCase() === 'bigquery'){
-            const assetData:any[] = dataProductAssets.map((asset:any) => {
-                const mapPermission = Object.keys(asset.accessGroupConfigs || {}).map((accessGroupId:any) => {
+            const assetData:any[] = Array.isArray(dataProductAssets) ? dataProductAssets.map((asset:any) => {
+                const mapPermission = Object.keys(asset?.accessGroupConfigs || {}).map((accessGroupId:any) => {
                     const roles = asset.accessGroupConfigs[accessGroupId].iamRoles || [];
                     return `${accessGroupId} : ${roles.join(', ')}`;
                 });
@@ -164,7 +165,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                     System: 'Bigquery',
                     'Source-Project': asset.resource.split('projects/')[1].split('/')[0],
                     'Mapped-Permissions':mapPermission,
-            })});
+            })}) : [];
 
             setAccessPermissionData(assetData);
         // }
@@ -173,9 +174,9 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
 }, [dataProductAssets]);
 
   let selectedDataProduct = localStorage.getItem('selectedDataProduct') ? 
-  JSON.parse(localStorage.getItem('selectedDataProduct') || '{}') : null;
+  JSON.parse(localStorage.getItem('selectedDataProduct') || '{}') : {};
 
-  let accessGroups = selectedDataProduct ? selectedDataProduct.accessGroups : (entry.aspects[`${number}.global.data-product`]?.data.accessGroups || []);
+  let accessGroups = selectedDataProduct ? (selectedDataProduct?.accessGroups || {}): {};
   //let usage = entry.aspects[`${number}.global.usage`]?.data.fields || {};
 
   // Always compute memoized helpers at top-level (avoid conditional hooks)
@@ -281,7 +282,7 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
         }
       });
         
-      accessPermissionView = (
+      accessPermissionView = accessPermissionData.length > 0 ? (
         <>
           {/* Sample Filter Bar - Only show when Sample Data tab is active */}
           <TableFilter
@@ -306,7 +307,9 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
             }} 
           />
         </>
-      );
+      ) : (
+        <div style={{padding:"10px", justifyContent:"center"}}>No data to display</div>
+        );
     } catch (error) {
       console.error('Error processing sample data:', error);
       accessPermissionView = (
@@ -375,6 +378,23 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                                 </Typography>
                             </Box>
                             <Grid container spacing={4}>
+                                {
+                                  Object.keys(accessGroups).length === 0 && (
+                                      <Typography 
+                                          component="span"
+                                          variant="heading2Medium"
+                                          sx={{
+                                              fontWeight: 400,
+                                              fontSize: "14px",
+                                              lineHeight: "1.33em",
+                                              color: "#575757", 
+                                              marginTop: "10px",
+                                          }}
+                                      >
+                                          No access groups defined for this data product.
+                                      </Typography>
+                                  )
+                                }
                                 { Object.keys(accessGroups).map((key:any) => (
                                                     // Grid item for each card, defining its responsive width
                                     <Grid

@@ -1,81 +1,240 @@
 .home {
-    align-items: center;
-    padding: 0px 0;
-    background-color:#F8FAFD ;
-    min-height: 100vh;
-  }
-
-  .home-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-radius:20px;
-    background-color: #ffffff;
-    min-height: 90vh;
-  }
-
-  .home-banner{
-    width:100% !important;
-    min-height: 20rem !important;
-    background-image: url('/assets/images/home-banner-bg.png');
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-  }
-  
-  .avatar,
-  .avatar-placeholder {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    margin-bottom: 1rem;
-    flex-shrink: 0;
-  }
-  
-  .avatar {
-    object-fit: cover;
-    display: block;
-  }
-  
-  .avatar-placeholder {
-    background-color: #ccc;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 2.5rem;
-    color: white;
-  }
-  
-  .home-name {
-    margin: 0.5rem 0;
-    font-size: 1.5rem;
-  }
-  
-  .home-info {
-    margin: 0.25rem 0;
-    font-size: 1rem;
-  }
-
-  .home-browse-button {
-    cursor: pointer;
-    float: right;
-  }
-  
-  .home-search-container {
-    width: 47.86%;
-    transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  background-color: transparent;
+  height: 100%;
 }
+
+.home-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+}
+
+/* Home banner */
+.home-banner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Centered content wrapper */
+.home-content-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(24px, 2.5vw, 48px);
+  width: clamp(320px, 50vw, 960px);
+  padding: 0 20px;
+  margin-bottom: clamp(110px, 23vh, 290px);
+}
+
+/* Header section */
+.home-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(6px, 1vw, 12px);
+  width: 100%;
+  transform: translateY(56px);
+  animation: headerSlideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+@keyframes headerSlideUp {
+  0% {
+    transform: translateY(56px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Greeting row */
+.home-greeting {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 0 0 8px;
+  gap: clamp(6px, 0.56vw, 10px);
+}
+
+.home-greeting span {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 400;
+  font-size: clamp(18px, 1.67vw, 32px);
+  line-height: clamp(26px, 2.22vw, 42px);
+  color: #575757;
+}
+
+.home-greeting-name {
+  background: linear-gradient(90deg,
+    #575757 0%, #575757 40%,
+    #4285F4 45%, #7B68AE 50%, #C9708A 55%, #E0826D 60%,
+    #575757 65%, #575757 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: nameColorSweep 0.8s ease-in-out 0s both;
+}
+
+@keyframes nameColorSweep {
+  0%   { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+
+/* Title */
+.home-title {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 400;
+  font-size: clamp(22px, 2.5vw, 48px);
+  line-height: clamp(30px, 3.06vw, 58px);
+  color: #1F1F1F;
+  text-align: left;
+  margin: 0;
+  padding-left: 8px;
+  opacity: 0;
+  animation: titleAppear 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+@keyframes titleAppear {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Subtitle */
+.home-subtitle {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 400;
+  font-size: clamp(14px, 1.3vw, 18px);
+  line-height: 1.33;
+  text-align: center;
+  color: #575757;
+  margin: 0;
+  max-width: 682px;
+}
+
+/* Search container */
+.home-search-container {
+  position: relative;
+  width: clamp(320px, 47.86vw, 900px);
+  max-width: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Glass rainbow border behind the search bar */
+.home-search-container::before {
+  content: '';
+  position: absolute;
+  top: clamp(-8px, -0.42vw, -5px);
+  left: clamp(-8px, -0.42vw, -5px);
+  width: calc(100% + clamp(10px, 0.83vw, 16px));
+  height: calc(100% + clamp(10px, 0.83vw, 16px));
+  border-radius: 170px;
+  background: linear-gradient(
+    135deg,
+    rgba(234, 67, 53, 0.18),
+    rgba(255, 200, 25, 0.18),
+    rgba(52, 168, 83, 0.18),
+    rgba(66, 133, 244, 0.18)
+  );
+  pointer-events: none;
+  z-index: -1;
+  animation: glassAppear 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes glassAppear {
+  0% {
+    opacity: 0;
+    filter: blur(20px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+/* Rainbow border stays rounded when autocomplete dropdown is open */
+
+.home-search-container .MuiAutocomplete-popper {
+  isolation: isolate;
+}
+
+/* Make dropdown relative so popper gets actual height for ::after sizing */
+.home-search-container .autocomplete-dropdown {
+  position: relative !important;
+  top: auto !important;
+}
+
+.home-search-container #search-bar {
+  box-shadow: none !important;
+}
+
+/* Dropdown is now a separate floating panel — no rainbow border needed */
 
 /* Tablet */
 @media (max-width: 1024px) {
-    .home-search-container {
-        width: 70%;
-    }
+  .home-content-wrapper {
+    width: clamp(320px, 70vw, 682px);
+  }
+  .home-search-container {
+    width: 70%;
+  }
+}
+
+/* Small tablet / large mobile */
+@media (max-width: 768px) {
+  .home-content-wrapper {
+    width: 90%;
+  }
+  .home-search-container {
+    width: 90%;
+  }
+  .home-search-container::before {
+    top: -6px;
+    left: -6px;
+    width: calc(100% + 12px);
+    height: calc(100% + 12px);
+  }
+  .home-subtitle {
+    max-width: 100%;
+  }
 }
 
 /* Mobile */
 @media (max-width: 600px) {
-    .home-search-container {
-        width: 95%;
-    }
+  .home-content-wrapper {
+    width: 95%;
+    padding: 0 12px;
+  }
+  .home-search-container {
+    width: 95%;
+  }
+  .home-greeting {
+    padding: 0 0 0 4px;
+  }
+  .home-title {
+    padding-left: 4px;
+  }
+  .home-search-container::before {
+    top: -5px;
+    left: -5px;
+    width: calc(100% + 10px);
+    height: calc(100% + 10px);
+  }
 }

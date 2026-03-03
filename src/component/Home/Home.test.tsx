@@ -2,6 +2,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi, beforeEach, it, describe, expect } from 'vitest';
 import Home from './Home';
+import axios from 'axios';
+
+// Track projects loaded state across tests
+let mockProjectsLoaded = false;
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
@@ -13,39 +17,53 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
-// Mock auth context
-const mockAuthContext = {
-  user: {
-    token: 'test-token',
-    name: 'Test User',
-    email: 'test@example.com',
-    picture: 'test-picture',
-    hasRole: true,
-    roles: [],
-    permissions: [],
-    appConfig: {
-      aspects: [],
-      projects: [],
-      defaultSearchProduct: {},
-      defaultSearchAssets: {},
-      browseByAspectTypes: {},
-      browseByAspectTypesLabels: {}
+// Mock NotificationContext
+const mockShowSuccess = vi.fn();
+const mockShowError = vi.fn();
+vi.mock('../../contexts/NotificationContext', () => ({
+  useNotification: () => ({
+    showSuccess: mockShowSuccess,
+    showError: mockShowError,
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
+    clearNotification: vi.fn(),
+    clearAllNotifications: vi.fn(),
+  })
+}));
+
+// Mock react-redux
+const mockDispatch = vi.fn();
+vi.mock('react-redux', async () => {
+  const actual = await vi.importActual('react-redux');
+  return {
+    ...actual,
+    useDispatch: () => mockDispatch,
+    useSelector: (selector: (state: { projects: { isloaded: boolean } }) => unknown) => {
+      const mockState = {
+        projects: { isloaded: mockProjectsLoaded }
+      };
+      return selector(mockState);
     }
-  },
+  };
+});
+
+// Mock getProjects action
+vi.mock('../../features/projects/projectsSlice', () => ({
+  getProjects: vi.fn((data: { id_token?: string }) => ({ type: 'projects/getProjects', payload: data }))
+}));
+
+// Mock axios - use actual axios module and spy on it
+vi.mock('axios');
+
+// Mock auth provider - will be set per test
+let mockAuthContext: { user: unknown; login: unknown; logout: unknown; updateUser: unknown } = {
+  user: null,
   login: vi.fn(),
   logout: vi.fn(),
   updateUser: vi.fn()
 };
-
 vi.mock('../../auth/AuthProvider', () => ({
   useAuth: () => mockAuthContext
-}));
-
-// Mock axios
-vi.mock('axios', () => ({
-  default: {
-    get: vi.fn()
-  }
 }));
 
 // Mock constants
@@ -58,15 +76,15 @@ vi.mock('../../constants/urls', () => ({
 
 // Mock SearchBar component
 vi.mock('../SearchBar/SearchBar', () => ({
-  default: function MockSearchBar({ handleSearchSubmit, variant, dataSearch }: any) {
+  default: function MockSearchBar({ handleSearchSubmit, variant, dataSearch }: { handleSearchSubmit: (text: string) => void; variant: string; dataSearch: Array<{ name: string }> }) {
     return (
       <div data-testid="search-bar">
-        <input 
+        <input
           data-testid="search-input"
           placeholder="Search..."
           onChange={(e) => {
-            if (e.target.value === 'test search') {
-              handleSearchSubmit('test search');
+            if (e.target.value) {
+              handleSearchSubmit(e.target.value);
             }
           }}
         />
@@ -81,12 +99,93 @@ vi.mock('../SearchBar/SearchBar', () => ({
 vi.mock('./Home.css', () => ({}));
 
 describe('Home', () => {
-  const renderHome = (authContext = mockAuthContext) => {
-    // Mock the auth context for this specific render
-    vi.doMock('../../auth/AuthProvider', () => ({
-      useAuth: () => authContext
-    }));
-    
+  const mockLogout = vi.fn();
+  const mockUpdateUser = vi.fn();
+
+  // Mock user data
+  const mockUserWithAppConfig = {
+    token: 'test-token',
+    name: 'Test User',
+    email: 'test@example.com',
+    picture: 'test-picture',
+    tokenExpiry: Date.now() + 3600000,
+    tokenIssuedAt: Date.now(),
+    hasRole: true,
+    roles: [],
+    permissions: [],
+    appConfig: {
+      aspects: ['aspect1'],
+      projects: ['project1'],
+      defaultSearchProduct: { name: 'BigQuery' },
+      defaultSearchAssets: { type: 'table' },
+      browseByAspectTypes: { type1: 'value1' },
+      browseByAspectTypesLabels: { label1: 'Label 1' }
+    }
+  };
+
+  const mockUserWithoutAppConfig = {
+    ...mockUserWithAppConfig,
+    appConfig: {} as Record<string, never>
+  };
+
+  type MockUser = typeof mockUserWithAppConfig | typeof mockUserWithoutAppConfig | {
+    token: string;
+    name: string;
+    email: string;
+    picture: string;
+    tokenExpiry: number;
+    tokenIssuedAt: number;
+    hasRole: boolean;
+    roles: never[];
+    permissions: never[];
+    appConfig: Record<string, unknown>;
+  };
+
+  const createMockAuthContext = (user: MockUser) => ({
+    user,
+    login: vi.fn(),
+    logout: mockLogout,
+    updateUser: mockUpdateUser
+  });
+
+  // Mock sessionStorage
+  const mockSessionStorage = (() => {
+    let store: Record<string, string> = {};
+    return {
+      getItem: vi.fn((key: string) => store[key] || null),
+      setItem: vi.fn((key: string, value: string) => {
+        store[key] = value;
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete store[key];
+      }),
+      clear: vi.fn(() => {
+        store = {};
+      })
+    };
+  })();
+
+  // Setup and teardown
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionStorage.clear();
+    mockProjectsLoaded = false;
+    Object.defineProperty(window, 'sessionStorage', {
+      value: mockSessionStorage,
+      writable: true
+    });
+
+    // Setup axios mock
+    vi.mocked(axios.get).mockClear();
+    if (!axios.defaults) {
+      (axios as any).defaults = { headers: { common: {} } };
+    }
+  });
+
+  const renderHome = (authContext = createMockAuthContext(mockUserWithAppConfig)) => {
+    // Set the mock auth context before rendering
+    mockAuthContext = authContext;
+
     return render(
       <BrowserRouter>
         <Home />
@@ -94,207 +193,437 @@ describe('Home', () => {
     );
   };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  describe('Loading state', () => {
+    it('shows CircularProgress when appConfig is empty', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockResolvedValue({
+        data: {
+          aspects: [],
+          projects: [],
+          defaultSearchProduct: {},
+          defaultSearchAssets: {},
+          browseByAspectTypes: {},
+          browseByAspectTypesLabels: {}
+        }
+      } as any);
 
-  it('renders the component with loading state initially', () => {
-    // The component shows loading state when user has empty appConfig
-    // This test verifies the component renders without crashing
-    renderHome();
-    expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-  });
+      renderHome(authContext);
 
-  it('renders home content when not loading', async () => {
-    renderHome();
+      const loader = screen.getByRole('progressbar');
+      expect(loader).toBeInTheDocument();
+    });
 
-    await waitFor(() => {
-      expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-      expect(screen.getByTestId('search-bar')).toBeInTheDocument();
-      expect(screen.getByText('Browse')).toBeInTheDocument();
+    it('shows home banner when appConfig is populated', () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      waitFor(() => {
+        expect(screen.getByText('What would you like to discover?')).toBeInTheDocument();
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
+    });
+
+    it('hides loader after appConfig is fetched', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockResolvedValue({
+        data: {
+          aspects: [],
+          projects: [],
+          defaultSearchProduct: {},
+          defaultSearchAssets: {},
+          browseByAspectTypes: {},
+          browseByAspectTypesLabels: {}
+        }
+      } as any);
+
+      renderHome(authContext);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
     });
   });
 
-  it('displays the correct search bar variant and data', async () => {
-    renderHome();
+  describe('App config fetching', () => {
+    it('makes API call to URLS.APP_CONFIG when appConfig is empty', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockResolvedValue({
+        data: {
+          aspects: [],
+          projects: [],
+          defaultSearchProduct: {},
+          defaultSearchAssets: {},
+          browseByAspectTypes: {},
+          browseByAspectTypesLabels: {}
+        }
+      } as any);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('search-variant')).toHaveTextContent('default');
-      expect(screen.getByTestId('search-data')).toHaveTextContent('BigQuery');
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalledWith('http://localhost:3000/api/app-config');
+      });
+    });
+
+    it('does NOT make API call when appConfig is already populated', () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      expect(axios.get).not.toHaveBeenCalled();
+    });
+
+    it('calls updateUser with correct data on successful fetch', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      const mockAppConfig = {
+        aspects: ['aspect1'],
+        projects: ['project1'],
+        defaultSearchProduct: {},
+        defaultSearchAssets: {},
+        browseByAspectTypes: {},
+        browseByAspectTypesLabels: {}
+      };
+      vi.mocked(axios.get).mockResolvedValue({ data: mockAppConfig } as any);
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockUpdateUser).toHaveBeenCalledWith(
+          'test-token',
+          expect.objectContaining({
+            name: 'Test User',
+            email: 'test@example.com',
+            picture: 'test-picture',
+            token: 'test-token',
+            hasRole: true,
+            roles: [],
+            permissions: [],
+            appConfig: mockAppConfig
+          })
+        );
+      });
+    });
+
+    it('shows error notification and calls logout on API error', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockRejectedValue(new Error('Network error'));
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(
+          'Access token expired or you do not have enough permissions',
+          2000
+        );
+        expect(mockLogout).toHaveBeenCalled();
+      });
+    });
+
+    it('sets loader to false after fetch completes', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockResolvedValue({
+        data: {
+          aspects: [],
+          projects: [],
+          defaultSearchProduct: {},
+          defaultSearchAssets: {},
+          browseByAspectTypes: {},
+          browseByAspectTypesLabels: {}
+        }
+      } as any);
+
+      renderHome(authContext);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      });
     });
   });
 
-  it('handles search submission', async () => {
-    renderHome();
+  describe('Redux integration', () => {
+    it('dispatches getProjects when projectsLoaded is false', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      mockProjectsLoaded = false;
 
-    await waitFor(() => {
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'projects/getProjects',
+            payload: { id_token: 'test-token' }
+          })
+        );
+      });
+    });
+
+    it('does NOT dispatch getProjects when projectsLoaded is true', () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      mockProjectsLoaded = true;
+
+      renderHome(authContext);
+
+      const projectsCall = mockDispatch.mock.calls.find(
+        (call: unknown[]) => (call[0] as { type?: string })?.type === 'projects/getProjects'
+      );
+      expect(projectsCall).toBeUndefined();
+    });
+
+    it('dispatches resources state reset actions on mount', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsPreviousPageRequest',
+          payload: null
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsPageRequest',
+          payload: null
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsStoreData',
+          payload: []
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItems',
+          payload: []
+        });
+      });
+    });
+
+    it('dispatches resources state reset actions before search', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+      });
+
+      mockDispatch.mockClear();
+
       const searchInput = screen.getByTestId('search-input');
       fireEvent.change(searchInput, { target: { value: 'test search' } });
-      
-      expect(mockNavigate).toHaveBeenCalledWith('/search');
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsPreviousPageRequest',
+          payload: null
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsPageRequest',
+          payload: null
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItemsStoreData',
+          payload: []
+        });
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'resources/setItems',
+          payload: []
+        });
+      });
+    });
+
+    it('verifies all 4 resource reset actions are dispatched', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        const dispatchedTypes = mockDispatch.mock.calls.map((call: unknown[]) => (call[0] as { type?: string })?.type);
+        expect(dispatchedTypes).toContain('resources/setItemsPreviousPageRequest');
+        expect(dispatchedTypes).toContain('resources/setItemsPageRequest');
+        expect(dispatchedTypes).toContain('resources/setItemsStoreData');
+        expect(dispatchedTypes).toContain('resources/setItems');
+      });
     });
   });
 
-  it('handles browse button click', async () => {
-    renderHome();
+  describe('Search functionality', () => {
+    it('handleSearch navigates to /search route', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
 
-    await waitFor(() => {
-      const browseButton = screen.getByText('Browse');
-      fireEvent.click(browseButton);
-      
-      expect(mockNavigate).toHaveBeenCalledWith('/browse-by-annotation');
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+      });
 
-  it('handles app config fetching logic', () => {
-    // This test verifies that the component handles app config logic
-    // The actual API calls are tested in integration tests
-    renderHome();
-    expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-  });
-
-  it('renders content when user has appConfig', async () => {
-    renderHome();
-
-    await waitFor(() => {
-      expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-    });
-  });
-
-  it('displays correct search data options', async () => {
-    renderHome();
-
-    await waitFor(() => {
-      const searchData = screen.getByTestId('search-data');
-      expect(searchData).toHaveTextContent('BigQuery');
-      expect(searchData).toHaveTextContent('Data Warehouse');
-      expect(searchData).toHaveTextContent('Data Lake');
-      expect(searchData).toHaveTextContent('Data Pipeline');
-      expect(searchData).toHaveTextContent('GCS');
-    });
-  });
-
-  it('displays browse button with chevron icon', async () => {
-    renderHome();
-
-    await waitFor(() => {
-      const browseButton = screen.getByText('Browse');
-      expect(browseButton).toBeInTheDocument();
-      
-      // Check for chevron icon (ChevronRight)
-      const chevronIcon = screen.getByTestId('ChevronRightIcon');
-      expect(chevronIcon).toBeInTheDocument();
-    });
-  });
-
-  it('applies correct styling to home banner', async () => {
-    renderHome();
-
-    await waitFor(() => {
-      const homeBanner = document.querySelector('.home-banner');
-      expect(homeBanner).toBeInTheDocument();
-    });
-  });
-
-  it('handles user without token', async () => {
-    const userWithoutToken = {
-      ...mockAuthContext.user,
-      token: ''
-    };
-
-    const authContextWithoutToken = {
-      ...mockAuthContext,
-      user: userWithoutToken
-    };
-
-    vi.doMock('../../auth/AuthProvider', () => ({
-      useAuth: () => authContextWithoutToken
-    }));
-
-    renderHome();
-
-    await waitFor(() => {
-      expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-    });
-  });
-
-  it('handles different user configurations', () => {
-    // This test verifies that the component handles different user configurations
-    renderHome();
-    expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-  });
-
-  it('handles multiple search submissions', async () => {
-    renderHome();
-
-    await waitFor(() => {
       const searchInput = screen.getByTestId('search-input');
-      
       fireEvent.change(searchInput, { target: { value: 'test search' } });
-      fireEvent.change(searchInput, { target: { value: 'another search' } });
-      
-      expect(mockNavigate).toHaveBeenCalledTimes(2);
-      expect(mockNavigate).toHaveBeenCalledWith('/search');
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/search');
+      });
     });
-  });
 
-  it('handles multiple browse button clicks', async () => {
-    renderHome();
+    it('handleSearch dispatches all 4 resource reset actions', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
 
-    await waitFor(() => {
-      const browseButton = screen.getByText('Browse');
-      
-      fireEvent.click(browseButton);
-      fireEvent.click(browseButton);
-      
-      expect(mockNavigate).toHaveBeenCalledTimes(2);
-      expect(mockNavigate).toHaveBeenCalledWith('/browse-by-annotation');
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+      });
 
-  it('handles loading states and app config scenarios', () => {
-    // This test verifies that the component handles loading states and app config scenarios
-    renderHome();
-    expect(screen.getByText('Your gateway to GCP data discovery')).toBeInTheDocument();
-  });
+      mockDispatch.mockClear();
 
-  it('applies correct CSS classes', async () => {
-    renderHome();
-
-    await waitFor(() => {
-      const homeElement = document.querySelector('.home');
-      const homeBodyElement = document.querySelector('.home-body');
-      const homeBannerElement = document.querySelector('.home-banner');
-      const homeBrowseButtonElement = document.querySelector('.home-browse-button');
-      
-      expect(homeElement).toBeInTheDocument();
-      expect(homeBodyElement).toBeInTheDocument();
-      expect(homeBannerElement).toBeInTheDocument();
-      expect(homeBrowseButtonElement).toBeInTheDocument();
-    });
-  });
-
-  it('handles search with empty string', async () => {
-    renderHome();
-
-    await waitFor(() => {
       const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: '' } });
-      
-      // Should not navigate with empty search
-      expect(mockNavigate).not.toHaveBeenCalled();
+      fireEvent.change(searchInput, { target: { value: 'test search' } });
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledTimes(4);
+      });
+    });
+
+    it('SearchBar receives correct props', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-variant')).toHaveTextContent('default');
+        const searchData = screen.getByTestId('search-data');
+        expect(searchData).toHaveTextContent('BigQuery');
+        expect(searchData).toHaveTextContent('Data Warehouse');
+        expect(searchData).toHaveTextContent('Data Lake');
+        expect(searchData).toHaveTextContent('Data Pipeline');
+        expect(searchData).toHaveTextContent('GCS');
+      });
     });
   });
 
-  it('handles search with whitespace only', async () => {
-    renderHome();
+  describe('Rendering', () => {
+    it('renders correct heading text', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
 
-    await waitFor(() => {
+      await waitFor(() => {
+        expect(screen.getByText('What would you like to discover?')).toBeInTheDocument();
+      });
+    });
+
+    it('renders SearchBar with correct variant', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-variant')).toHaveTextContent('default');
+      });
+    });
+
+    it('renders SearchBar with correct dataSearch array', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        const searchData = screen.getByTestId('search-data');
+        expect(searchData.textContent).toContain('BigQuery');
+        expect(searchData.textContent).toContain('Data Warehouse');
+        expect(searchData.textContent).toContain('Data Lake');
+        expect(searchData.textContent).toContain('Data Pipeline');
+        expect(searchData.textContent).toContain('GCS');
+      });
+    });
+
+    it('applies correct CSS classes', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        const homeElement = document.querySelector('.home');
+        const homeBodyElement = document.querySelector('.home-body');
+        const homeBannerElement = document.querySelector('.home-banner');
+        const homeSearchContainer = document.querySelector('.home-search-container');
+
+        expect(homeElement).toBeInTheDocument();
+        expect(homeBodyElement).toBeInTheDocument();
+        expect(homeBannerElement).toBeInTheDocument();
+        expect(homeSearchContainer).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Error handling', () => {
+    it('handles axios error with proper error message', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockRejectedValue(new Error('Network error'));
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(
+          'Access token expired or you do not have enough permissions',
+          2000
+        );
+      });
+    });
+
+    it('calls logout when API call fails', async () => {
+      const authContext = createMockAuthContext(mockUserWithoutAppConfig);
+      vi.mocked(axios.get).mockRejectedValue(new Error('API error'));
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(mockLogout).toHaveBeenCalled();
+      });
+    });
+
+  });
+
+  describe('Edge cases', () => {
+    it('handles user with empty token', async () => {
+      const userWithoutToken = {
+        ...mockUserWithAppConfig,
+        token: ''
+      };
+      const authContext = createMockAuthContext(userWithoutToken);
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByText('What would you like to discover?')).toBeInTheDocument();
+      });
+    });
+
+    it('handles user with partial appConfig', async () => {
+      const userWithPartialConfig = {
+        ...mockUserWithAppConfig,
+        appConfig: {
+          aspects: []
+        } as any
+      };
+      const authContext = createMockAuthContext(userWithPartialConfig);
+
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByText('What would you like to discover?')).toBeInTheDocument();
+      });
+    });
+
+    it('handles multiple search submissions without duplicate API calls', async () => {
+      const authContext = createMockAuthContext(mockUserWithAppConfig);
+      renderHome(authContext);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-bar')).toBeInTheDocument();
+      });
+
       const searchInput = screen.getByTestId('search-input');
-      fireEvent.change(searchInput, { target: { value: '   ' } });
-      
-      // Should not navigate with whitespace only
-      expect(mockNavigate).not.toHaveBeenCalled();
+
+      fireEvent.change(searchInput, { target: { value: 'search 1' } });
+      fireEvent.change(searchInput, { target: { value: 'search 2' } });
+      fireEvent.change(searchInput, { target: { value: 'search 3' } });
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledTimes(3);
+      });
+
+      // Should not make additional app config calls
+      expect(axios.get).not.toHaveBeenCalled();
     });
   });
 });

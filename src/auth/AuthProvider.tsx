@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useMemo, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { type CredentialResponse, GoogleOAuthProvider } from '@react-oauth/google';
 import type { User } from '../types/User';
 import axios from 'axios';
@@ -48,46 +48,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const [user, setUser] = useState<User | null>(storedData ?? null);
+  const isLoggedOut = useRef(false);
 
-  if(storedData){
-    dispatch(
-      setCredentials({token: storedData.token, user: storedData})
-    );
-  }
+  // Sync stored session data to Redux on mount only
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('sessionUserData') || 'null');
+    if (stored) {
+      dispatch(setCredentials({ token: stored.token, user: stored }));
+    }
+  }, [dispatch]);
 
   const login = useCallback(async (credentialResponse: CredentialResponse) => {
     if (credentialResponse.credential) {
+      isLoggedOut.current = false;
       try {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${credentialResponse.credential}`;
-        
-        // Optional: fetch user info from Google API
-        const res = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo');
-        const decoded: { name: string; email: string; picture: string } = res.data;
-        // Check IAM role and fetch app configurations in parallel
-        // These can be uncommented when needed for role checking
+        const token = credentialResponse.credential;
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
+        // Fetch user profile from Google OAuth2 userinfo
+        const profileRes = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const profile = profileRes.data;
 
         // Calculate token timestamps
         const tokenIssuedAt = Math.floor(Date.now() / 1000);
         const tokenExpiry = tokenIssuedAt + AUTH_CONFIG.TOKEN_LIFETIME_SECONDS;
 
-        const userData = {
-          name: decoded.name,
-          email: decoded.email,
-          picture: decoded.picture,
-          token: credentialResponse.credential,
+        const userData: User = {
+          name: profile.name,
+          email: profile.email,
+          picture: profile.picture,
+          token,
           tokenIssuedAt,
           tokenExpiry,
           hasRole: true,
-          roles: [],
-          permissions: [],
+          roles: ['roles/viewer'],
+          permissions: ['read'],
+          iamDisplayRole: 'Viewer',
           appConfig: {}
         };
         setUser(userData);
         localStorage.setItem('sessionUserData', JSON.stringify(userData));
 
         dispatch(
-          setCredentials({token: credentialResponse.credential, user: userData})
+          setCredentials({token, user: userData})
         );
 
         // Reset the auth notification flag on successful login
@@ -103,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [dispatch, showSuccess, showError]);
 
   const logout = useCallback(() => {
+    isLoggedOut.current = true;
     dispatch(setCredentials({token: null, user: null}));
     dispatch(setIsLoaded({ isloaded: false }));
     localStorage.removeItem('sessionUserData');
@@ -117,6 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [showError, logout]);
 
   const updateUser = useCallback((token:string|undefined, userData:User) => {
+    if (isLoggedOut.current) return;
     dispatch(setCredentials({token: token, user: userData}));
     localStorage.setItem('sessionUserData', JSON.stringify(userData));
     setUser(userData);
@@ -127,8 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    * Returns true if successful, false otherwise
    */
   const silentLogin = useCallback(async (): Promise<boolean> => {
-    if (!user?.email) {
-      console.warn('[Silent Auth] Cannot perform silent login - no user email');
+    if (!user?.email || isLoggedOut.current) {
+      console.warn('[Silent Auth] Cannot perform silent login - no user email or logged out');
       return false;
     }
 

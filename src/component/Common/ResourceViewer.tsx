@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Typography, ToggleButton, ToggleButtonGroup, Menu, MenuItem, IconButton, Tooltip } from '@mui/material';
-import { KeyboardArrowDown, InfoOutlined, ChevronLeftOutlined, ChevronRightOutlined } from '@mui/icons-material';
+import { KeyboardArrowDown, InfoOutlined } from '@mui/icons-material';
+// Pagination icons (commented out — kept for future re-enabling)
+// import { ChevronLeftOutlined, ChevronRightOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import SearchEntriesCard from '../SearchEntriesCard/SearchEntriesCard';
@@ -180,12 +182,12 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   onFavoriteClick,
   selectedFilters = [],
   onFiltersChange,
-  startIndex = 0,
-  pageSize = 20,
+  startIndex: _startIndex = 0,
+  pageSize: _pageSize = 20,
   setPageSize,
-  requestItemStore,
+  requestItemStore: _requestItemStore,
   resourcesTotalSize,
-  handlePagination
+  handlePagination: _handlePagination
 }) => {
   // Navigation and auth hooks
   const navigate = useNavigate();
@@ -194,7 +196,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
 
   const dispatch = useDispatch<AppDispatch>();
   const searchFilters = useSelector((state: any) => state.search.searchFilters);
-  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
+  // semanticSearch is now always true (commented out — kept for future re-enabling)
+  // const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const entryStatus = useSelector((state: any) => state.entry.status);
 
   // Sort state
@@ -594,8 +597,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                   ))}
                 </Select>
               </span> */}
-              {semanticSearch === true ? (<>
-                <span style={{
+              <span style={{
                   fontFamily: '"Google Sans Text", sans-serif',
                   fontWeight: "500",
                   fontSize: "14px",
@@ -603,7 +605,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                 }}>
                   Top 100 results
                 </span>
-              </>) : (<>
+              {/* Non-semantic pagination controls (commented out — kept for future re-enabling)
               <IconButton
                 style={{padding: '0px', fontFamily: '"Google Sans Text", sans-serif',}}
                 disabled={requestItemStore.length > 0 && startIndex > 0 ? false : true}
@@ -630,7 +632,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               >
                 <ChevronRightOutlined style={{ color: '#0E4DCA' , opacity: (startIndex + pageSize >= resourcesTotalSize) ? 0.5 : 1 }} />
               </IconButton>
-              </>)}
+              */}
 
               {/* View Mode Toggle */}
               <ToggleButtonGroup

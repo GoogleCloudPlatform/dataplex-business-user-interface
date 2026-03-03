@@ -1,0 +1,38 @@
+.parent-container {
+  position: relative; 
+}
+
+.child-element {
+  /* Initially hide the child */
+  position:absolute;
+  opacity: 0;
+  visibility: hidden;
+  
+  /* Optional: Style the child element */
+  width:0px;
+  /* top:0px;
+  left: 5px; */
+  bottom: 16px;
+  left:20px;
+    z-index: 2;
+    background: #fff;
+    padding: 0px 20px;
+    border: 1px solid #f6f6f6;
+    border-radius: 10px;
+    box-shadow: 5px 2px 15px #ddd;
+    overflow: hidden;
+    /* Add the transition property for smooth effects */
+    interpolate-size: allow-keywords;
+    
+    /* transition: opacity 0.3s ease, visibility 0.3s ease width 0.3s ease; */
+}
+
+/* When the parent is hovered, change the child's properties */
+.parent-container:hover .child-element {
+  opacity: 1;
+  width: auto; /* Adjust width as needed */
+  visibility: visible;
+  transition: width 0.3s ease;
+}
+
+

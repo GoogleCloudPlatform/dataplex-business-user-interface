@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { Autocomplete, TextField } from '@mui/material';
 import './SearchBar.css'
 import { useDispatch, useSelector } from 'react-redux';
@@ -56,7 +55,6 @@ interface SearchProps {
 const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, variant = 'default' }) => {
   const dispatch = useDispatch<AppDispatch>();
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
-  const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const { user } = useAuth();
   const location = useLocation();
   const { isAccessPanelOpen } = useAccessRequest();
@@ -66,16 +64,11 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   ]);
   const [recentSearches, setRecentSearches] = useState<Array<{ id: number, term: string, timestamp: number }>>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [blurTimeoutId, setBlurTimeoutId] = useState<(ReturnType<typeof setTimeout>) | null>(null);
   const [hoveredSearchId, setHoveredSearchId] = useState<number | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   // Local storage key for recent searches
   const getStorageKey = (userId: string) => `recentSearches_${userId}`;
   
-  const handleSemanticSearchToggle = () => {
-    dispatch({ type: 'search/setSemanticSearch', payload: { semanticSearch: !semanticSearch } });
-  };
-
   // Load recent searches from localStorage on component mount
   useEffect(() => {
     if (user?.email) {
@@ -251,11 +244,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
         }
   };
   const handleInputFocus = () => {
-    // Clear any pending blur timeout
-    if (blurTimeoutId) {
-      clearTimeout(blurTimeoutId);
-      setBlurTimeoutId(null);
-    }
+    setIsFocused(true);
     // Only open if we have valid conditions
     const shouldOpen = (searchTerm && searchTerm.length >= 3) || recentSearches.length > 0;
     if (shouldOpen) {
@@ -264,28 +253,16 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   };
 
   const handleInputBlur = () => {
-    // Clear any existing timeout to prevent memory leaks
-    if (blurTimeoutId) {
-      clearTimeout(blurTimeoutId);
-    }
-    
-    // Delay closing to allow for clicks on dropdown items
-    const timeoutId = setTimeout(() => {
-      setIsDropdownOpen(false);
-      setBlurTimeoutId(null);
-    }, 200);
-    
-    setBlurTimeoutId(timeoutId);
+    // Close immediately — mousedown handler on the container
+    // prevents blur from firing when clicking inside the search bar
+    setIsFocused(false);
+    setIsDropdownOpen(false);
   };
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (blurTimeoutId) {
-        clearTimeout(blurTimeoutId);
-      }
-    };
-  }, [blurTimeoutId]);
+  // Check if any search data matches the current input (hide dropdown when nothing matches)
+  const hasMatchingOptions = searchTerm
+    ? searchData.some(option => option.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    : true;
 
   // Determine if any dropdown is open
   const isAnyDropdownOpen = isDropdownOpen;
@@ -293,34 +270,42 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   return (
         <div
             id="search-bar"
-            className={`${variant === 'navbar' ? 'navbar-variant' : ''} ${isAnimating ? 'google-glow-animation' : ''}`}
+            className={`${variant === 'navbar' ? 'navbar-variant' : ''}`}
             data-route={location.pathname === '/browse-by-annotation' ? 'browse-by-annotation' : ''}
+            onMouseDown={(e) => {
+                // Prevent input blur when clicking inside the search bar (not on the input itself)
+                // This keeps the dropdown open; clicking outside will still trigger blur
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+            }}
             style={{
-                height:  '3.09rem',
+                height:  'clamp(2.75rem, 3.4vw, 4rem)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderRadius: isAnyDropdownOpen ? '24px 24px 0 0' : '24px',
-                background: isAnyDropdownOpen ? '#ffffff' : '#E9EEF6',
-                padding: '0rem 0.5rem 0rem 1.125rem',
-                width: variant === 'navbar' ? 'calc(100%)' : 'calc(100% - 0.9375rem)',
-                maxWidth: '820px',
+                borderRadius: '170px',
+                background: (isAnyDropdownOpen || variant === 'default') ? '#ffffff' : '#E9EEF6',
+                padding: '0rem 0.5rem 0rem 1rem',
+                width: '100%',
+                maxWidth: 'clamp(600px, 57vw, 1080px)',
                 marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
                 zIndex: isAccessPanelOpen ? 999 : 1100,
                 transition: 'border-radius 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
-                boxShadow: isAnyDropdownOpen ? '0 1px 6px rgba(32,33,36,.28)' : 'none',
-                 border: '1px solid transparent',
+                boxShadow: variant === 'default' ? 'inset 0 0 0 1px #DAE2ED' : 'none',
+                 border: 'none',
                  boxSizing: 'border-box',
             }}>
+            {/* SearchIcon on the left */}
             <SearchIcon style={{
-                color: '#5F6368', 
-                marginRight: variant === 'navbar' ? '0.5rem' : '0px',
+                color: '#5F6368',
+                marginRight: '0.5rem',
                 transition: 'color 0.2s ease',
                 height:"1.25rem",
                 width:"1.25rem",
-                marginLeft: variant === 'navbar' ? '0px' : "5px",
                 flexShrink: 0
             }}/>
             <Autocomplete
@@ -329,20 +314,19 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 inputValue={searchTerm || ''}
                 disableClearable
                 onInputChange={handleInputChange}
-                open={isDropdownOpen && ((searchTerm && searchTerm.length >= 3) || recentSearches.length > 0)}
+                open={isDropdownOpen && ((searchTerm && searchTerm.length >= 3) || recentSearches.length > 0) && hasMatchingOptions}
                 onOpen={() => {
-                    // Clear any pending blur timeout when opening
-                    if (blurTimeoutId) {
-                        clearTimeout(blurTimeoutId);
-                        setBlurTimeoutId(null);
-                    }
                     const shouldOpen = (searchTerm && searchTerm.length >= 3) || recentSearches.length > 0;
                     if (shouldOpen) {
                         setIsDropdownOpen(true);
                     }
                 }}
-                onClose={() => {
-                    setIsDropdownOpen(false);
+                onClose={(_event: React.SyntheticEvent, reason: string) => {
+                    // Only close on escape key; blur handler manages all other close scenarios
+                    if (reason === 'escape') {
+                      setIsFocused(false);
+                      setIsDropdownOpen(false);
+                    }
                 }}
                 options={searchTerm ? searchData.map((option) => option.name) : recentSearches.map(search => search.term)}
                 renderOption={(props, option) => {
@@ -428,14 +412,23 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                             }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                              <AccessTimeIcon style={{ 
-                                  color: '#575757', 
+                              <SearchIcon style={{
+                                  color: '#575757',
                                   fontSize: '20px',
                                   width: '20px',
                                   height: '20px',
                                   opacity: 0.8
                               }} />
-                              <span>{option}</span>
+                              <span>
+                                {searchTerm
+                                  ? option.split(new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, i) =>
+                                      part.toLowerCase() === searchTerm.toLowerCase()
+                                        ? <strong key={i}>{part}</strong>
+                                        : part
+                                    )
+                                  : option
+                                }
+                              </span>
                           </div>
                         </li>
                     );
@@ -443,15 +436,14 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
 
                 renderInput={(params) => (
                     <div style={{ position: 'relative', width: '100%' }}>
-                        {!searchTerm && (
-                            <span 
-                                key={semanticSearch ? 'semantic-mode' : 'keyword-mode'} 
+                        {!searchTerm && !isFocused && (
+                            <span
                                 className="animated-placeholder"
-                                style={{ 
-                                    left: variant === 'navbar' ? '7px' : '16px' 
+                                style={{
+                                    left: variant === 'navbar' ? '7px' : '0px'
                                 }}
                             >
-                                {semanticSearch ? "Ask anything" : "Search for assets"}
+                                {"Ask anything"}
                             </span>
                         )}
 
@@ -472,7 +464,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                 color: '#1F1F1F',
                                 width: "100%",
                                 flex: 1,
-                                background: isAnyDropdownOpen ? "#ffffff" : "#E9EEF6",
+                                background: (isAnyDropdownOpen || variant === 'default') ? "#ffffff" : "#E9EEF6",
                                 fontWeight: "500",
                                 fontSize: "0.875rem",
                             }}
@@ -485,7 +477,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                         opacity: "0.8",
                                         color: '#1F1F1F',
                                         fontStyle: "normal",
-                                        padding: "0rem 0.5625rem"
+                                        padding: "0rem 0.5625rem 0rem 0rem"
                                     },
                                 },
                             }}
@@ -495,29 +487,27 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 PaperComponent={(props) => (
                     <div
                         {...props}
-                        className={`autocomplete-dropdown ${variant === 'navbar' ? 'navbar-dropdown' : ''}`}
+                        className={`${props.className || ''} autocomplete-dropdown ${variant === 'navbar' ? 'navbar-dropdown' : ''}`}
                         style={{
                         ...props.style,
-                        borderRadius: '0 0 24px 24px', 
+                        borderRadius: '24px',
                         border: 'none',
-                        borderTop: '1px solid transparent', 
-                        boxShadow: '0 4px 6px rgba(32,33,36,.28)', 
+                        boxShadow: '0 4px 6px rgba(32,33,36,.28)',
                         padding: '10px 0px',
                         backgroundColor: '#ffffff',
-                        position: 'absolute',
-                        marginLeft: '-47.2px',
-                        ...((variant === 'navbar' || location.pathname === '/browse-by-annotation') ? {
-                            width: 'calc(100% + 198px)',
-                            
-                        } : {
-                            right: '-151px',
-                            width: 'calc(100% + 194.4px)', 
-                        }),
-                        
-                        top: '100%',        
-                        marginTop: '7px',   
+                        width: '100%',
                         zIndex: 2000,
                         overflow: "hidden",
+                        ...(variant === 'navbar' ? {
+                            position: 'relative' as const,
+                            marginTop: '0px',
+                        } : {
+                            position: 'absolute' as const,
+                            left: 0,
+                            top: 'calc(100%)',
+                            marginTop: -10,
+                            marginLeft: 0,
+                        }),
                     }}
                     />
                 )}
@@ -538,47 +528,6 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 }}
                 noOptionsText={!searchTerm && recentSearches.length === 0 ? "No recent searches" : "No options"}
             />
-          <div style={{ paddingRight: '8px', flexShrink: 0 }}>
-                <button
-                    className={!semanticSearch ? "natural-language-btn-hover-effect" : ""}
-                    onClick={(e) => {
-                        handleSemanticSearchToggle();
-                        if (!semanticSearch) {
-                          setIsAnimating(true);
-                          setTimeout(() => setIsAnimating(false), 2500);
-
-                          // 3. Trigger search if text exists (Acting as "Enter")
-                          const trimmedTerm = searchTerm?.toString().trim();
-                          if (trimmedTerm && trimmedTerm.length >= 3) {
-                              handleSearchSubmit(trimmedTerm);
-                              addToRecentSearches(trimmedTerm);
-                          }
-                      }
-                      e.currentTarget.blur();
-                    }}
-                    style={{
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        backgroundColor: semanticSearch ? '#d2e3fc' : '#E9EEF6',
-                        color: semanticSearch ? '#174ea6' : '#5F6368',
-                        border: '2px solid transparent', 
-                        padding: '2px 8px 2px 4px',
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.1)',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontFamily: '"Google Sans", sans-serif',
-                        fontWeight: 500,
-                        fontSize: '0.75rem',
-                        transition: 'all 0.2s ease',
-                        boxSizing: 'border-box', 
-                    }}
-                >
-                    <AutoAwesomeIcon style={{ fontSize: '16px' }} />
-                    <span>Natural Language</span>
-                </button>
-            </div>
         </div>
   );
 }

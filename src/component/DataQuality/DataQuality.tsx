@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import CurrentRules from './CurrentRules';
 import DataQualityStatus from './DataQualityStatus';
+import DataQualitySkeleton from './DataQualitySkeleton';
 import { useAuth } from '../../auth/AuthProvider';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
@@ -41,10 +42,12 @@ import { fetchDataScan, selectScanData, selectScanStatus, selectIsScanLoading } 
  */
 
 interface DataQualityProps {
-  scanName: any;
+  scanName: string | null;
+  allScansStatus: string;
 }
 
-const DataQuality: React.FC<DataQualityProps> = ({ scanName }) => {
+const DataQuality: React.FC<DataQualityProps> = ({ scanName, allScansStatus }) => {
+  const isParentLoading = allScansStatus !== 'succeeded';
 
   const { user } = useAuth();
   const id_token = user?.token || '';
@@ -65,7 +68,7 @@ const DataQuality: React.FC<DataQualityProps> = ({ scanName }) => {
       // We already have the data, no need to fetch
       setDataQualityAvailable(true);
       setLoading(false);
-    } else if (!scanName) {
+    } else if (scanName === null) {
       setDataQualityAvailable(false);
       setLoading(false);
     }
@@ -81,7 +84,7 @@ const DataQuality: React.FC<DataQualityProps> = ({ scanName }) => {
       setDataQualityAvailable(false);
       setLoading(false);
       console.log("Data Quality Scan failed");
-    } else if (dataQualityScanStatus === 'idle' && !scanName) {
+    } else if (dataQualityScanStatus === 'idle' && scanName === null) {
       setLoading(false);
     }
   }, [dataQualityScanStatus, dataQualityScan, scanName]);
@@ -96,10 +99,9 @@ const DataQuality: React.FC<DataQualityProps> = ({ scanName }) => {
       marginLeft: '-1.25rem',
       width: 'calc(100% + 2.5rem)',
     }}>
-      { loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', minHeight: '31.25rem' }}>
-          <CircularProgress />
-        </div>) : (dataQualityAvailable ? (
+      { (loading || isScanLoading || isParentLoading) ? (
+        <DataQualitySkeleton />
+        ) : (dataQualityAvailable ? (
         <>
           <CurrentRules dataQualtyScan={dataQualityScan}/>
           <DataQualityStatus dataQualityScan={dataQualityScan}/>

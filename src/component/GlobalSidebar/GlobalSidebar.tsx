@@ -1,48 +1,44 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search } from '@mui/icons-material';
 import SidebarMenuItem from './SidebarMenuItem';
-import BrowsePopover from './BrowsePopover';
 import { useAccessRequest } from '../../contexts/AccessRequestContext';
 import './GlobalSidebar.css';
 import { fetchDataProductsList } from '../../features/dataProducts/dataProductsSlice';
-import { useDispatch } from 'react-redux';
-import { type AppDispatch } from '../../app/store';
+import { fetchGlossaries } from '../../features/glossaries/glossariesSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { type AppDispatch, type RootState } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
+import { changeMode } from '../../features/user/userSlice';
+import { DarkMode, LightMode } from '@mui/icons-material';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 
-interface GlobalSidebarProps {
-  isHomePage?: boolean;
-}
-
-const GlobalSidebar: React.FC<GlobalSidebarProps> = ({ isHomePage = false }) => {
+const GlobalSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAccessPanelOpen } = useAccessRequest();
-  const [browseAnchorEl, setBrowseAnchorEl] = useState<HTMLElement | null>(null);
-
-  const isBrowseOpen = Boolean(browseAnchorEl);
-
-  // Determine active states based on current route
-  const isSearchActive = ['/home', '/search', '/view-details'].includes(location.pathname);
-  const isBrowseActive = ['/glossaries', '/browse-by-annotation'].includes(location.pathname) || isBrowseOpen;
-  const isDataProductsActive = location.pathname.startsWith('/data-products');
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
+  const mode = useSelector((state: RootState) => state.user.mode);
+  const isDarkModeEnabled = import.meta.env.VITE_FEATURE_DARK_MODE === 'true';
 
-  const handleSearchClick = () => {
+  // Determine active states based on current route
+  const isHomeActive = ['/home', '/search', '/view-details'].includes(location.pathname);
+  const isGlossariesActive = location.pathname === '/glossaries';
+  const isAnnotationsActive = location.pathname === '/browse-by-annotation';
+  const isDataProductsActive = location.pathname.startsWith('/data-products');
+
+  const handleHomeClick = () => {
     navigate('/home');
   };
 
-  const handleBrowseClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    setBrowseAnchorEl(event.currentTarget);
+  const handleGlossariesClick = () => {
+    dispatch(fetchGlossaries({ id_token: user?.token }));
+    navigate('/glossaries');
   };
 
-  const handleBrowseClose = () => {
-    setBrowseAnchorEl(null);
-  };
-
-  const handleLogoClick = () => {
-    navigate('/home');
+  const handleAnnotationsClick = () => {
+    navigate('/browse-by-annotation');
   };
 
   const handleDataProducts = () => {
@@ -52,66 +48,87 @@ const GlobalSidebar: React.FC<GlobalSidebarProps> = ({ isHomePage = false }) => 
 
   return (
     <nav
-      className={`global-sidebar ${isHomePage ? 'partial-height' : 'full-height'}`}
+      className="global-sidebar"
       style={{
         zIndex: isAccessPanelOpen ? 999 : 1200,
       }}
     >
-      {!isHomePage && (
-        <div className="sidebar-logo-container" onClick={handleLogoClick}>
-          <img
-            src="/assets/svg/dataplex-logo-icon.svg"
-            alt="Dataplex"
-            className="logo-icon-only"
-          />
-        </div>
-      )}
-
       {/* Menu Items */}
       <div className="sidebar-menu-items">
-        {/* Search */}
-        <SidebarMenuItem
-          icon={<Search sx={{ fontSize: 20 }} />}
-          label="Search"
-          isActive={isSearchActive}
-          onClick={handleSearchClick}
-        />
-
-        {/* Browse */}
+        {/* Home */}
         <SidebarMenuItem
           icon={
-            isBrowseActive ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <mask id="mask0_7284_49287" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
-                  <rect width="20" height="20" fill="#D9D9D9"/>
-                </mask>
-                <g mask="url(#mask0_7284_49287)">
-                  <path d="M4.16667 17.5L2.5 7.5H17.5L15.8333 17.5H4.16667ZM5.5625 15.8333H14.4375L15.5 9.16667H4.5L5.5625 15.8333ZM8.33333 12.5H11.6667C11.9028 12.5 12.1007 12.4201 12.2604 12.2604C12.4201 12.1007 12.5 11.9028 12.5 11.6667C12.5 11.4306 12.4201 11.2326 12.2604 11.0729C12.1007 10.9132 11.9028 10.8333 11.6667 10.8333H8.33333C8.09722 10.8333 7.89931 10.9132 7.73958 11.0729C7.57986 11.2326 7.5 11.4306 7.5 11.6667C7.5 11.9028 7.57986 12.1007 7.73958 12.2604C7.89931 12.4201 8.09722 12.5 8.33333 12.5ZM5 6.66667C4.76389 6.66667 4.56597 6.58681 4.40625 6.42708C4.24653 6.26736 4.16667 6.06944 4.16667 5.83333C4.16667 5.59722 4.24653 5.39931 4.40625 5.23958C4.56597 5.07986 4.76389 5 5 5H15C15.2361 5 15.434 5.07986 15.5938 5.23958C15.7535 5.39931 15.8333 5.59722 15.8333 5.83333C15.8333 6.06944 15.7535 6.26736 15.5938 6.42708C15.434 6.58681 15.2361 6.66667 15 6.66667H5ZM6.66667 4.16667C6.43056 4.16667 6.23264 4.08681 6.07292 3.92708C5.91319 3.76736 5.83333 3.56944 5.83333 3.33333C5.83333 3.09722 5.91319 2.89931 6.07292 2.73958C6.23264 2.57986 6.43056 2.5 6.66667 2.5H13.3333C13.5694 2.5 13.7674 2.57986 13.9271 2.73958C14.0868 2.89931 14.1667 3.09722 14.1667 3.33333C14.1667 3.56944 14.0868 3.76736 13.9271 3.92708C13.7674 4.08681 13.5694 4.16667 13.3333 4.16667H6.66667Z" fill="#0E4DCA"/>
-                </g>
-              </svg>
-            ) : (
-              <img src="/assets/svg/browse-icon.svg" alt="Browse" style={{ width: 20, height: 20 }} />
-            )
+            <div className="icon-states">
+              <span className="icon-inactive">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/></svg>
+              </span>
+              <span className="icon-hover">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M270.78-222.78H347V-469h266v246.22h76.22v-337.83L480-717.52 270.78-560.61v337.83Zm-98 98v-484.83L480-840.31 787.22-609.8v485.02H523.48v-254.7h-86.96v254.7H172.78ZM480-469.87Z"/></svg>
+              </span>
+              <span className="icon-active">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#001D35"><path d="M172.78-124.78v-484.83L480-840.31 787.22-609.8v485.02h-230.7v-287.74H403.48v287.74h-230.7Z"/></svg>
+              </span>
+            </div>
           }
-          label="Browse"
-          isActive={isBrowseActive}
-          onClick={handleBrowseClick}
+          label="Home"
+          isActive={isHomeActive}
+          onClick={handleHomeClick}
+        />
+
+        {/* Glossaries */}
+        <SidebarMenuItem
+          icon={
+            <div className="icon-states">
+              <span className="icon-inactive">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M324-96q-54.69 0-93.34-38.66Q192-173.31 192-228v-504q0-54.69 38.66-93.34Q269.31-864 324-864h444v575q-25 0-42.5 17.91t-17.5 43.5q0 25.59 17.5 43.09Q743-167 768-167v71H324Zm-60-250q14-7 28.5-10.5T324-360h12v-432h-12q-25 0-42.5 17.5T264-732v386Zm144-14h288v-432H408v432Zm-144 14v-446 446Zm60 178h326q-7-14-10.5-28t-3.5-31.27q0-16.25 4-31.49Q644-274 651-288H324q-26 0-43 17.5T264-228q0 26 17 43t43 17Z"/></svg>
+              </span>
+              <span className="icon-hover">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M314.96-76.78q-59.21 0-100.7-41.48-41.48-41.49-41.48-100.7v-522.08q0-59.21 41.48-100.69 41.49-41.49 100.7-41.49h472.26v613.44q-20.76 0-35.29 14.94-14.54 14.95-14.54 36.3 0 21.34 14.54 35.88 14.53 14.53 35.29 14.53v91.35H314.96Zm-49.83-274.87q11.63-4.87 23.58-7.46 11.96-2.59 26.25-2.59h22.17v-429.17h-22.17q-20.76 0-35.3 14.53-14.53 14.54-14.53 35.3v389.39Zm164.35-10.05h265.39v-429.17H429.48v429.17Zm-164.35 10.05v-439.22 439.22Zm49.83 182.52h340.13q-5.18-11.79-7.61-23.5-2.44-11.72-2.44-25.78 0-13.24 3.09-25.98 3.09-12.73 7.96-24.39H314.96q-21.6 0-35.71 14.53-14.12 14.53-14.12 35.29 0 21.6 14.12 35.71 14.11 14.12 35.71 14.12Z"/></svg>
+              </span>
+              <span className="icon-active">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#001D35"><path d="M314.96-76.78q-59.21 0-100.7-41.48-41.48-41.49-41.48-100.7v-522.08q0-59.21 41.48-100.69 41.49-41.49 100.7-41.49h472.26v613.44q-20.76 0-35.29 14.94-14.54 14.95-14.54 36.3 0 21.34 14.54 35.88 14.53 14.53 35.29 14.53v91.35H314.96Zm22.17-284.92h92.35v-429.17h-92.35v429.17Zm-22.17 192.57h340.13q-5.18-11.79-7.61-23.5-2.44-11.72-2.44-25.78 0-13.24 3.09-25.98 3.09-12.73 7.96-24.39H314.96q-21.6 0-35.71 14.53-14.12 14.53-14.12 35.29 0 21.6 14.12 35.71 14.11 14.12 35.71 14.12Z"/></svg>
+              </span>
+            </div>
+          }
+          label="Glossaries"
+          isActive={isGlossariesActive}
+          onClick={handleGlossariesClick}
+        />
+
+        {/* Annotations */}
+        <SidebarMenuItem
+          icon={
+            <div className="icon-states">
+              <span className="icon-inactive">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M168-144q-29.7 0-50.85-21.15Q96-186.3 96-216v-528q0-29.7 21.15-50.85Q138.3-816 168-816h624q29.7 0 50.85 21.15Q864-773.7 864-744v528q0 29.7-21.15 50.85Q821.7-144 792-144H168Zm0-72h624v-528H168v528Zm72-96h480v-72H240v72Zm0-144h168v-216H240v216Zm240 0h240v-72H480v72Zm0-144h240v-72H480v72ZM168-216v-528 528Z"/></svg>
+              </span>
+              <span className="icon-hover">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M174.78-124.78q-41 0-69.5-28.5t-28.5-69.5v-514.44q0-41 28.5-69.5t69.5-28.5h610.44q41 0 69.5 28.5t28.5 69.5v514.44q0 41-28.5 69.5t-69.5 28.5H174.78Zm0-98h610.44v-514.44H174.78v514.44Zm68.61-92.61h473.22v-72H243.39v72Zm0-140.61h168v-212.61h-168V-456ZM480-456h236.61v-72H480v72Zm0-140.61h236.61v-72H480v72ZM174.78-222.78v-514.44 514.44Z"/></svg>
+              </span>
+              <span className="icon-active">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#001D35"><path d="M174.78-124.78q-41 0-69.5-28.5t-28.5-69.5v-514.44q0-41 28.5-69.5t69.5-28.5h610.44q41 0 69.5 28.5t28.5 69.5v514.44q0 41-28.5 69.5t-69.5 28.5H174.78Zm68.61-190.61h473.22v-72H243.39v72Zm0-140.61h168v-212.61h-168V-456ZM480-456h236.61v-72H480v72Zm0-140.61h236.61v-72H480v72Z"/></svg>
+              </span>
+            </div>
+          }
+          label="Aspects"
+          isActive={isAnnotationsActive}
+          onClick={handleAnnotationsClick}
         />
 
         {/* Data Products */}
         <SidebarMenuItem
           icon={
-            isDataProductsActive ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9.16667 10.8333H5.83333V14.1667H9.16667V10.8333Z" fill="#0E4DCA"/>
-                <path d="M14.1667 10.8333H10.8333V14.1667H14.1667V10.8333Z" fill="#0E4DCA"/>
-                <path d="M15.8333 2.5H4.16667C3.25 2.5 2.5 3.25 2.5 4.16667V15.8333C2.5 16.75 3.25 17.5 4.16667 17.5H15.8333C16.75 17.5 17.5 16.75 17.5 15.8333V4.16667C17.5 3.25 16.75 2.5 15.8333 2.5ZM15.8333 15.8333H4.16667V4.16667H15.8333V15.8333Z" fill="#0E4DCA"/>
-                <path d="M9.16667 5.83333H5.83333V9.16667H9.16667V5.83333Z" fill="#0E4DCA"/>
-                <path d="M14.1667 5.83333H10.8333V9.16667H14.1667V5.83333Z" fill="#0E4DCA"/>
-              </svg>
-            ) : (
-              <img src="/assets/svg/data-products-icon.svg" alt="Data Products" style={{ width: 20, height: 20 }} />
-            )
+            <div className="icon-states">
+              <span className="icon-inactive">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M288-288h144v-144H288v144Zm240 0h144v-144H528v144ZM288-528h144v-144H288v144Zm240 0h144v-144H528v144ZM216-144q-29.7 0-50.85-21.15Q144-186.3 144-216v-528q0-29.7 21.15-50.85Q186.3-816 216-816h528q29.7 0 50.85 21.15Q816-773.7 816-744v528q0 29.7-21.15 50.85Q773.7-144 744-144H216Zm0-72h528v-528H216v528Zm0-528v528-528Z"/></svg>
+              </span>
+              <span className="icon-hover">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#444746"><path d="M283.48-283.48h153.04v-153.04H283.48v153.04Zm240 0h153.04v-153.04H523.48v153.04Zm-240-240h153.04v-153.04H283.48v153.04Zm240 0h153.04v-153.04H523.48v153.04Zm-300.7 398.7q-41 0-69.5-28.5t-28.5-69.5v-514.44q0-41 28.5-69.5t69.5-28.5h514.44q41 0 69.5 28.5t28.5 69.5v514.44q0 41-28.5 69.5t-69.5 28.5H222.78Zm0-98h514.44v-514.44H222.78v514.44Zm0-514.44v514.44-514.44Z"/></svg>
+              </span>
+              <span className="icon-active">
+                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#001D35"><path d="M283.48-283.48h153.04v-153.04H283.48v153.04Zm240 0h153.04v-153.04H523.48v153.04Zm-240-240h153.04v-153.04H283.48v153.04Zm240 0h153.04v-153.04H523.48v153.04Zm-300.7 398.7q-41 0-69.5-28.5t-28.5-69.5v-514.44q0-41 28.5-69.5t69.5-28.5h514.44q41 0 69.5 28.5t28.5 69.5v514.44q0 41-28.5 69.5t-69.5 28.5H222.78Zm0-98h514.44v-514.44H222.78v514.44Zm0-514.44v514.44-514.44Z"/></svg>
+              </span>
+            </div>
           }
           label="Data Products"
           isActive={isDataProductsActive}
@@ -121,12 +138,32 @@ const GlobalSidebar: React.FC<GlobalSidebarProps> = ({ isHomePage = false }) => 
         />
       </div>
 
-      {/* Browse Popover */}
-      <BrowsePopover
-        anchorEl={browseAnchorEl}
-        open={isBrowseOpen}
-        onClose={handleBrowseClose}
-      />
+      {/* Dark Mode Toggle */}
+      {isDarkModeEnabled && (
+        <div className="sidebar-bottom-section">
+          <Tooltip title={mode === 'light' ? 'Dark mode' : 'Light mode'} placement="right">
+            <IconButton
+              onClick={() => dispatch(changeMode())}
+              aria-label="Toggle dark mode"
+              sx={{
+                color: mode === 'dark' ? '#c4c7c5' : '#444746',
+                width: 44,
+                height: 32,
+                borderRadius: '1000px',
+                '&:hover': {
+                  backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              {mode === 'light' ? (
+                <DarkMode sx={{ fontSize: 20 }} />
+              ) : (
+                <LightMode sx={{ fontSize: 20 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </div>
+      )}
     </nav>
   );
 };

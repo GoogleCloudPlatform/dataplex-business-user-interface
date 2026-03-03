@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Dark Mode Overrides — Gemini-inspired dark theme
+   Applied when <html data-theme="dark"> is set via ThemeSyncProvider
+   ========================================================================== */
+
+/* --- Layout --- */
+html[data-theme="dark"] .app-layout {
+  background-color: #131314;
+}
+
+/* --- GlobalSidebar --- */
+html[data-theme="dark"] .global-sidebar {
+  background-color: #1e1f20;
+}
+
+html[data-theme="dark"] .menu-label {
+  color: #c4c7c5;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.active .menu-icon-container {
+  background-color: #004a77;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.active .menu-label {
+  color: #8ab4f8;
+}
+
+html[data-theme="dark"] .sidebar-menu-item:not(.active):not(.disabled):hover .menu-icon-container {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .icon-inactive svg,
+html[data-theme="dark"] .icon-hover svg {
+  fill: #c4c7c5 !important;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.active .icon-active svg {
+  fill: #8ab4f8 !important;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.disabled .menu-label {
+  color: #5f6368;
+}
+
+/* --- Home Page --- */
+html[data-theme="dark"] .home-greeting span {
+  color: #9aa0a6;
+}
+
+html[data-theme="dark"] .home-greeting-name {
+  background: linear-gradient(90deg,
+    #9aa0a6 0%, #9aa0a6 40%,
+    #8ab4f8 45%, #a78bfa 50%, #f472b6 55%, #fb923c 60%,
+    #9aa0a6 65%, #9aa0a6 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+html[data-theme="dark"] .home-title {
+  color: #e3e3e3;
+}
+
+html[data-theme="dark"] .home-subtitle {
+  color: #9aa0a6;
+}
+
+/* Home search container rainbow border — thinner & brighter glow for dark mode */
+html[data-theme="dark"] .home-search-container::before {
+  top: -3px;
+  left: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  background: linear-gradient(
+    135deg,
+    rgba(234, 67, 53, 0.45),
+    rgba(255, 200, 25, 0.45),
+    rgba(52, 168, 83, 0.45),
+    rgba(66, 133, 244, 0.45)
+  );
+}
+
+/* Home page SearchBar (variant="default" only, NOT navbar variant) */
+html[data-theme="dark"] .home-search-container #search-bar:not(.navbar-variant) {
+  background: #282a2c !important;
+  box-shadow: inset 0 0 0 1px #3c4043 !important;
+}
+
+html[data-theme="dark"] .home-search-container #search-bar:not(.navbar-variant) > .MuiSvgIcon-root {
+  color: #9aa0a6 !important;
+}
+
+html[data-theme="dark"] .home-search-container #search-bar:not(.navbar-variant) .MuiTextField-root {
+  background: #282a2c !important;
+}
+
+html[data-theme="dark"] .home-search-container #search-bar:not(.navbar-variant) .MuiOutlinedInput-root input {
+  color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] .home-search-container #search-bar:not(.navbar-variant) .animated-placeholder {
+  color: #7c7f82;
+}
+
+/* Home SearchBar autocomplete dropdown */
+html[data-theme="dark"] .home-search-container .autocomplete-dropdown {
+  background-color: #282a2c !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .home-search-container .MuiAutocomplete-listbox li {
+  color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] .home-search-container .MuiAutocomplete-listbox li:hover,
+html[data-theme="dark"] .home-search-container .MuiAutocomplete-listbox li.Mui-focused {
+  background-color: #3c4043 !important;
+}
+
+/* --- User Account Dropdown --- */
+html[data-theme="dark"] .MuiPopover-paper {
+  background-color: #2d2e30;
+}
+
+html[data-theme="dark"] .MuiPopover-paper .MuiDivider-root {
+  border-color: #3c4043;
+}
+
+/* --- Dataplex Logo (img tag, inverted to white for dark mode) --- */
+html[data-theme="dark"] .app-layout img[alt="Dataplex Universal Catalog"] {
+  filter: brightness(0) invert(1) brightness(0.85);
+}

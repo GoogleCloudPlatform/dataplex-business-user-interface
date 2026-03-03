@@ -202,6 +202,10 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
               overflowY: "auto",
               minHeight: 0,
               pb: 2,
+              px: 1,
+              mx: -1,
+              pt: 1,
+              mt: -1,
             }}
           >
             {items.map((item: GlossaryItem) => (
@@ -213,11 +217,13 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
                   borderRadius: "16px",
                   height: "132px",
                   cursor: "pointer",
-                  transition: "box-shadow 0.2s",
+                  transition: "box-shadow 0.2s, border-color 0.2s, transform 0.2s",
                   display: "flex",
                   flexDirection: "column",
                   "&:hover": {
                     boxShadow: "0 4px 8px 0 rgba(60,64,67,0.15)",
+                    borderColor: "#0B57D0",
+                    transform: "scale(1.02)",
                   },
                 }}
               >

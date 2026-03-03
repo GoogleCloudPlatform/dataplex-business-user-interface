@@ -3,9 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   token: null,
   userData: null,
-  mode: localStorage.getItem('mode')
-    ? localStorage.getItem('mode')
-    :'light',
+  mode: localStorage.getItem('mode') || 'light',
 };
 
 export const userSlice = createSlice({

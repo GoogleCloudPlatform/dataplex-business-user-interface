@@ -20,6 +20,7 @@ import NotificationBar from '../SearchPage/NotificationBar'
 import { useAccessRequest } from '../../contexts/AccessRequestContext'
 import ResourcePreview from '../Common/ResourcePreview'
 import { fetchEntry, pushToHistory } from '../../features/entry/entrySlice'
+import { useNotification } from '../../contexts/NotificationContext'
 // import { useFavorite } from '../../hooks/useFavorite'
 
 /**
@@ -76,10 +77,12 @@ const DataProductsDetailView: React.FC<DataProductsDetailViewProps> = ({ onReque
         dataProductsItems, 
         status, 
         selectedDataProductDetails, 
-        selectedDataProductStatus
+        selectedDataProductStatus,
+        selectedDataProductError
     } = useSelector((state: any) => state.dataProducts);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { showError } = useNotification();
 
   const { setAccessPanelOpen } = useAccessRequest();
 
@@ -185,6 +188,15 @@ const tabProps = (index: number)  => {
     if(selectedDataProductStatus=== 'succeeded'){
         console.log("Selected Data Product Details", selectedDataProductDetails);
         dispatch(fetchDataProductsAssetsList({ id_token: user?.token, dataProductId: selectedDataProductDetails.name }));
+    }
+
+    if(selectedDataProductStatus === 'failed'){
+        console.log("Error fetching selected data product details", selectedDataProductError);
+        showError(`Error fetching data product details: ${selectedDataProductError}`, 5000);
+        setTimeout(() => {
+          //setIsNotificationVisible(false);
+          navigate('/data-products');
+        }, 2000);
     }
   }, [dispatch, selectedDataProductDetails.length, selectedDataProductStatus, user?.token]);
 

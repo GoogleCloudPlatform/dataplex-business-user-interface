@@ -135,17 +135,19 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
   };
 
   return (
-    <TableContainer 
-      component={Paper} 
+    <TableContainer
+      component={Paper}
       sx={{
         backgroundColor: '#FFFFFF',
         borderRadius: '8px',
         boxShadow: 'none',
         maxHeight: 'calc(100vh - 200px)',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        overflowX: 'auto',
+        width: '100%',
       }}
     >
-      <Table sx={{ minWidth: 800 }} aria-label="search results table">
+      <Table sx={{ width: '100%', tableLayout: 'fixed' }} aria-label="search results table">
         <TableHead>
           <TableRow 
             sx={{
@@ -157,13 +159,14 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
             }}
           >
             {/* Name */}
-            <TableCell 
+            <TableCell
               sx={{
                 fontSize: '11px',
                 fontWeight: '700',
                 color: '#444746',
                 fontFamily: '"Google Sans Text",sans-serif',
-                paddingLeft: '16px'
+                paddingLeft: '16px',
+                width: '25%',
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', '&:hover .MuiIconButton-root': { opacity: 1 } }}>
@@ -187,26 +190,28 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
             </TableCell>
 
             {/* Description */}
-            <TableCell 
+            <TableCell
               sx={{
                 fontFamily: '"Google Sans Text",sans-serif',
                 fontSize: '11px',
                 fontWeight: '700',
                 color: '#444746',
-                padding: '0px 12px'
+                padding: '0px 12px',
+                width: '35%',
               }}
             >
               Description
             </TableCell>
 
             {/* Type */}
-            <TableCell 
+            <TableCell
               sx={{
                 fontFamily: '"Google Sans Text",sans-serif',
                 fontSize: '11px',
                 fontWeight: '700',
                 color: '#444746',
-                padding: '0px 12px'
+                padding: '0px 12px',
+                width: '20%',
               }}
             >
               Type
@@ -227,14 +232,15 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
             </TableCell> */}
 
             {/* Last Modified */}
-            <TableCell 
+            <TableCell
               sx={{
                 fontFamily: '"Google Sans Text",sans-serif',
                 fontSize: '11px',
                 fontWeight: '700',
                 color: '#444746',
                 padding: '0px 4px',
-                paddingLeft: '3px'
+                paddingLeft: '3px',
+                width: '20%',
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' , '&:hover .MuiIconButton-root': { opacity: 1 } }}>
@@ -277,63 +283,50 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                   }
                 }}
               >
-                <TableCell 
-                   sx={{
-                     fontFamily: '"Google Sans", sans-serif',
-                     fontSize: '11px',
-                     color: '#1F1F1F',
-                     padding: '10px 6px',
-                     paddingLeft: '16px',
-                     display: 'flex',
-                     borderBottom: 'none',
-                     alignItems: 'center',
-                     gap: '8px',
-                     maxWidth: '200px'
-                   }}
-                 >
-                  {/* <IconButton
-                    onClick={(e) => handleFavoriteClick(e, entry)}
-                    sx={{
-                      padding: '4px',
-                      color: isFavorite ? '#F4B400' : '#575757',
-                      '&:hover': {
-                        backgroundColor: 'rgba(244, 180, 0, 0.1)'
-                      }
-                    }}
-                  >
-                    {isFavorite ? <Star sx={{ fontSize: '18px' }} /> : <StarOutline sx={{ fontSize: '18px' }} />}
-                  </IconButton> */}
-                  <Typography
-                    sx={{
-                      flex: 1,
-                      fontFamily: '"Google Sans Text",sans-serif',
-                      fontSize: '1.125rem',
-                      fontWeight: '400',
-                      color: '#0B57D0',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        color: '#0A4BC0'
-                      },
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {getNameFromEntry(entry)}
-                  </Typography>
-                  {hasLock && (
-                    <Lock sx={{ fontSize: '12px', color: '#575757' }} />
-                  )}
+                <TableCell
+                  sx={{
+                    fontFamily: '"Google Sans", sans-serif',
+                    fontSize: '11px',
+                    color: '#1F1F1F',
+                    padding: '10px 6px',
+                    paddingLeft: '16px',
+                    borderBottom: 'none',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <Typography
+                      sx={{
+                        flex: 1,
+                        fontFamily: '"Google Sans Text",sans-serif',
+                        fontSize: '1.125rem',
+                        fontWeight: '400',
+                        color: '#0B57D0',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          color: '#0A4BC0'
+                        },
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {getNameFromEntry(entry)}
+                    </Typography>
+                    {hasLock && (
+                      <Lock sx={{ fontSize: '12px', color: '#575757', flexShrink: 0 }} />
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell 
-                   sx={{
-                     fontFamily: '"Google Sans Text",sans-serif',
-                     fontSize: '0.75rem',
-                     color: '#575757',
-                     padding: '3px 12px',
-                     maxWidth: '200px'
-                   }}
-                 >
+                <TableCell
+                  sx={{
+                    fontFamily: '"Google Sans Text",sans-serif',
+                    fontSize: '0.75rem',
+                    color: '#575757',
+                    padding: '3px 12px',
+                    overflow: 'hidden',
+                  }}
+                >
                   <Typography
                     sx={{
                       fontFamily: '"Google Sans Text",sans-serif',

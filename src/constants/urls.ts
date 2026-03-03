@@ -21,4 +21,5 @@ export const URLS = {
     GET_PROJECTS: '/get-projects',
     SEND_FEEDBACK: '/send-feedback',
     LINEAGE_SEARCH_COLUMN_LEVEL: '/lineage-column-level',
+    GET_SCAN_JOBS: '/get-data-scan-jobs',
 }
