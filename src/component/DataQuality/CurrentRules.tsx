@@ -28,6 +28,7 @@ import {
   InfoOutline
 } from '@mui/icons-material';
 import ConfigurationsPanel from './ConfigurationsPanel';
+import { useAccessRequest } from '../../contexts/AccessRequestContext';
 
 /**
  * @file CurrentRules.tsx
@@ -89,11 +90,17 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({dataQualtyScan}) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isConfigurationsOpen, setIsConfigurationsOpen] = useState(false);
   //const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const { setAccessPanelOpen } = useAccessRequest();
 
   useEffect(() => {
     setFilterText('');
     setIsExpanded(true);
   }, []);
+
+  // Sync configurations panel state with global context for z-index management
+  useEffect(() => {
+    setAccessPanelOpen(isConfigurationsOpen);
+  }, [isConfigurationsOpen, setAccessPanelOpen]);
 
   // Debug: Monitor selectedRows changes
   // useEffect(() => {

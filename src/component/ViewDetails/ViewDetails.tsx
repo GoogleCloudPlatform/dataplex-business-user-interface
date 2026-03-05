@@ -31,6 +31,7 @@ import GlossariesLinkedAssets from '../Glossaries/GlossariesLinkedAssets';
 import GlossariesSynonyms from '../Glossaries/GlossariesSynonyms';
 import GlossariesSynonymsSkeleton from '../Glossaries/GlossariesSynonymsSkeleton';
 import ResourcePreview from '../Common/ResourcePreview';
+import TableInsights from '../TableInsights/TableInsights'
 // import { useFavorite } from '../../hooks/useFavorite'
 
 /**
@@ -112,6 +113,7 @@ const ViewDetails = () => {
   const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set());
   const [dqScanName, setDqScanName] = useState<string | null>(null);
   const [dpScanName, setDpScanName] = useState<string | null>(null);
+  const [tableInsightsScanName, setTableInsightsScanName] = useState<string | null>(null);
 
   const [glossaryType, setGlossaryType] = useState<'glossary' | 'category' | 'term' | null>(null);
   const [contentSearchTerm, setContentSearchTerm] = useState('');
@@ -306,7 +308,7 @@ const ViewDetails = () => {
 
 let annotationTab = <PreviewAnnotation
   entry={filteredEntry || displayEntry}
-  css={{width:"100%", borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px', marginRight: '8px'}}
+  css={{width:"100%", borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px', borderTopLeftRadius: '0px', borderTopRightRadius: '0px', marginRight: '8px'}}
   isTopComponent={true}
   expandedItems={expandedAnnotations}
   setExpandedItems={setExpandedAnnotations}
@@ -354,6 +356,14 @@ useEffect(() => {
           scan.data.resource.includes(resourceName) && scan.type === 'DATA_PROFILE'
       );
       setDpScanName(dpScan ? dpScan.name : null);
+
+      const tableInsightsScan = allScans.find(
+        (scan: any) =>
+          (scan.data.resource === resourceName || scan.data.resource === `//bigquery.googleapis.com/${resourceName}`)&& (scan.type === 'DATA_DOCUMENTATION' || scan.type === 4)
+      );
+      console.log("Table Insights Scans found:", tableInsightsScan);
+      setTableInsightsScanName(tableInsightsScan?.name || null);
+      console.log(`tableInsightsScanName for resource [${resourceName}]:`, tableInsightsScanName);
 
       // console.log(`For resource [${resourceName}], found DQ scan: ${dqScan ? dqScan.name : 'None'}`);
       // console.log(`For resource [${resourceName}], found DP scan: ${dpScan ? dpScan.name : 'None'}`);
@@ -465,7 +475,7 @@ useEffect(() => {
   return (
     <div style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#F8FAFD", height: "100vh", overflow: "hidden" }}>
       <div style={{display: "flex", flexDirection: "row", gap: "1rem", flex: 1, minHeight: 0, overflow: "hidden"}}>
-      <div style={{display: "flex", flexDirection: "column", borderRadius:"20px",background: "#ffffff", flex: 1, minHeight: 0, marginBottom: "2rem", overflow: "hidden"}}>
+      <div style={{display: "flex", flexDirection: "column", borderRadius:"24px",background: "#ffffff", flex: 1, height: "calc(100vh - 80px)", minHeight: 0, overflow: "hidden"}}>
         {loading ? (
           <Box sx={{ padding: "0px 20px" }}>
             {/* Header Skeleton: Back button + Title + Tags */}
@@ -741,11 +751,13 @@ useEffect(() => {
                               <Tab key="annotations" label="Aspects" {...tabProps(1)} />,
                               <Tab key="lineage" label="Lineage" {...tabProps(2)} />,
                               <Tab key="dataProfile" label="Data Profile" {...tabProps(3)} />,
-                              <Tab key="dataQuality" label="Data Quality" {...tabProps(4)} />
+                              <Tab key="dataQuality" label="Data Quality" {...tabProps(4)} />,
+                              <Tab key="insights" label="Insights" {...tabProps(5)} />,
                             ] : getEntryType(displayEntry.name, '/') === 'Datasets' ? [
                               <Tab key="overview" label="Overview" {...tabProps(0)} />,
                               <Tab key="entryList" label="Entry List" {...tabProps(1)} />,
-                              <Tab key="annotations" label="Aspects" {...tabProps(2)} />
+                              <Tab key="annotations" label="Aspects" {...tabProps(2)} />,
+                              <Tab key="insights" label="Insights" {...tabProps(3)} />
                             ] : glossaryType === 'glossary' || glossaryType === 'category' ? [
                               <Tab key="overview" label="Overview" {...tabProps(0)} />,
                               <Tab key="categories" label="Categories" {...tabProps(1)} />,
@@ -790,10 +802,13 @@ useEffect(() => {
                             {lineageTab}
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={3}>
-                            <DataProfile scanName={dpScanName} />
+                            <DataProfile scanName={dpScanName} allScansStatus={allScansStatus} />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={4}>
-                            <DataQuality scanName={dqScanName} />
+                            <DataQuality scanName={dqScanName} allScansStatus={allScansStatus} />
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={5}>
+                            <TableInsights entry={entry} scanName={tableInsightsScanName} />
                         </CustomTabPanel>
                       </>
                     ) : getEntryType(entry.name, '/') === 'Datasets' ? (
@@ -810,6 +825,9 @@ useEffect(() => {
                               onExpandAll={handleAnnotationExpandAll}
                             />
                             {annotationTab}
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={3}>
+                            <TableInsights entry={entry} scanName={tableInsightsScanName} />
                         </CustomTabPanel>
                       </>
                     ) : glossaryType === 'glossary' || glossaryType === 'category' ? (

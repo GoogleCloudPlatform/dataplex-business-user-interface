@@ -148,12 +148,12 @@ export const SessionWarningModal: React.FC<SessionWarningModalProps> = ({
     }
   }, [remainingTime, modalState.mode]);
 
-  // Reset modal state when modal opens
+  // Reset modal state when modal opens (only if time hasn't expired)
   useEffect(() => {
-    if (open && modalState.mode !== 'warning') {
+    if (open && modalState.mode !== 'warning' && remainingTime > 0) {
       setModalState({ mode: 'warning', error: null });
     }
-  }, [open, modalState.mode]);
+  }, [open, modalState.mode, remainingTime]);
 
   /**
    * Handle "Stay Logged In" button click

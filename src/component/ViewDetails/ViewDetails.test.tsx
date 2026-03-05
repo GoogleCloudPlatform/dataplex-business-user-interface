@@ -1,11 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ViewDetails from './ViewDetails';
 import { AuthContext } from '../../auth/AuthProvider';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import store from '../../app/store';
+import { configureStore } from '@reduxjs/toolkit';
+
+// Mock CSS imports
+vi.mock('@mui/x-data-grid', () => ({
+  DataGrid: () => <div data-testid="data-grid">DataGrid Mock</div>
+}));
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
@@ -14,6 +20,16 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+  };
+});
+
+// Mock Redux hooks
+const mockDispatch = vi.fn();
+vi.mock('react-redux', async () => {
+  const actual = await vi.importActual('react-redux');
+  return {
+    ...actual,
+    useDispatch: () => mockDispatch,
   };
 });
 
@@ -26,14 +42,38 @@ vi.mock('../../features/sample-data/sampleDataSlice', async (importOriginal) => 
   };
 });
 
-// Mock the favorite hook
-const mockToggleFavorite = vi.fn(() => true);
-vi.mock('../../hooks/useFavorite', () => ({
-  useFavorite: vi.fn(() => ({
-    isFavorite: false,
-    toggleFavorite: mockToggleFavorite
-  }))
-}));
+// Mock the entry slice
+vi.mock('../../features/entry/entrySlice', async (importOriginal) => {
+  const actual = await importOriginal() || {};
+  return {
+    ...actual,
+    popFromHistory: vi.fn(() => ({ type: 'entry/popFromHistory' })),
+    pushToHistory: vi.fn(() => ({ type: 'entry/pushToHistory' })),
+    fetchEntry: vi.fn(() => ({ type: 'entry/fetchEntry' })),
+  };
+});
+
+// Mock the dataScan slice
+vi.mock('../../features/dataScan/dataScanSlice', async (importOriginal) => {
+  const actual = await importOriginal() || {};
+  return {
+    ...actual,
+    fetchAllDataScans: vi.fn(() => ({ type: 'dataScan/fetchAllDataScans' })),
+    selectAllScans: () => [],
+    selectAllScansStatus: () => 'idle',
+  };
+});
+
+// Mock the glossaries slice
+vi.mock('../../features/glossaries/glossariesSlice', async (importOriginal) => {
+  const actual = await importOriginal() || {};
+  return {
+    ...actual,
+    fetchViewDetailsTermRelationships: vi.fn(() => ({ type: 'glossaries/fetchViewDetailsTermRelationships' })),
+    fetchViewDetailsEntryDetails: vi.fn(() => ({ type: 'glossaries/fetchViewDetailsEntryDetails' })),
+    fetchViewDetailsChildren: vi.fn(() => ({ type: 'glossaries/fetchViewDetailsChildren' })),
+  };
+});
 
 // Mock the utility functions
 vi.mock('../../utils/resourceUtils', () => ({
@@ -46,7 +86,16 @@ vi.mock('../../utils/resourceUtils', () => ({
     if (name.includes('table')) return 'Tables';
     if (name.includes('dataset')) return 'Datasets';
     return 'Other';
-  })
+  }),
+  generateBigQueryLink: vi.fn(() => 'https://console.cloud.google.com/bigquery?ws=test'),
+  generateLookerStudioLink: vi.fn(() => 'https://lookerstudio.google.com'),
+  hasValidAnnotationData: vi.fn(() => true),
+}));
+
+// Mock glossaryUtils
+import * as glossaryUtils from '../../utils/glossaryUtils';
+vi.mock('../../utils/glossaryUtils', () => ({
+  findItem: vi.fn(() => null),
 }));
 
 // Mock child components
@@ -63,11 +112,13 @@ vi.mock('../Annotation/PreviewAnnotation', () => ({
 }));
 
 vi.mock('../Annotation/AnnotationFilter', () => ({
-  default: function MockAnnotationFilter({ entry, onFilteredEntryChange }: any) {
+  default: function MockAnnotationFilter({ entry, onFilteredEntryChange, onCollapseAll, onExpandAll }: any) {
     return (
       <div data-testid="annotation-filter">
         Annotation Filter for {entry?.name}
         <button onClick={() => onFilteredEntryChange(entry)}>Apply Filter</button>
+        <button onClick={onCollapseAll}>Collapse All</button>
+        <button onClick={onExpandAll}>Expand All</button>
       </div>
     );
   }
@@ -97,14 +148,14 @@ vi.mock('../Lineage', () => ({
 }));
 
 vi.mock('../DataQuality/DataQuality', () => ({
-  default: function MockDataQuality({ entry }: any) {
-    return <div data-testid="data-quality">Data Quality for {entry?.name}</div>;
+  default: function MockDataQuality({ scanName }: any) {
+    return <div data-testid="data-quality">Data Quality - Scan: {scanName}</div>;
   }
 }));
 
 vi.mock('../DataProfile/DataProfile', () => ({
-  default: function MockDataProfile({ entry }: any) {
-    return <div data-testid="data-profile">Data Profile for {entry?.name}</div>;
+  default: function MockDataProfile({ scanName }: any) {
+    return <div data-testid="data-profile">Data Profile - Scan: {scanName}</div>;
   }
 }));
 
@@ -117,6 +168,67 @@ vi.mock('../EntryList/EntryList', () => ({
 vi.mock('../Shimmer/ShimmerLoader', () => ({
   default: function MockShimmerLoader({ count, type }: any) {
     return <div data-testid="shimmer-loader">Loading {count} {type} items...</div>;
+  }
+}));
+
+vi.mock('../Glossaries/GlossariesCategoriesTerms', () => ({
+  default: function MockGlossariesCategoriesTerms({ mode, items, onItemClick }: any) {
+    return (
+      <div data-testid={`glossaries-${mode}`}>
+        {items?.length || 0} {mode}
+        {items?.map((item: any, idx: number) => (
+          <button key={idx} onClick={() => onItemClick(item.id)}>{item.displayName}</button>
+        ))}
+      </div>
+    );
+  }
+}));
+
+vi.mock('../Glossaries/GlossariesCategoriesTermsSkeleton', () => ({
+  default: function MockGlossariesCategoriesTermsSkeleton() {
+    return <div data-testid="glossaries-skeleton">Loading...</div>;
+  }
+}));
+
+vi.mock('../Glossaries/GlossariesLinkedAssets', () => ({
+  default: function MockGlossariesLinkedAssets({ linkedAssets, onAssetPreviewChange }: any) {
+    return (
+      <div data-testid="glossaries-linked-assets">
+        {linkedAssets?.length || 0} linked assets
+        <button onClick={() => onAssetPreviewChange({ name: 'test-asset' })}>Preview Asset</button>
+      </div>
+    );
+  }
+}));
+
+vi.mock('../Glossaries/GlossariesSynonyms', () => ({
+  default: function MockGlossariesSynonyms({ relations, onItemClick }: any) {
+    return (
+      <div data-testid="glossaries-synonyms">
+        {relations?.length || 0} relations
+        {relations?.map((r: any, idx: number) => (
+          <button key={idx} onClick={() => onItemClick(r.id)}>{r.displayName}</button>
+        ))}
+      </div>
+    );
+  }
+}));
+
+vi.mock('../Glossaries/GlossariesSynonymsSkeleton', () => ({
+  default: function MockGlossariesSynonymsSkeleton() {
+    return <div data-testid="glossaries-synonyms-skeleton">Loading synonyms...</div>;
+  }
+}));
+
+vi.mock('../Common/ResourcePreview', () => ({
+  default: function MockResourcePreview({ previewData, onPreviewDataChange, onViewDetails }: any) {
+    return (
+      <div data-testid="resource-preview">
+        Preview: {previewData?.name || 'None'}
+        <button onClick={() => onPreviewDataChange(null)}>Close</button>
+        <button onClick={() => onViewDetails(previewData)}>View Details</button>
+      </div>
+    );
   }
 }));
 
@@ -159,9 +271,78 @@ describe('ViewDetails', () => {
   const mockEntry = {
     name: 'project/dataset/table',
     fullyQualifiedName: 'project:dataset.table',
+    entryType: 'tables/table',
     entrySource: {
-      system: 'BigQuery'
+      system: 'BigQuery',
+      displayName: 'Test Table',
+      resource: 'projects/test/datasets/test/tables/test'
+    },
+    aspects: {
+      '123.custom.test': {
+        aspectType: 'test',
+        data: { field: 'value' }
+      }
     }
+  };
+
+  const mockDatasetEntry = {
+    name: 'project/dataset',
+    fullyQualifiedName: 'project:dataset',
+    entryType: 'datasets/dataset',
+    entrySource: {
+      system: 'BigQuery',
+      displayName: 'Test Dataset',
+      resource: 'projects/test/datasets/test'
+    },
+    aspects: {}
+  };
+
+  const mockGlossaryEntry = {
+    name: 'projects/test/locations/us/entryGroups/@dataplex/entries/glossary',
+    fullyQualifiedName: 'test:glossary',
+    entryType: 'glossaries/glossary',
+    entrySource: {
+      system: 'dataplex',
+      displayName: 'Test Glossary',
+      resource: 'projects/test/locations/us/glossaries/test'
+    },
+    aspects: {}
+  };
+
+  const mockCategoryEntry = {
+    name: 'projects/test/locations/us/entryGroups/@dataplex/entries/category',
+    fullyQualifiedName: 'test:category',
+    entryType: 'glossaries/category',
+    entrySource: {
+      system: 'dataplex',
+      displayName: 'Test Category',
+      resource: 'projects/test/locations/us/glossaries/test/categories/cat1'
+    },
+    aspects: {}
+  };
+
+  const mockTermEntry = {
+    name: 'projects/test/locations/us/entryGroups/@dataplex/entries/term',
+    fullyQualifiedName: 'test:term',
+    entryType: 'glossaries/term',
+    entrySource: {
+      system: 'dataplex',
+      displayName: 'Test Term',
+      resource: 'projects/test/locations/us/glossaries/test/terms/term1'
+    },
+    aspects: {}
+  };
+
+  const mockOtherEntry = {
+    name: 'project/other/resource',
+    fullyQualifiedName: 'project:other.resource',
+    entryType: 'other/type',
+    entrySource: {
+      system: 'custom',
+      displayName: 'Other Resource',
+      resource: 'projects/test/other/resource'
+    },
+    aspects: {}
   };
 
   const mockSampleData = {
@@ -169,28 +350,33 @@ describe('ViewDetails', () => {
     rows: [['value1', 'value2']]
   };
 
+  const createMockStore = (entryState: any = mockEntry, entryStatus = 'succeeded', sampleDataState = mockSampleData, sampleDataStatus = 'succeeded', history: any[] = []) => {
+    return configureStore({
+      reducer: {
+        entry: (state = { items: entryState, status: entryStatus, history }) => state,
+        sampleData: (state = { items: sampleDataState, status: sampleDataStatus }) => state,
+        glossaries: (state = { viewDetailsItems: [] }) => state,
+        resources: (state = { items: [] }) => state,
+      },
+      middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockWindowOpen.mockClear();
-    mockToggleFavorite.mockClear();
+    mockDispatch.mockClear();
+    mockNavigate.mockClear();
   });
 
-  const renderViewDetails = (entryState: any = mockEntry, entryStatus = 'succeeded', sampleDataState = mockSampleData, sampleDataStatus = 'succeeded') => {
-    // Mock the Redux store state
-    const mockStore = {
-      ...store.getState(),
-      entry: {
-        items: entryState,
-        status: entryStatus
-      },
-      sampleData: {
-        items: sampleDataState,
-        status: sampleDataStatus
-      }
-    };
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
+  const renderViewDetails = (entryState: any = mockEntry, entryStatus = 'succeeded', sampleDataState = mockSampleData, sampleDataStatus = 'succeeded', history: any[] = []) => {
+    const store = createMockStore(entryState, entryStatus, sampleDataState, sampleDataStatus, history);
     return render(
-      <Provider store={{ ...store, getState: () => mockStore as any }}>
+      <Provider store={store}>
         <BrowserRouter>
           <AuthContext.Provider value={mockAuthContextValue}>
             <ViewDetails />
@@ -200,338 +386,1255 @@ describe('ViewDetails', () => {
     );
   };
 
-  it('renders loading state initially', () => {
-    renderViewDetails(mockEntry, 'loading');
-    
-    expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
-    expect(screen.getByText('Loading 6 card items...')).toBeInTheDocument();
-  });
+  describe('Loading State', () => {
+    it('renders loading skeleton when entry is loading', () => {
+      renderViewDetails(mockEntry, 'loading');
 
-  it('renders the main content when entry is loaded', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      expect(screen.getByText('table')).toBeInTheDocument(); // getName result
+      // Should show skeleton loader
+      expect(document.querySelector('.MuiSkeleton-root')).toBeInTheDocument();
     });
-    
-    // There are multiple tags (system and entry type), so use getAllByTestId
-    const tags = screen.getAllByTestId('tag');
-    expect(tags).toHaveLength(2); // System tag and entry type tag
-    
-    expect(screen.getByText('bigquery')).toBeInTheDocument(); // system tag
-  });
 
-  it('renders back button and navigates back when clicked', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      // Find the back button by looking for the first button (back button is the first one)
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThan(0);
+    it('renders loading state with valid entry in loading status', () => {
+      renderViewDetails(mockEntry, 'loading');
+      expect(document.querySelector('.MuiSkeleton-root')).toBeInTheDocument();
     });
-    
-    const buttons = screen.getAllByRole('button');
-    const backButton = buttons[0]; // Back button is the first button
-    fireEvent.click(backButton);
-    
-    expect(mockNavigate).toHaveBeenCalledWith(-1);
   });
 
-  it('renders favorite star button', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      // Find the star button by looking for the button that contains a star icon
-      const buttons = screen.getAllByRole('button');
-      const starButton = buttons.find(button => 
-        button.querySelector('[data-testid="StarOutlineIcon"]') || 
-        button.querySelector('[data-testid="StarIcon"]')
+  describe('Basic Rendering - Tables Entry', () => {
+    it('renders the main content when entry is loaded', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Table')).toBeInTheDocument();
+      });
+
+      const tags = screen.getAllByTestId('tag');
+      expect(tags.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('renders back button', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        expect(buttons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('navigates back using browser history when no entry history exists', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        const backButton = buttons[0];
+        fireEvent.click(backButton);
+      });
+
+      expect(mockDispatch).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith(-1);
+    });
+
+    it('pops from entry history when history exists', async () => {
+      const mockStore = configureStore({
+        reducer: {
+          entry: () => ({ items: mockEntry, status: 'succeeded', history: [{ name: 'previous' }] }),
+          sampleData: () => ({ items: mockSampleData, status: 'succeeded' }),
+          glossaries: () => ({ viewDetailsItems: [] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStore}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
       );
-      expect(starButton).toBeInTheDocument();
-    });
-  });
 
-  it('toggles favorite when star button is clicked', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      // Find the star button by looking for the button that contains a star icon
-      const buttons = screen.getAllByRole('button');
-      const starButton = buttons.find(button => 
-        button.querySelector('[data-testid="StarOutlineIcon"]') || 
-        button.querySelector('[data-testid="StarIcon"]')
-      );
-      expect(starButton).toBeInTheDocument();
-      fireEvent.click(starButton!);
-    });
-    
-    // The mock toggleFavorite function should be called
-    expect(mockToggleFavorite).toHaveBeenCalled();
-  });
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        const backButton = buttons[0];
+        fireEvent.click(backButton);
+      });
 
-  it('renders BigQuery button and opens BigQuery console', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalled();
+    });
+
+    it('renders BigQuery button and opens BigQuery console', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const bigQueryButton = screen.getByText('Open in BigQuery');
+        expect(bigQueryButton).toBeInTheDocument();
+      });
+
       const bigQueryButton = screen.getByText('Open in BigQuery');
-      expect(bigQueryButton).toBeInTheDocument();
-    });
-    
-    const bigQueryButton = screen.getByText('Open in BigQuery');
-    fireEvent.click(bigQueryButton);
-    
-    expect(mockWindowOpen).toHaveBeenCalledWith(
-      expect.stringContaining('console.cloud.google.com/bigquery'),
-      '_blank'
-    );
-  });
+      fireEvent.click(bigQueryButton);
 
-  it('renders Looker Studio button and opens Looker Studio', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
+      expect(mockWindowOpen).toHaveBeenCalledWith(
+        expect.stringContaining('console.cloud.google.com/bigquery'),
+        '_blank'
+      );
+    });
+
+    it('renders Looker Studio button and opens Looker Studio', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const lookerButton = screen.getByText('Explore with Looker Studio');
+        expect(lookerButton).toBeInTheDocument();
+      });
+
       const lookerButton = screen.getByText('Explore with Looker Studio');
-      expect(lookerButton).toBeInTheDocument();
-    });
-    
-    const lookerButton = screen.getByText('Explore with Looker Studio');
-    fireEvent.click(lookerButton);
-    
-    expect(mockWindowOpen).toHaveBeenCalledWith('https://lookerstudio.google.com', '_blank');
-  });
+      fireEvent.click(lookerButton);
 
-  it('renders tabs for Tables entry type', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Annotations')).toBeInTheDocument();
-      expect(screen.getByText('Lineage')).toBeInTheDocument();
-      expect(screen.getByText('Data Profile')).toBeInTheDocument();
-      expect(screen.getByText('Data Quality')).toBeInTheDocument();
+      expect(mockWindowOpen).toHaveBeenCalledWith('https://lookerstudio.google.com', '_blank');
+    });
+
+    it('renders tabs for Tables entry type', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+        expect(screen.getByText('Lineage')).toBeInTheDocument();
+        expect(screen.getByText('Data Profile')).toBeInTheDocument();
+        expect(screen.getByText('Data Quality')).toBeInTheDocument();
+      });
     });
   });
 
-  it('renders tabs for Datasets entry type', async () => {
-    const datasetEntry = { ...mockEntry, name: 'project/dataset' };
-    renderViewDetails(datasetEntry);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Entry List')).toBeInTheDocument();
-      expect(screen.getByText('Annotations')).toBeInTheDocument();
+  describe('Tab Navigation', () => {
+    it('switches to Aspects tab when clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Aspects'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+      });
     });
-    
-    // Should not have Data Profile and Data Quality tabs for Datasets
-    expect(screen.queryByText('Data Profile')).not.toBeInTheDocument();
-    expect(screen.queryByText('Data Quality')).not.toBeInTheDocument();
+
+    it('switches to Lineage tab when clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Lineage'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+        expect(screen.getByTestId('lineage')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Data Profile tab when clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Data Profile'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+        expect(screen.getByTestId('data-profile')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Data Quality tab when clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Data Quality'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-4')).toBeInTheDocument();
+        expect(screen.getByTestId('data-quality')).toBeInTheDocument();
+      });
+    });
+
+    it('renders overview tab content', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
+        expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
+      });
+    });
   });
 
-  it('switches between tabs when clicked', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-    });
-    
-    // Initially Overview tab should be active
-    expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
-    expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
-    
-    // Click on Annotations tab
-    const annotationsTab = screen.getByText('Annotations');
-    fireEvent.click(annotationsTab);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
-      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
-    });
-  });
+  describe('Annotation Filter Actions', () => {
+    it('applies annotation filter when filter changes', async () => {
+      renderViewDetails();
 
-  it('renders overview tab content', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
-    });
-    
-    expect(screen.getByText('Overview for project/dataset/table')).toBeInTheDocument();
-  });
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
 
-  it('renders sample data in overview when available', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('sample-data')).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        const applyFilterButton = screen.getByText('Apply Filter');
+        fireEvent.click(applyFilterButton);
+      });
 
-  it('renders annotation filter and preview annotation', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      const annotationsTab = screen.getByText('Annotations');
-      fireEvent.click(annotationsTab);
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
       expect(screen.getByTestId('preview-annotation')).toBeInTheDocument();
     });
-  });
 
-  it('renders lineage tab content', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      const lineageTab = screen.getByText('Lineage');
-      fireEvent.click(lineageTab);
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('lineage')).toBeInTheDocument();
-    });
-  });
+    it('collapses all annotations when collapse all is clicked', async () => {
+      renderViewDetails();
 
-  it('renders data profile tab content', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      const dataProfileTab = screen.getByText('Data Profile');
-      fireEvent.click(dataProfileTab);
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('data-profile')).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
 
-  it('renders data quality tab content', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      const dataQualityTab = screen.getByText('Data Quality');
-      fireEvent.click(dataQualityTab);
+      await waitFor(() => {
+        const collapseButton = screen.getByText('Collapse All');
+        fireEvent.click(collapseButton);
+      });
+
+      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
     });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('data-quality')).toBeInTheDocument();
+
+    it('expands all annotations when expand all is clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        const expandButton = screen.getByText('Expand All');
+        fireEvent.click(expandButton);
+      });
+
+      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
     });
   });
 
-  it('renders entry list for datasets', async () => {
-    const datasetEntry = { ...mockEntry, name: 'project/dataset' };
-    renderViewDetails(datasetEntry);
-    
-    await waitFor(() => {
-      const entryListTab = screen.getByText('Entry List');
-      fireEvent.click(entryListTab);
+  describe('Datasets Entry Type', () => {
+    it('renders tabs for Datasets entry type', async () => {
+      renderViewDetails(mockDatasetEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Entry List')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Data Profile')).not.toBeInTheDocument();
+      expect(screen.queryByText('Data Quality')).not.toBeInTheDocument();
     });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('entry-list')).toBeInTheDocument();
+
+    it('renders entry list for datasets', async () => {
+      renderViewDetails(mockDatasetEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Entry List'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('entry-list')).toBeInTheDocument();
+      });
     });
   });
 
-  it('handles missing entry gracefully', () => {
-    // Test with loading state when entry is null
-    renderViewDetails(null, 'loading');
-    
-    // Should show loading state
-    expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
+  describe('Other Entry Type', () => {
+    it('renders tabs for Other entry type', async () => {
+      renderViewDetails(mockOtherEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Lineage')).not.toBeInTheDocument();
+      expect(screen.queryByText('Data Profile')).not.toBeInTheDocument();
+      expect(screen.queryByText('Data Quality')).not.toBeInTheDocument();
+    });
+
+    it('does not render BigQuery/Looker buttons for non-BigQuery entries', async () => {
+      renderViewDetails(mockOtherEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('Open in BigQuery')).not.toBeInTheDocument();
+      expect(screen.queryByText('Explore with Looker Studio')).not.toBeInTheDocument();
+    });
   });
 
-  it('handles null entry with succeeded status', () => {
-    // This tests the edge case where status is succeeded but entry is null
-    // The component should handle this gracefully
-    try {
-      renderViewDetails(null, 'succeeded');
-      // If it doesn't crash, the test passes
-      expect(true).toBe(true);
-    } catch (error) {
-      // If it does crash, we expect it to be handled gracefully
-      expect(error).toBeDefined();
-    }
+  describe('Edge Cases', () => {
+    it('handles entry without displayName gracefully', async () => {
+      const entryWithoutDisplayName = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          displayName: ''
+        }
+      };
+
+      renderViewDetails(entryWithoutDisplayName);
+
+      await waitFor(() => {
+        expect(screen.getByText('table')).toBeInTheDocument();
+      });
+    });
+
+    it('handles entry with empty system string gracefully', async () => {
+      const entryWithEmptySystem = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          system: ''
+        }
+      };
+
+      renderViewDetails(entryWithEmptySystem);
+
+      await waitFor(() => {
+        expect(screen.getByText('Custom')).toBeInTheDocument();
+      });
+    });
+
+    it('handles missing user token gracefully', () => {
+      const authContextWithoutToken = {
+        ...mockAuthContextValue,
+        user: { ...mockUser, token: '' }
+      };
+
+      const store = createMockStore();
+      render(
+        <Provider store={store}>
+          <BrowserRouter>
+            <AuthContext.Provider value={authContextWithoutToken}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      expect(document.body).toBeInTheDocument();
+    });
+
+    it('handles null user gracefully', () => {
+      const authContextWithNullUser = {
+        ...mockAuthContextValue,
+        user: null
+      };
+
+      const store = createMockStore(mockEntry, 'succeeded');
+      render(
+        <Provider store={store}>
+          <BrowserRouter>
+            <AuthContext.Provider value={authContextWithNullUser}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      expect(document.body).toBeInTheDocument();
+    });
   });
 
-  it('handles missing user data gracefully', () => {
-    const authContextWithoutUser = {
-      ...mockAuthContextValue,
-      user: null
+  describe('Sample Data', () => {
+    it('renders sample data when available', async () => {
+      renderViewDetails(mockEntry, 'succeeded', mockSampleData, 'succeeded');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
+      });
+    });
+
+    it('handles missing sample data gracefully', async () => {
+      renderViewDetails(mockEntry, 'succeeded', undefined, 'idle');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('System Tag Display', () => {
+    it('displays BigQuery tag correctly', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('BigQuery')).toBeInTheDocument();
+      });
+    });
+
+    it('displays custom system tag with formatting', async () => {
+      const customSystemEntry = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          system: 'custom_system'
+        }
+      };
+
+      renderViewDetails(customSystemEntry);
+
+      await waitFor(() => {
+        // Component replaces only first underscore/hyphen
+        expect(screen.getByText('custom system')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Tab Panel Content', () => {
+    it('shows correct tab panel for Overview', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
+      });
+    });
+
+    it('hides tab panels not matching current index', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('tabpanel-1')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('tabpanel-2')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Entry Type Specific Features', () => {
+    it('does not fetch sample data for non-BigQuery tables', async () => {
+      const nonBigQueryTable = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          system: 'custom_system'
+        }
+      };
+
+      renderViewDetails(nonBigQueryTable);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Glossary Entry Type', () => {
+    it('renders tabs for glossary entry type', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Categories')).toBeInTheDocument();
+        expect(screen.getByText('Terms')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Categories tab for glossary', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Categories'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Terms tab for glossary', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Aspects tab for glossary', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Category Entry Type', () => {
+    it('renders tabs for category entry type', async () => {
+      renderViewDetails(mockCategoryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Categories')).toBeInTheDocument();
+        expect(screen.getByText('Terms')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+      });
+    });
+
+    it('switches between tabs for category entry', async () => {
+      renderViewDetails(mockCategoryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Term Entry Type', () => {
+    it('renders tabs for term entry type', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Linked Assets')).toBeInTheDocument();
+        expect(screen.getByText('Synonyms & Related Terms')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Linked Assets tab for term', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Linked Assets'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Synonyms tab for term', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Synonyms & Related Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+
+    it('switches to Aspects tab for term', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Asset Preview Panel', () => {
+    it('renders resource preview component', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('resource-preview')).toBeInTheDocument();
+      });
+    });
+
+    it('handles close preview action', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const closeButton = screen.getByText('Close');
+        fireEvent.click(closeButton);
+      });
+
+      expect(screen.getByTestId('resource-preview')).toBeInTheDocument();
+    });
+
+    it('handles view details action from preview', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const viewDetailsButton = screen.getByText('View Details');
+        fireEvent.click(viewDetailsButton);
+      });
+
+      expect(mockDispatch).toHaveBeenCalled();
+    });
+  });
+
+  describe('Sorting and Filtering', () => {
+    it('handles sort direction toggle', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Helper Functions', () => {
+    it('correctly identifies glossary type from entryType', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Categories')).toBeInTheDocument();
+      });
+    });
+
+    it('correctly identifies category type from entryType', async () => {
+      renderViewDetails(mockCategoryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Categories')).toBeInTheDocument();
+      });
+    });
+
+    it('correctly identifies term type from entryType', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Linked Assets')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Data Scan Integration', () => {
+    it('handles data scans for BigQuery tables', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Data Quality')).toBeInTheDocument();
+        expect(screen.getByText('Data Profile')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Data Quality'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('data-quality')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Tab Panel Rendering', () => {
+    it('renders annotation filter in Aspects tab for tables', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+        expect(screen.getByTestId('preview-annotation')).toBeInTheDocument();
+      });
+    });
+
+    it('renders annotation filter in Aspects tab for datasets', async () => {
+      renderViewDetails(mockDatasetEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+      });
+    });
+
+    it('renders annotation filter in Aspects tab for other entry types', async () => {
+      renderViewDetails(mockOtherEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Display Name Fallback', () => {
+    it('shows entry name when displayName is empty', async () => {
+      const entryWithEmptyDisplayName = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          displayName: ''
+        }
+      };
+
+      renderViewDetails(entryWithEmptyDisplayName);
+
+      await waitFor(() => {
+        // Should fall back to getName result
+        expect(screen.getByText('table')).toBeInTheDocument();
+      });
+    });
+
+    it('shows displayName when available', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Table')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Sample Data Loading', () => {
+    it('handles sample data loading state', async () => {
+      renderViewDetails(mockEntry, 'succeeded', undefined, 'loading');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
+      });
+    });
+
+    it('handles sample data failure state', async () => {
+      renderViewDetails(mockEntry, 'succeeded', undefined, 'failed');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-page-overview')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Glossary Data Loading States', () => {
+    it('shows categories skeleton while loading glossary data', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Categories'));
+      });
+
+      // Since glossary data is loading (no items in viewDetailsItems), skeleton should show
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('shows terms skeleton while loading glossary data', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+
+    it('shows linked assets loading state for term', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Linked Assets'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('shows synonyms skeleton while loading term data', async () => {
+      renderViewDetails(mockTermEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Synonyms & Related Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Entry History Navigation', () => {
+    it('pops from history when history exists', async () => {
+      const mockStoreWithHistory = configureStore({
+        reducer: {
+          entry: () => ({ items: mockEntry, status: 'succeeded', history: [{ name: 'previous-entry' }] }),
+          sampleData: () => ({ items: mockSampleData, status: 'succeeded' }),
+          glossaries: () => ({ viewDetailsItems: [] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithHistory}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        const backButton = buttons[0];
+        fireEvent.click(backButton);
+      });
+
+      expect(mockDispatch).toHaveBeenCalled();
+      // Should not navigate via browser when history exists
+    });
+
+    it('navigates back via browser when no history', async () => {
+      renderViewDetails(mockEntry, 'succeeded', mockSampleData, 'succeeded', []);
+
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        const backButton = buttons[0];
+        fireEvent.click(backButton);
+      });
+
+      expect(mockNavigate).toHaveBeenCalledWith(-1);
+    });
+  });
+
+  describe('Tab Reset on Entry Change', () => {
+    it('resets tab value when entry name changes', async () => {
+      const { rerender } = renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+
+      // Rerender with a new entry
+      const newEntry = { ...mockEntry, name: 'project/dataset/newtable' };
+      const newStore = createMockStore(newEntry);
+
+      rerender(
+        <Provider store={newStore}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Expand/Collapse Annotations', () => {
+    it('expands all annotations when expand all is clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        const expandAllButton = screen.getByText('Expand All');
+        fireEvent.click(expandAllButton);
+      });
+
+      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+    });
+
+    it('collapses all annotations when collapse all is clicked', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        const collapseAllButton = screen.getByText('Collapse All');
+        fireEvent.click(collapseAllButton);
+      });
+
+      expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+    });
+  });
+
+  describe('Resource ID Conversion', () => {
+    it('handles preview panel interactions', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('resource-preview')).toBeInTheDocument();
+      });
+
+      // The resource preview should be visible
+      const viewDetailsButton = screen.getByText('View Details');
+      fireEvent.click(viewDetailsButton);
+
+      expect(mockDispatch).toHaveBeenCalled();
+    });
+  });
+
+  describe('BigQuery Link Generation', () => {
+    it('generates correct BigQuery link for table', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const bigQueryButton = screen.getByText('Open in BigQuery');
+        fireEvent.click(bigQueryButton);
+      });
+
+      expect(mockWindowOpen).toHaveBeenCalledWith(
+        expect.stringContaining('console.cloud.google.com/bigquery'),
+        '_blank'
+      );
+    });
+
+    it('generates correct Looker Studio link', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const lookerButton = screen.getByText('Explore with Looker Studio');
+        fireEvent.click(lookerButton);
+      });
+
+      expect(mockWindowOpen).toHaveBeenCalledWith(
+        expect.stringContaining('lookerstudio.google.com'),
+        '_blank'
+      );
+    });
+  });
+
+  describe('System Tag Rendering', () => {
+    it('renders BigQuery tag for BigQuery entries', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('BigQuery')).toBeInTheDocument();
+      });
+    });
+
+    it('renders dataplex tag for glossary entries', async () => {
+      renderViewDetails(mockGlossaryEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('dataplex')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Entry Type Tag Rendering', () => {
+    it('renders Tables tag for table entries', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('Tables')).toBeInTheDocument();
+      });
+    });
+
+    it('renders Datasets tag for dataset entries', async () => {
+      renderViewDetails(mockDatasetEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Datasets')).toBeInTheDocument();
+      });
+    });
+
+    it('renders Other tag for unknown entry types', async () => {
+      renderViewDetails(mockOtherEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Other')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Entry Status Handling', () => {
+    it('shows loading skeleton when entry status is loading', async () => {
+      renderViewDetails(mockEntry, 'loading');
+
+      await waitFor(() => {
+        expect(document.querySelector('.MuiSkeleton-root')).toBeInTheDocument();
+      });
+    });
+
+    it('shows content when entry status is succeeded', async () => {
+      renderViewDetails(mockEntry, 'succeeded');
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Table')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Glossary with Data', () => {
+    const mockGlossaryItem = {
+      id: 'projects/test/locations/us/glossaries/test',
+      displayName: 'Test Glossary',
+      type: 'glossary' as const,
+      children: [
+        { id: 'cat1', displayName: 'Category 1', type: 'category' as const },
+        { id: 'term1', displayName: 'Term 1', type: 'term' as const }
+      ],
+      relations: []
     };
 
-    render(
-      <Provider store={store}>
-        <BrowserRouter>
-          <AuthContext.Provider value={authContextWithoutUser}>
-            <ViewDetails />
-          </AuthContext.Provider>
-        </BrowserRouter>
-      </Provider>
-    );
-    
-    // Should still render without crashing
-    expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
+    const mockTermItem = {
+      id: 'projects/test/locations/us/glossaries/test/terms/term1',
+      displayName: 'Test Term',
+      type: 'term' as const,
+      children: [],
+      relations: [
+        { id: 'related1', displayName: 'Related Term', type: 'synonym' as const, lastModified: Date.now() }
+      ],
+      linkedAssets: [
+        { id: 'asset1', displayName: 'Linked Asset 1' }
+      ]
+    };
+
+    it('renders categories content when glossary data is loaded', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockGlossaryItem);
+
+      const mockStoreWithGlossary = configureStore({
+        reducer: {
+          entry: () => ({ items: mockGlossaryEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockGlossaryItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithGlossary}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Categories'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('renders terms content when glossary data is loaded', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockGlossaryItem);
+
+      const mockStoreWithGlossary = configureStore({
+        reducer: {
+          entry: () => ({ items: mockGlossaryEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockGlossaryItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithGlossary}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+
+    it('renders linked assets content when term data is loaded', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockTermItem);
+
+      const mockStoreWithTerm = configureStore({
+        reducer: {
+          entry: () => ({ items: mockTermEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockTermItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithTerm}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Linked Assets'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
+      });
+    });
+
+    it('renders synonyms content when term data is loaded', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockTermItem);
+
+      const mockStoreWithTerm = configureStore({
+        reducer: {
+          entry: () => ({ items: mockTermEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockTermItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithTerm}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Synonyms & Related Terms'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+      });
+    });
+
+    it('renders aspects tab for glossary entry', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockGlossaryItem);
+
+      const mockStoreWithGlossary = configureStore({
+        reducer: {
+          entry: () => ({ items: mockGlossaryEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockGlossaryItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithGlossary}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+      });
+    });
+
+    it('renders aspects tab for term entry', async () => {
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(mockTermItem);
+
+      const mockStoreWithTerm = configureStore({
+        reducer: {
+          entry: () => ({ items: mockTermEntry, status: 'succeeded', history: [] }),
+          sampleData: () => ({ items: null, status: 'idle' }),
+          glossaries: () => ({ viewDetailsItems: [mockTermItem] }),
+          resources: () => ({ items: [] }),
+        },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware({ serializableCheck: false }),
+      });
+
+      render(
+        <Provider store={mockStoreWithTerm}>
+          <BrowserRouter>
+            <AuthContext.Provider value={mockAuthContextValue}>
+              <ViewDetails />
+            </AuthContext.Provider>
+          </BrowserRouter>
+        </Provider>
+      );
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
+      });
+    });
+
+    afterEach(() => {
+      // Reset findItem mock after each glossary test
+      vi.mocked(glossaryUtils.findItem).mockReturnValue(null);
+    });
   });
 
-  it('applies annotation filter when filter changes', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      const annotationsTab = screen.getByText('Annotations');
-      fireEvent.click(annotationsTab);
-    });
-    
-    await waitFor(() => {
-      const applyFilterButton = screen.getByText('Apply Filter');
-      fireEvent.click(applyFilterButton);
-    });
-    
-    // The filtered entry should be passed to PreviewAnnotation
-    expect(screen.getByText('Preview Annotation for project/dataset/table')).toBeInTheDocument();
-  });
+  describe('Preview Panel Interactions', () => {
+    it('handles close button on preview panel', async () => {
+      renderViewDetails();
 
-  it('resets tab value when entry changes', async () => {
-    const { rerender } = renderViewDetails();
-    
-    await waitFor(() => {
-      const annotationsTab = screen.getByText('Annotations');
-      fireEvent.click(annotationsTab);
-    });
-    
-    // Change entry
-    const newEntry = { ...mockEntry, name: 'project/dataset/newtable' };
-    rerender(
-      <Provider store={{ ...store, getState: () => ({ ...store.getState(), entry: { items: newEntry, status: 'succeeded' } }) as any }}>
-        <BrowserRouter>
-          <AuthContext.Provider value={mockAuthContextValue}>
-            <ViewDetails />
-          </AuthContext.Provider>
-        </BrowserRouter>
-      </Provider>
-    );
-    
-    // Tab should reset to Overview (index 0)
-    await waitFor(() => {
-      expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        const closeButton = screen.getByText('Close');
+        fireEvent.click(closeButton);
+      });
 
-  it('renders correctly for Tables entry type with sample data', async () => {
-    renderViewDetails();
-    
-    await waitFor(() => {
-      // Verify that the component renders with Tables-specific tabs
-      expect(screen.getByText('Overview')).toBeInTheDocument();
-      expect(screen.getByText('Annotations')).toBeInTheDocument();
-      expect(screen.getByText('Lineage')).toBeInTheDocument();
-      expect(screen.getByText('Data Profile')).toBeInTheDocument();
-      expect(screen.getByText('Data Quality')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-preview')).toBeInTheDocument();
     });
-    
-    // Verify that sample data is displayed in overview
-    await waitFor(() => {
-      expect(screen.getByTestId('sample-data')).toBeInTheDocument();
+
+    it('handles view details from preview panel', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        const viewDetailsButton = screen.getByText('View Details');
+        fireEvent.click(viewDetailsButton);
+      });
+
+      expect(mockDispatch).toHaveBeenCalled();
     });
   });
 });

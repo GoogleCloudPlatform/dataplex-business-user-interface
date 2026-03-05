@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { type FilterChip } from "./GlossaryDataType";
 import { isOrConnector } from "../../utils/glossaryUtils";
@@ -79,64 +79,76 @@ const GlossaryFilterChip: React.FC<GlossaryFilterChipProps> = ({
       : chip.displayLabel;
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        backgroundColor: "#E7F0FE",
-        borderRadius: "25px",
-        padding: "2px 3px 2px 8px",
-        gap: "4px",
-      }}
-    >
-      {fieldLabel && (
+    <Tooltip title={chip.displayLabel} arrow>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: "#E7F0FE",
+          borderRadius: "25px",
+          padding: "2px 3px 2px 8px",
+          gap: "4px",
+          maxWidth: "100%",
+          overflow: "hidden",
+          minWidth: 0,
+        }}
+      >
+        {fieldLabel && (
+          <Typography
+            sx={{
+              fontFamily: "'Google Sans', sans-serif",
+              fontWeight: 500,
+              fontSize: "11px",
+              lineHeight: "16px",
+              letterSpacing: "0.1px",
+              color: "#0B57D0",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {fieldLabel}
+          </Typography>
+        )}
         <Typography
           sx={{
             fontFamily: "'Google Sans', sans-serif",
-            fontWeight: 500,
+            fontWeight: 700,
             fontSize: "11px",
             lineHeight: "16px",
             letterSpacing: "0.1px",
             color: "#0B57D0",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
           }}
         >
-          {fieldLabel}
+          {valueLabel}
         </Typography>
-      )}
-      <Typography
-        sx={{
-          fontFamily: "'Google Sans', sans-serif",
-          fontWeight: 700,
-          fontSize: "11px",
-          lineHeight: "16px",
-          letterSpacing: "0.1px",
-          color: "#0B57D0",
-        }}
-      >
-        {valueLabel}
-      </Typography>
-      <IconButton
-        size="small"
-        onClick={() => onRemove(chip.id)}
-        sx={{
-          width: 14,
-          height: 14,
-          backgroundColor: "#0B57D0",
-          borderRadius: "50%",
-          padding: 0,
-          "&:hover": {
-            backgroundColor: "#0842A0",
-          },
-        }}
-      >
-        <CloseIcon
+        <IconButton
+          size="small"
+          onClick={() => onRemove(chip.id)}
           sx={{
-            fontSize: 10,
-            color: "#FFFFFF",
+            width: 14,
+            height: 14,
+            backgroundColor: "#0B57D0",
+            borderRadius: "50%",
+            padding: 0,
+            flexShrink: 0,
+            "&:hover": {
+              backgroundColor: "#0842A0",
+            },
           }}
-        />
-      </IconButton>
-    </Box>
+        >
+          <CloseIcon
+            sx={{
+              fontSize: 10,
+              color: "#FFFFFF",
+            }}
+          />
+        </IconButton>
+      </Box>
+    </Tooltip>
   );
 };
 

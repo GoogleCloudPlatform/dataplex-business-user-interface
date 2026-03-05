@@ -1,7 +1,7 @@
 {
-  "name": "catalog-studio-api",
-  "version": "1.0.0",
-  "description": "Backend api for catalog studio to communicate with dataplex api's",
+  "name": "dataplex-business-ui-api",
+  "version": "1.0.1",
+  "description": "Backend api for dataplex-business-ui to communicate with dataplex api's",
   "main": "index.js",
   "scripts": {
     "start": "node --env-file-if-exists=.env.test server.js",
@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "firebase-admin": "^13.4.0",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",

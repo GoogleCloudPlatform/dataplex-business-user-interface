@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import type { AppDispatch } from '../../app/store'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getProjects } from '../../features/projects/projectsSlice'
+import { sanitizeFirstName } from '../../utils/sanitizeName'
 
 /**
  * @file Home.tsx
@@ -38,15 +39,12 @@ import { getProjects } from '../../features/projects/projectsSlice'
  */
 
 const Home = () => {
-  // const { displayName, email, phoneNumber, photoURL } = user
   const { user, logout, updateUser } = useAuth();
-  const { showSuccess, showError } = useNotification();
+  const { showError } = useNotification();
   const navigate = useNavigate();
   const [loader, setLoader] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
-
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
-  //const searchTerm = useSelector((state:any) => state.search.term);
 
   useEffect(() => {
     setLoader(true);
@@ -68,80 +66,70 @@ const Home = () => {
             token: user?.token,
             tokenExpiry: user?.tokenExpiry,
             tokenIssuedAt: user?.tokenIssuedAt,
-            hasRole: true,
-            roles: [],
-            permissions: [],
+            hasRole: user?.hasRole,
+            roles: user?.roles || [],
+            permissions: user?.permissions || [],
+            iamDisplayRole: user?.iamDisplayRole,
             appConfig: appConfig
           };
           updateUser(user?.token, userData);
           setLoader(false);
-          const welcomeShown = sessionStorage.getItem('welcomeShown');
-          if (!welcomeShown) {
-            showSuccess("Welcome " + user?.name + "!", 2000);
-            sessionStorage.setItem('welcomeShown', 'true');
-          }
         }).catch((err)=>{
           console.log(err);
           showError("Access token expired or you do not have enough permissions", 2000);
           setLoader(false);
-          sessionStorage.removeItem('welcomeShown');
           logout();
         });
       }else{
         setLoader(false);
       }
-  }, [user, projectsLoaded, dispatch, updateUser, logout, showSuccess, showError]);
+  }, [user, projectsLoaded, dispatch, updateUser, logout, showError]);
 
-  const handleSearch = (text:string) => {
-    console.log("Search Term:", text);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSearch = (_text:string) => {
     dispatch({ type: 'resources/setItemsPreviousPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsStoreData', payload: [] });
     dispatch({ type: 'resources/setItems', payload: [] });
-    // Dispatch the setSearchTerm action with the new value
     navigate('/search');
-
   };
 
   return (
     <div className="home">
       <div className='home-body'>
-        { loader ? (<>
+        { loader ? (
           <Grid
             container
             spacing={0}
             direction="column"
             alignItems="center"
             justifyContent="center"
-            sx={{ minHeight: 'inherit' }}
           >
             <CircularProgress />
           </Grid>
-          </>) :
-          ( <div className='home-banner'>
-              <Grid
-                container
-                spacing={0}
-                direction="column"
-                alignItems="center"
-                justifyContent="center"
-                sx={{ minHeight: 'inherit' }}
-              >
-                <div style={{fontSize: "1.75rem",color:"#1F1F1F",fontWeight: "500", marginBottom:"1.25rem", fontStyle:"Medium", fontFamily: '"Google Sans", sans-serif'}}>
-                  <span>What would you like to discover?</span>
+        ) : (
+          <div className="home-banner">
+            <div className="home-content-wrapper">
+              <div className="home-header">
+                <div className="home-greeting">
+                  <span>Hi <span className="home-greeting-name">{sanitizeFirstName(user?.name)}</span>,</span>
                 </div>
-                <div className="home-search-container">
-                    <SearchBar handleSearchSubmit={handleSearch} variant="default" dataSearch={[
-                        { name: 'BigQuery' },
-                        { name: 'Data Warehouse' },
-                        { name: 'Data Lake' },
-                        { name: 'Data Pipeline' },
-                        { name: 'GCS' }
-                    ]}/>
-                </div>
-              </Grid>
+                <h1 className="home-title">
+                  What would you like to discover?
+                </h1>
+              </div>
+              <div className="home-search-container">
+                <SearchBar handleSearchSubmit={handleSearch} variant="default" dataSearch={[
+                    { name: 'BigQuery' },
+                    { name: 'Data Warehouse' },
+                    { name: 'Data Lake' },
+                    { name: 'Data Pipeline' },
+                    { name: 'GCS' }
+                ]}/>
+              </div>
             </div>
-          )}
+          </div>
+        )}
       </div>
     </div>
   )

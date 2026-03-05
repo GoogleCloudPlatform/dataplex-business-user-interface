@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import Tag from '../Tags/Tag';
 import axios from 'axios';
 import { getMimeType } from '../../utils/resourceUtils';
+import './DataProducts.css'
 
 // Types
 interface DataProduct {
@@ -61,12 +62,12 @@ const sortDataProducts = (
 // Reusable style constants
 const SEARCH_FIELD_SX = {
   '& .MuiOutlinedInput-root': {
-    borderRadius: '54px',
-    height: '32px',
-    padding: '8px 12px',
-    gap: '8px',
+    borderRadius: 'clamp(40px, 4vw, 54px)',
+    height: 'clamp(28px, 2.5vw, 32px)',
+    padding: 'clamp(6px, 0.6vw, 8px) clamp(10px, 1vw, 12px)',
+    gap: 'clamp(6px, 0.6vw, 8px)',
     fontFamily: 'Google Sans Text',
-    fontSize: '12px',
+    fontSize: 'clamp(10px, 0.9vw, 12px)',
     fontWeight: 500,
     letterSpacing: '0.1px',
     color: '#5E5E5E',
@@ -74,8 +75,8 @@ const SEARCH_FIELD_SX = {
     '&:hover fieldset': { borderColor: '#A8A8A8' },
     '&.Mui-focused fieldset': { borderColor: '#0E4DCA', borderWidth: '1.5px' },
   },
-  width: { xs: '100%', sm: '250px', md: '309px' },
-  marginRight: { xs: 0, sm: '10px' },
+  width: 'clamp(250px, 25vw, 350px)',
+  marginRight: 'clamp(6px, 0.8vw, 10px)',
   mb: { xs: 1, sm: 0 },
   '& .MuiInputBase-input': {
     padding: 0,
@@ -89,17 +90,19 @@ const SEARCH_FIELD_SX = {
 
 const CARD_SX = {
   border: '1px solid #E0E0E0',
-  borderRadius: '16px',
-  padding: '16px',
+  borderRadius: 'clamp(12px, 1vw, 16px)',
+  padding: 'clamp(12px, 1vw, 16px)',
   height: '100%',
   boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
   cursor: 'pointer',
-  transition: 'box-shadow 0.2s',
+  transition: 'box-shadow 0.2s, border-color 0.2s, transform 0.2s',
   '&:hover': {
     boxShadow: '0 4px 8px 0 rgba(60,64,67,0.15)',
+    borderColor: '#0B57D0',
+    transform: 'scale(1.02)',
   },
 };
 
@@ -111,38 +114,39 @@ const DataProductCard = React.memo(({
   dataProduct: DataProduct;
   onClick: () => void;
 }) => (
-  <Box sx={CARD_SX} onClick={onClick}>
+  <Box sx={CARD_SX} onClick={onClick} className='parent-container'>
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
       <img
         src={dataProduct.icon ? `data:image/${getMimeType(dataProduct.icon)};base64,${dataProduct.icon}` : '/assets/images/data-product-card.png'}
         alt={dataProduct.displayName}
-        style={{ width: '40px', height: '40px', marginBottom: '12px' }}
+        style={{ width: 'clamp(30px, 3vw, 40px)', height: 'clamp(30px, 3vw, 40px)', marginBottom: 'clamp(8px, 0.8vw, 12px)' }}
       />
-      <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: '17px', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', marginLeft: '12px', maxWidth: 'calc(100% - 150px)', lineHeight: 1.3, marginTop: '-10px' }}>
+      <Typography variant="h6" sx={{ fontFamily: 'Google Sans', fontSize: 'clamp(14px, 1.2vw, 17px)', fontWeight: 500, color: '#1F1F1F', textWrap: 'break-word', marginLeft: 'clamp(8px, 0.8vw, 12px)', maxWidth: 'calc(100% - 150px)', lineHeight: 1.3, marginTop: '-10px' }}>
         {dataProduct.displayName}
       </Typography>
       <Box sx={{ alignSelf: "flex-end", marginLeft: 'auto', position: 'relative', top: '-25px' }}>
         <Tag text={`${dataProduct.assetCount || 0} assets`} css={{
           fontFamily: '"Google Sans Text", sans-serif',
+          fontSize: 'clamp(10px, 0.9vw, 14px)',
           color: '#004A77',
           margin: 0,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0.25rem 0.5rem",
+          padding: "clamp(0.15rem, 0.3vw, 0.25rem) clamp(0.3rem, 0.5vw, 0.5rem)",
           fontWeight: 500,
-          borderRadius: '12px',
+          borderRadius: 'clamp(8px, 0.8vw, 12px)',
           textTransform: 'capitalize',
           flexShrink: 0
         }} />
       </Box>
     </Box>
     <Box>
-      <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', lineHeight: 1.4, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: 'clamp(11px, 1vw, 14px)', color: '#575757', lineHeight: 1.4, height: 'clamp(32px, 3vw, 40px)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {dataProduct.description || 'No description available.'}
       </Typography>
     </Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', marginTop: '16px', gap: 1 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', marginTop: 'clamp(12px, 1vw, 16px)', gap: 'clamp(4px, 0.5vw, 8px)' }}>
       <Tooltip title={`Owner: ${dataProduct.ownerEmails.join(', ') || 'Unknown'}`} arrow>
         <>
           <span style={{
@@ -152,79 +156,78 @@ const DataProductCard = React.memo(({
             display: "flex",
             alignItems: "center",
             flex: '0 1 auto',
-            gap: '0.25rem',
+            gap: 'clamp(0.15rem, 0.3vw, 0.25rem)',
             minWidth: 0
           }}>
             <div style={{
-              width: '1.25rem',
-              height: '1.25rem',
+              width: 'clamp(1rem, 1.2vw, 1.25rem)',
+              height: 'clamp(1rem, 1.2vw, 1.25rem)',
               borderRadius: '50%',
               backgroundColor: '#FFDCD2',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#9C3A1F',
-              fontSize: '0.75rem',
+              fontSize: 'clamp(0.6rem, 0.7vw, 0.75rem)',
               fontWeight: 500,
               flexShrink: 0
             }}>
               {dataProduct.ownerEmails.length > 0 && dataProduct.ownerEmails[0].charAt(0).toUpperCase()}
             </div>
           </span>
-          <span style={{
-            color: "#575757",
-            fontSize: "12px",
-            fontWeight: 500,
-            display: "flex",
-            alignItems: "center",
-            flex: '0 0 auto',
-            gap: '0.25rem'
-          }}>
+          <Box
+            component="span"
+            sx={{
+              color: "#575757",
+              fontSize: 'clamp(8px, 0.8vw, 12px)',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+          >
             {dataProduct.ownerEmails.length > 0 && dataProduct.ownerEmails[0]}
             {dataProduct.ownerEmails.length > 1 ? (`+${dataProduct.ownerEmails.length - 1}`) : ''}
-          </span>
+          </Box>
         </>
       </Tooltip>
       <Box sx={{
         marginLeft: 'auto',
         alignSelf: 'flex-end',
         display: 'flex',
-        gap: 2
+        gap: 'clamp(4px, 0.5vw, 16px)',
       }}>
         <Tooltip title={`Last Modified at ${dataProduct.updateTime.split('T')[0]}`} arrow placement='top'>
-          <span style={{
-            color: "#575757",
-            fontSize: "12px",
-            fontWeight: 500,
-            display: "flex",
-            alignItems: "center",
-            flex: '0 0 auto',
-            gap: '0.25rem'
-          }}>
-            <AccessTime style={{ fontSize: 12 }} />
+          <Box
+            component="span"
+            sx={{
+              color: "#575757",
+              fontSize: 'clamp(8px, 0.8vw, 12px)',
+              fontWeight: 500,
+              display: "flex",
+              alignItems: "center",
+              gap: '0.25rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <AccessTime sx={{ fontSize: 'clamp(8px, 0.8vw, 12px)' }} />
             <span>{dataProduct.updateTime.split('T')[0]}</span>
-          </span>
+          </Box>
         </Tooltip>
         <Tooltip title={`Location - ${dataProduct.name.split('/')[3]}`} arrow placement='top'>
-          <span style={{
-            color: "#575757",
-            fontSize: "12px",
-            fontWeight: 500,
-            display: "flex",
-            alignItems: "center",
-            flex: '0 1 auto',
-            gap: '0.125rem',
-            minWidth: 0
-          }}>
-            <LocationOnOutlined style={{ fontSize: 12, flexShrink: 0 }} />
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
-              {dataProduct.name.split('/')[3]}
-            </span>
-          </span>
+          <Box
+            component="span"
+            sx={{
+              color: "#575757",
+              fontSize: 'clamp(8px, 0.8vw, 12px)',
+              fontWeight: 500,
+              display: "flex",
+              alignItems: "center",
+              gap: '0.125rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <LocationOnOutlined sx={{ fontSize: 'clamp(8px, 0.8vw, 12px)', flexShrink: 0 }} />
+            <span>{dataProduct.name.split('/')[3]}</span>
+          </Box>
         </Tooltip>
       </Box>
     </Box>
@@ -403,8 +406,8 @@ const DataProducts = () => {
                 <Typography variant="h5" sx={{
                   fontFamily: '"Google Sans", sans-serif',
                   fontWeight: 400,
-                  fontSize: { xs: '20px', sm: '24px' },
-                  lineHeight: { xs: '20px', sm: '24px' },
+                  fontSize: 'clamp(18px, 1.8vw, 24px)',
+                  lineHeight: 'clamp(18px, 1.8vw, 24px)',
                   color: '#1F1F1F'
                 }}>
                     Data Products
@@ -429,7 +432,7 @@ const DataProducts = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     sx={SEARCH_FIELD_SX}
                     InputProps={{
-                        startAdornment: <Search sx={{ color: '#575757', fontSize: 20 }} />,
+                        startAdornment: <Search sx={{ color: '#575757', fontSize: 'clamp(16px, 1.5vw, 20px)' }} />,
                     }}
                 />
 
@@ -438,11 +441,11 @@ const DataProducts = () => {
                     {/* Sort Order Toggle Button */}
                     <IconButton
                         onClick={handleSortOrderToggle}
-                        sx={{ p: 0.5, mr: 0.5, color: "#1F1F1F" }}
+                        sx={{ p: 'clamp(2px, 0.3vw, 4px)', mr: 'clamp(2px, 0.3vw, 4px)', color: "#1F1F1F" }}
                     >
                         <Sort
                             sx={{
-                                fontSize: 16,
+                                fontSize: 'clamp(12px, 1.2vw, 16px)',
                                 transform: sortOrder === "asc" ? "scaleY(-1)" : "none",
                             }}
                         />
@@ -455,7 +458,7 @@ const DataProducts = () => {
                             <ExpandMore
                                 sx={{
                                     color: "#1F1F1F",
-                                    fontSize: 20,
+                                    fontSize: 'clamp(14px, 1.4vw, 20px)',
                                     transform: sortAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
                                     transition: "transform 0.2s",
                                 }}
@@ -465,7 +468,7 @@ const DataProducts = () => {
                             textTransform: "none",
                             color: "#1F1F1F",
                             fontFamily: "Product Sans",
-                            fontSize: "12px",
+                            fontSize: 'clamp(10px, 0.9vw, 12px)',
                             fontWeight: 400,
                             padding: 0,
                             minWidth: "auto",
@@ -517,9 +520,9 @@ const DataProducts = () => {
                         aria-label="view mode"
                         size="small"
                         sx={{
-                        width: '5rem', // 80px total width as per Figma
-                        height: '1.5rem', // 24px height as per Figma
-                        borderRadius: '1rem', // 16px - fully rounded
+                        width: 'clamp(4rem, 5vw, 5rem)', // fluid width
+                        height: 'clamp(1.2rem, 1.8vw, 1.5rem)', // fluid height
+                        borderRadius: '1rem',
                         border: '1px solid #E2E8F0',
                         backgroundColor: '#FFFFFF',
                         overflow: 'hidden',
@@ -529,21 +532,21 @@ const DataProducts = () => {
                         padding: 0,
                         '& .MuiToggleButton-root': {
                             border: 'none',
-                            borderRadius: '1rem', // 16px - fully rounded
-                            padding: '0px', // No padding as per Figma
-                            fontSize: 0, // Hide text, only show icons
+                            borderRadius: '1rem',
+                            padding: '0px',
+                            fontSize: 0,
                             fontWeight: 500,
                             fontFamily: '"Google Sans Text", sans-serif',
                             lineHeight: 1,
                             minWidth: 'auto',
-                            height: '1.5rem', // 24px
+                            height: 'clamp(1.2rem, 1.8vw, 1.5rem)',
                             margin: 0,
                             backgroundColor: 'transparent',
                             color: '#64748B',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.125rem', // 2px gap between check and icon
+                            gap: '0.125rem',
                             transition: 'all 0.2s ease-in-out',
                             '&:first-of-type': {
                             borderTopRightRadius: 0,
@@ -608,7 +611,7 @@ const DataProducts = () => {
               top: { xs: '30px', sm: '40px' },
               overflowY: 'auto'
             }}>
-                <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
+                <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
                     {
                         showLoading &&
                             Array.from(new Array(6)).map((_, index) => (

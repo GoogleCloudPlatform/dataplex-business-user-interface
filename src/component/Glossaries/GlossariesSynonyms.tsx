@@ -13,12 +13,12 @@ import {
 } from "@mui/material";
 import {
   Search,
-  DescriptionOutlined,
   AccessTime,
   ExpandMore,
   Sort,
 } from "@mui/icons-material";
 import { type GlossaryRelation } from "./GlossaryDataType";
+import { getIcon } from "./glossaryUIHelpers";
 import { getFormattedDateTimePartsByDateTime } from "../../utils/resourceUtils";
 
 interface GlossariesSynonymsProps {
@@ -284,6 +284,10 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
             overflowY: "auto",
             minHeight: 0,
             pb: 2,
+            px: 1,
+            mx: -1,
+            pt: 1,
+            mt: -1,
           }}
         >
           {filteredRelations.map((rel) => (
@@ -295,11 +299,13 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
                 borderRadius: "16px",
                 height: "132px",
                 cursor: "pointer",
-                transition: "box-shadow 0.2s",
+                transition: "box-shadow 0.2s, border-color 0.2s, transform 0.2s",
                 display: "flex",
                 flexDirection: "column",
                 "&:hover": {
                   boxShadow: "0 4px 8px 0 rgba(60,64,67,0.15)",
+                  borderColor: "#0B57D0",
+                  transform: "scale(1.02)",
                 },
               }}
             >
@@ -328,13 +334,7 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
                       overflow: "hidden",
                     }}
                   >
-                    <DescriptionOutlined
-                      sx={{
-                        color: "#F4B400",
-                        fontSize: 24,
-                        flexShrink: 0,
-                      }}
-                    />
+                    {getIcon("term", "medium")}
                     <Typography
                       variant="h6"
                       noWrap

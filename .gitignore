@@ -31,3 +31,6 @@ dist-ssr
 .env.local
 .env.development.local
 stats.html
+package-lock.json
+yarn.lock
+coverage/

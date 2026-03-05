@@ -11,5 +11,25 @@ export default defineConfig({
     environment: 'jsdom', // simulate DOM
     setupFiles: './test/setup.ts', // custom setup (like importing jest-dom)
     include: ['src/**/**/*.test.{ts,tsx}'], // test file patterns
+    css: true, // Enable CSS processing in tests
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'node_modules/',
+        'test/',
+        '**/*.test.{ts,tsx}',
+        '**/*.d.ts',
+        'src/mocks/**',
+        'src/types/**',
+        'src/constants/**',
+        '**/DataProductsTypes.ts',
+      ],
+      reportsDirectory: './coverage',
+      clean: false,
+      cleanOnRerun: false,
+      reportOnFailure: true,
+    },
   },
 });

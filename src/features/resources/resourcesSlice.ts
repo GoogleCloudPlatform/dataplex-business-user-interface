@@ -51,27 +51,27 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
           if(filter.type === 'aspectType') {
             //let aspect = filter.name.replace(' ', '-');
             const name = getAspectName(filter.name);
-            if(requestData.semanticSearch) {
-              if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
-                filter.subAnnotationData.forEach((subAspect:any) => {
-                  let subAspectName = `${name}.${subAspect.fieldName}`;
-                  let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(${subAspectName}:${subAspect.value})` : `-(${subAspectName}:${subAspect.value})`) : '';
-                  aspectType += (aspectType != '' ? '|' : '') + `(has=${name} AND ${subAspectNameVal})`;
-                });
-              }else {
-                aspectType += (aspectType != '' ? '|' : '') + `(has=${name})`;
-              }
-            } else {
-              if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
-                filter.subAnnotationData.forEach((subAspect:any) => {
-                  let subAspectName = `${name}.${subAspect.fieldName}`;
-                  let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(aspect:${subAspectName}:${subAspect.value})` : `-(aspect:(${subAspectName}:${subAspect.value})`) : '';
-                  aspectType += (aspectType != '' ? '|' : '') + `aspect=(${subAspectName}) AND ${subAspectNameVal}`;
-                });
-              }else {
-                aspectType += (aspectType != '' ? '|' : '') + `aspect=(${name})`;
-              }
+            if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
+              filter.subAnnotationData.forEach((subAspect:any) => {
+                let subAspectName = `${name}.${subAspect.fieldName}`;
+                let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(${subAspectName}:${subAspect.value})` : `-(${subAspectName}:${subAspect.value})`) : '';
+                aspectType += (aspectType != '' ? '|' : '') + `(has=${name} AND ${subAspectNameVal})`;
+              });
+            }else {
+              aspectType += (aspectType != '' ? '|' : '') + `(has=${name})`;
             }
+            // Non-semantic search filter syntax (commented out — kept for future re-enabling)
+            // if(!requestData.semanticSearch) {
+            //   if(filter.subAnnotationData && filter.subAnnotationData.length > 0) {
+            //     filter.subAnnotationData.forEach((subAspect:any) => {
+            //       let subAspectName = `${name}.${subAspect.fieldName}`;
+            //       let subAspectNameVal = subAspect.enabled ? (subAspect.filterType == 'include' ? `(aspect:${subAspectName}:${subAspect.value})` : `-(aspect:(${subAspectName}:${subAspect.value})`) : '';
+            //       aspectType += (aspectType != '' ? '|' : '') + `aspect=(${subAspectName}) AND ${subAspectNameVal}`;
+            //     });
+            //   }else {
+            //     aspectType += (aspectType != '' ? '|' : '') + `aspect=(${name})`;
+            //   }
+            // }
           }
           if(filter.type === 'system') {
             system += (system != '' ? '|' : '') + `${filter.name.replaceAll(' ', '_').replace('/','').toUpperCase()}`;
@@ -93,9 +93,7 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
           }
         });
 
-        if(requestData.semanticSearch) {
-          semanticSearchFlags = '-has=dataplex-types.global.bigquery-row-access-policy AND -has=dataplex-types.global.bigquery-data-policy';
-        }
+        semanticSearchFlags = '-has=dataplex-types.global.bigquery-row-access-policy AND -has=dataplex-types.global.bigquery-data-policy';
 
         // Example search string format: 
         // name:searchTerm|description:searchTerm|title:searchTerm|tags:searchTerm|
@@ -107,18 +105,30 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         //  )
 
         searchString += aspectType != '' ? ((searchString != '' ? ' ' : '') + `(${aspectType})`) : '';
-        searchString += system != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(system=(${system}))`) : '';
-        searchString += typeAliases != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(type=(${typeAliases}))`) : '';
-        searchString += project != '' ? (((searchString != '' &&  !requestData.semanticSearch ) ? ',' : ' ') + `(project=(${project}))`) : '';
+        searchString += system != '' ? (' ' + `(system=(${system}))`) : '';
+        searchString += typeAliases != '' ? (' ' + `(type=(${typeAliases}))`) : '';
+        searchString += project != '' ? (' ' + `(project=(${project}))`) : '';
         searchString += semanticSearchFlags != '' ? ((searchString != '' ? ' ' : '') + `${semanticSearchFlags}`) : '';
+        // Non-semantic search separator logic (commented out — kept for future re-enabling)
+        // searchString += system != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(system=(${system}))`) : '';
+        // searchString += typeAliases != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(type=(${typeAliases}))`) : '';
+        // searchString += project != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(project=(${project}))`) : '';
       }
       requestResourceData = {
         query: searchString,
-        pageSize: requestData.semanticSearch ? 100 : 20,
-        pageToken: requestData.nextPageToken ?? '', // Optional: for pagination
-        orderBy: requestData.semanticSearch ? 'relevance' : '', // Optional: specify ordering  
-        semanticSearch: requestData.semanticSearch || false,
+        pageSize: 100,
+        pageToken: requestData.nextPageToken ?? '',
+        orderBy: 'relevance',
+        semanticSearch: true,
       };
+      // Non-semantic search request config (commented out — kept for future re-enabling)
+      // requestResourceData = {
+      //   query: searchString,
+      //   pageSize: requestData.semanticSearch ? 100 : 20,
+      //   pageToken: requestData.nextPageToken ?? '',
+      //   orderBy: requestData.semanticSearch ? 'relevance' : '',
+      //   semanticSearch: requestData.semanticSearch || false,
+      // };
     }
     
     // const response = await axios.post(URLS.API_URL + URLS.SEARCH, requestResourceData);
@@ -153,11 +163,11 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
   }
 });
 
-export const browseResourcesByAspects = createAsyncThunk('resources/browseResourcesByAspects', async (requestData: any , { rejectWithValue }) => {
+export const browseResourcesByAspects = createAsyncThunk('resources/browseResourcesByAspects', async (requestData: any , { rejectWithValue, signal }) => {
 
   // If the term is not empty, we will perform a search.
   try {
-    // search from your API endpoint 
+    // search from your API endpoint
     axios.defaults.headers.common['Authorization'] = requestData.id_token ? `Bearer ${requestData.id_token}` : '';
     let searchString = '';
     if(requestData.annotationName && requestData.annotationName != '') {
@@ -173,6 +183,8 @@ export const browseResourcesByAspects = createAsyncThunk('resources/browseResour
     if(searchString != '') {
       const response = await axios.post(URLS.API_URL + URLS.SEARCH, {
         query: searchString,
+      }, {
+        signal: requestData.signal || signal // Support both custom signal and thunk signal
       });
       const data = await response.data;
       return data;
@@ -181,6 +193,10 @@ export const browseResourcesByAspects = createAsyncThunk('resources/browseResour
     }
 
   } catch (error) {
+    // Check if request was aborted
+    if (axios.isCancel(error) || (error instanceof Error && (error.name === 'AbortError' || error.name === 'CanceledError'))) {
+      return rejectWithValue({ aborted: true, message: 'Request aborted' });
+    }
     if (error instanceof AxiosError) {
       return rejectWithValue(error.response?.data || error.message);
     }else if (error instanceof Error) {
@@ -224,6 +240,12 @@ type ResourcesState = {
   itemsRequestData: any | null;
   totalItems?: number;
   itemsStore: unknown[]; // For storing all fetched items
+  // NEW: Cache for aspect-based browsing
+  aspectBrowseCache: Record<string, {
+    data: unknown[];
+    totalSize: number;
+    fetchedAt: number;
+  }>;
   // For entry list in resource details page
   entryListData:unknown;
   entryListNextPageToken: string;
@@ -240,6 +262,7 @@ const initialState: ResourcesState = {
   itemsRequestData: null,
   totalItems: 0,
   itemsStore:[],
+  aspectBrowseCache: {},
   entryListData:[],
   entryListNextPageToken: '',
   totalEntryList: 0,
@@ -272,6 +295,20 @@ export const resourcesSlice = createSlice({
     },
     setItemsStoreData: (state, action) => {
       state.itemsStore = action.payload;
+    },
+    setAspectBrowseCache: (state, action) => {
+      const { cacheKey, data, totalSize } = action.payload;
+      state.aspectBrowseCache[cacheKey] = {
+        data,
+        totalSize,
+        fetchedAt: Date.now()
+      };
+    },
+    clearAspectBrowseCache: (state) => {
+      state.aspectBrowseCache = {};
+    },
+    removeAspectBrowseCacheEntry: (state, action) => {
+      delete state.aspectBrowseCache[action.payload];
     },
   }, // No synchronous reducers needed for this slice
   // The `extraReducers` field lets the slice handle actions defined elsewhere,
@@ -330,6 +367,6 @@ export const resourcesSlice = createSlice({
   },
 });
 
-export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData } = resourcesSlice.actions;
+export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData, setAspectBrowseCache, clearAspectBrowseCache, removeAspectBrowseCacheEntry } = resourcesSlice.actions;
 
 export default resourcesSlice.reducer;

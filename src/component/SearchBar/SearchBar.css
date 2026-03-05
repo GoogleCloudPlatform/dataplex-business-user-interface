@@ -1,22 +1,33 @@
 .MuiAutocomplete-paper {
-    border-radius: 0px 0px 24px 24px !important;
-    box-shadow: none !important;
-    border: 1px solid #E0E0E0 !important;
-    border-top: none !important;
+    border-radius: 24px !important;
+    box-shadow: 0 4px 6px rgba(32,33,36,.28) !important;
+    border: none !important;
     padding: 6px 0px 8px !important;
     background-color: #ffffff !important;
-    margin-top: 0px !important;
-    width: calc(100% + 0.9375rem + 0.5rem + 0.5rem) !important;
-    max-width: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     position: absolute !important;
-    left: calc(-0.9375rem - 0.5rem - 0.5rem) !important;
-    top: 100% !important;
-    z-index: 1000 !important;
+    left: 0 !important;
+    top: calc(100% + 12px) !important;
+    z-index: 2000 !important;
+    transform: none !important;
 }
 
+.MuiAutocomplete-paper.navbar-dropdown {
+    position: relative !important;
+    top: auto !important;
+    margin-top: 0px !important;
+}
+
+#search-bar.navbar-variant .MuiAutocomplete-popper {
+    top: calc(100% + 4px) !important;
+}
 
 .MuiAutocomplete-listbox {
     padding: 0px !important;
+    max-height: 35vh !important;
+    overflow-y: auto !important;
 }
 
 .MuiAutocomplete-listbox li {
@@ -59,7 +70,7 @@
 }
 
 #search-bar .MuiOutlinedInput-root {
-    padding: 0rem 0.5625rem 0rem 0.5625rem !important;
+    padding: 0rem 0.5625rem 0rem 0rem !important;
     border: none !important;
 }
 
@@ -112,29 +123,35 @@
     display: none !important;
 }
 
-/* Ensure proper dropdown positioning */
-.MuiAutocomplete-root {
-    position: relative !important;
-}
-
-.MuiAutocomplete-paper {
+/* Disable MUI Popper positioning interference */
+/* Extend 1px beyond each side to align with search bar's outer border edge */
+#search-bar .MuiAutocomplete-popper {
+    position: absolute !important;
+    top: calc(100% + 12px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     transform: none !important;
-    margin: 0 !important;
+    box-sizing: border-box !important;
 }
 
 /* Search bar styling when dropdown is open */
 #search-bar {
     transition: none !important;
+    box-sizing: border-box !important;
+    width: auto !important;
+    max-width: 100% !important;
 }
 
-#search-bar.dropdown-open {
+#search-bar.navbar-variant.dropdown-open {
     background: #ffffff !important;
-    border-radius: 24px 0px 0px 0px !important;
+    border-radius: 170px 0px 0px 170px !important;
     box-shadow: 0px 2px 3px 1px rgba(0, 0, 0, 0.12), 0px 2px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 5px 0px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Create a pseudo-element to cover the select menu area with original background */
-#search-bar.dropdown-open::after {
+/* Create a pseudo-element to cover the select menu area with original background (navbar only) */
+#search-bar.navbar-variant.dropdown-open::after {
     content: '';
     position: absolute;
     top: -1px;
@@ -157,195 +174,18 @@ input[type="search"]::-webkit-search-cancel-button {
     cursor: pointer;
 }
 
-@property --border-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.google-glow-animation {
-  position: relative;
-  background-clip: padding-box !important;
-  border: 1px solid transparent !important;
-}
-
-/* --- LAYER 1: THE BORDER STROKE --- */
-.google-glow-animation::before {
-  content: "";
-  position: absolute;
-  z-index: 2; 
-  border-radius: inherit;
-  
-  background: conic-gradient(
-    from var(--border-angle),
-    transparent 25%,
-    #34a853 75%, 
-    #fbbc05 80%, 
-    #ea4335 85%, 
-    #4285f4 90%, 
-    #4285f4 100% 
-  );
-  
-  -webkit-mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  
-  /* CHANGED: Increased to 2.5s for a lazier, smoother rotation */
-  animation: 
-    spin-glow 2s linear forwards,
-    border-pulse 2s ease-in-out forwards; 
-}
-
-/* --- LAYER 2: THE SHADOW GLOW --- */
-.google-glow-animation::after {
-  content: "";
-  position: absolute;
-  z-index: 1; 
-  border-radius: inherit;
-  
-  background: conic-gradient(
-    from var(--border-angle),
-    transparent 40%, 
-    #34a853 75%, 
-    #fbbc05 80%, 
-    #ea4335 85%, 
-    #4285f4 90%, 
-    #4285f4 100% 
-  );
-  
-  -webkit-mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  
-  filter: blur(3px); 
-  
-  /* CHANGED: 2.5s duration */
-  animation: 
-    spin-glow 2s linear forwards,
-    shadow-pulse 2s ease-in-out forwards;
-}
-
-/* --- KEYFRAMES --- */
-
-@keyframes spin-glow {
-  from { --border-angle: 0deg; }
-  to   { --border-angle: 360deg; } /* Still exactly one rotation, just slower */
-}
-
-@keyframes border-pulse {
-  0% {
-    inset: 0px;
-    padding: 0px;
-    opacity: 0;
-  }
-  /* ENTER: Smoothly appears by 20% (0.5s) */
-  20% {
-    inset: -1.5px;
-    padding: 1.5px;
-    opacity: 1;
-  }
-  /* HOLD: Brief hold until 50% */
-  30% {
-    inset: -1.5px;
-    padding: 1.5px;
-    opacity: 1;
-  }
-  /* EXIT: VERY LONG fade out from 50% to 100% (1.25s duration) */
-  95% {
-    inset: 0px;
-    padding: 0px;
-    opacity: 0;
-  }
-}
-
-@keyframes shadow-pulse {
-  0% {
-    inset: 0px;
-    padding: 0px;
-    opacity: 0;
-  }
-  /* ENTER */
-  20% {
-    inset: -3px;
-    padding: 3px;
-    opacity: 1;
-  }
-  /* HOLD */
-  30% {
-    inset: -3px;
-    padding: 3px;
-    opacity: 1;
-  }
-  /* EXIT */
-  95% {
-    inset: 0px;
-    padding: 0px;
-    opacity: 0;
-  }
-}
-
-@property --gradient-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.natural-language-btn-hover-effect {
-  position: relative;
-}
-
-.natural-language-btn-hover-effect::before {
-  content: "";
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border-radius: 22px; 
-  padding: 2px;
-  
-  background: conic-gradient(from var(--gradient-angle), #4285f4, #ea4335, #fbbc05, #34a853, #4285f4);
-  
-  -webkit-mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: 
-     linear-gradient(#fff 0 0) content-box, 
-     linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  
-  pointer-events: none;
-  z-index: 1;
-
-  opacity: 0;
-  --gradient-angle: 0deg;
-  
-  transition: opacity 0.5s ease, --gradient-angle 0s linear 0.5s;
-}
-
-.natural-language-btn-hover-effect:hover::before {
-  opacity: 1;
-  --gradient-angle: 360deg;
-  transition: opacity 0.3s ease, --gradient-angle 1s linear;
-}
-
 .animated-placeholder {
     position: absolute;
     left: 15px;
     top: 50%;
     transform: translateY(-50%);
     color: #1F1F1F;
-    opacity: 0.6;
+    opacity: 0.5;
     pointer-events: none;
-    font-family: "Google Sans Text", sans-serif;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-family: 'Product Sans', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
     z-index: 1;
     white-space: nowrap;
     animation: placeholderSlideIn 0.4s cubic-bezier(0.2, 0.0, 0.2, 1) forwards;
@@ -357,7 +197,7 @@ input[type="search"]::-webkit-search-cancel-button {
         transform: translate(0, -30%);
     }
     100% {
-        opacity: 0.6;
+        opacity: 0.5;
         transform: translate(0, -50%);
     }
 }
@@ -368,7 +208,8 @@ input[type="search"]::-webkit-search-cancel-button {
         left: 0 !important;
         right: 0 !important;
         max-width: 100% !important;
-        border-radius: 0 0 24px 24px !important;
+        border-radius: 20px !important;
+        box-sizing: border-box !important;
     }
 
     #search-bar.navbar-variant {
@@ -378,22 +219,39 @@ input[type="search"]::-webkit-search-cancel-button {
         height: 2.75rem !important;
     }
 
+    #search-bar:not(.navbar-variant) {
+        height: 2.75rem !important;
+    }
+
     #search-bar {
         padding: 0 0.5rem !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #search-bar:not(.navbar-variant) {
+        padding: 0 0.5rem 0 0.75rem !important;
+    }
+
+    #search-bar .MuiAutocomplete-popper {
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        top: calc(100% + 8px) !important;
     }
 }
 
 @media (max-width: 480px) {
+    #search-bar:not(.navbar-variant) {
+        height: 2.5rem !important;
+    }
+
     #search-bar input {
         font-size: 0.8rem !important;
     }
-    
-    button.natural-language-btn-hover-effect {
-        font-size: 0.7rem !important;
-        padding: 2px 6px !important;
-    }
-    
+
     .animated-placeholder {
-        font-size: 0.8rem !important;
+        font-size: 12px !important;
     }
 }

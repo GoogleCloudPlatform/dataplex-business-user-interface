@@ -12,7 +12,7 @@ import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import './Navbar.css'
-import { HelpOutline, MenuBook, Home, Person, AccountCircle, Logout, Menu as MenuIcon } from '@mui/icons-material';
+import { HelpOutline, MenuBook, Menu as MenuIcon } from '@mui/icons-material';
 import SearchBar from '../SearchBar/SearchBar';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import SendFeedback from './SendFeedback';
 import NotificationBar from '../SearchPage/NotificationBar';
+import UserAccountDropdown from './UserAccountDropdown';
 
 /**
  * @file Navbar.tsx
@@ -54,46 +55,6 @@ import NotificationBar from '../SearchPage/NotificationBar';
  */
 
 //const pages = ['Guide', 'Notification', 'Help'];
-const settings = ['Home'];
-
-// Icon mapping for menu items
-const getMenuIcon = (setting: string) => {
-  switch (setting) {
-    case 'Home':
-      return <Home sx={{ 
-        mr: "0.25rem", 
-        fontSize: "1.25rem", // 20px
-        color: "#5F6367"
-      }} />;
-    case 'Profile':
-      return <Person sx={{ 
-        mr: "0.25rem", 
-        fontSize: "1.25rem", // 20px
-        color: "#5F6367"
-      }} />;
-    case 'Account':
-      return <AccountCircle sx={{ 
-        mr: "0.25rem", 
-        fontSize: "1.25rem", // 20px
-        color: "#5F6367"
-      }} />;
-    default:
-      return null;
-  }
-};
-
-const getNavPath = (setting: string) => {
-  switch (setting) {
-    case 'Home':
-      return '/home';
-    case 'Profile':
-      return '/profile';
-    case 'Account':
-      return '/account';
-    default:
-      return '/';
-  }
-};
 
 interface NavBarProps {
   searchBar?: boolean; // Optional prop to control the visibility of the search bar
@@ -101,11 +62,13 @@ interface NavBarProps {
 }
 
 const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = true }) => {
-  const { user, logout, updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
   const { name, picture } = user ?? {name: '', picture:''};
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
+  const mode = useSelector((state: any) => state.user.mode);
+  const iconColor = mode === 'dark' ? '#9aa0a6' : '#5F6367';
   const isGlossaryPage = ['/glossaries'].includes(location.pathname);
   const isBrowsePage = ['/browse-by-annotation'].includes(location.pathname);
   const isSearchOrDetailPage = ['/search', '/view-details'].includes(location.pathname);
@@ -121,7 +84,6 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const id_token = user?.token || '';
   const [isNotificationVisible, setIsNotificationVisible] = React.useState<boolean>(false);
   const [notificationMessage, setNotificationMessage] = React.useState<string>('');
-
   const handleLogoClick = () => {
     if (user) {
       const userData = {
@@ -134,6 +96,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
         hasRole: user.hasRole,
         roles: user.roles,
         permissions: user.permissions,
+        iamDisplayRole: user.iamDisplayRole,
         appConfig: {}
       };
       updateUser(user.token, userData);
@@ -215,7 +178,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
 
   return (<>
     <AppBar position="static" sx={{
-      background: "#F8FAFD",
+      background: mode === 'dark' ? '#131314' : (location.pathname === '/home' ? "#ffffff" : "#f9fafd"),
       boxShadow: "none",
       height: "4rem", // 64px
       flex: "0 0 auto",
@@ -243,15 +206,15 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
             <Box onClick={handleLogoClick} sx={{
               display: { xs: 'none', md: 'flex' },
               flex: "0 0 auto",
-              width: "157px",
-              height: "46px",
+              width: "130px",
+              height: "40px",
               marginLeft: "-0.5rem",
               cursor: "pointer",
             }}>
               <img
                 src="/assets/svg/dataplex-universal-catalog-logo.svg"
                 alt="Dataplex Universal Catalog"
-                style={{ width: '157px', height: '46px' }}
+                style={{ width: '130px', height: '40px' }}
               />
             </Box>
           )}
@@ -271,7 +234,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   marginLeft: "calc(250px)", // Logo width + padding
                 }),
                 ...(isBrowsePage && {
-                  marginLeft: "202px",
+                  marginLeft:"calc(233px)",
                 }),
                 ...(isSearchOrDetailPage && {
                   marginLeft: "202px",
@@ -315,8 +278,8 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleOpenNavMenu}
-              sx={{ 
-                color: "#5F6367",
+              sx={{
+                color: iconColor,
                 p: "0.25rem"
               }}
             >
@@ -346,7 +309,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
               </MenuItem> */}
               <MenuItem onClick={()=>{handleCloseNavMenu(); navigate('/guide')}}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: "0.5rem" }}>
-                  <MenuBook sx={{ fontSize: "1.25rem", color: "#5F6367" }} />
+                  <MenuBook sx={{ fontSize: "1.25rem", color: iconColor }} />
                   <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>Guide</Typography>
                 </Box>
               </MenuItem>
@@ -358,7 +321,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
               </MenuItem> */}
               <MenuItem onClick={handleOpenFeedback}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: "0.5rem" }}>
-                  <HelpOutline sx={{ fontSize: "1.25rem", color: "#5F6367" }} />
+                  <HelpOutline sx={{ fontSize: "1.25rem", color: iconColor }} />
                   <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>Help</Typography>
                 </Box>
               </MenuItem>
@@ -374,10 +337,9 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
             height: "2rem"
           }}>
             <div className="logo-container" style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
-              <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="CS Studio Logo" className="navbar-logo-img" />
               <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', cursor: "pointer",}}>
-                <label style={{fontSize:"19px", fontWeight:700, color:"#0B57D0", lineHeight: 1, cursor: "pointer",}}>Dataplex</label>
-                <label style={{fontSize:"12px", fontWeight:700, color:"#0B57D0", lineHeight: 1, cursor: "pointer",}}>Universal Catalog</label>
+                <label style={{fontSize:"19px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Dataplex</label>
+                <label style={{fontSize:"12px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Universal Catalog</label>
               </div>
             </div>
           </Box>
@@ -420,9 +382,9 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   }}
                   onClick={()=>{navigate('/guide')}}
                 >
-                  <MenuBook sx={{ 
-                    fontSize: "1.5rem", 
-                    color: "#5F6368" 
+                  <MenuBook sx={{
+                    fontSize: "1.5rem",
+                    color: iconColor
                   }} />
                 </IconButton>
               </Tooltip>
@@ -446,9 +408,9 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   }}
                   onClick={handleOpenFeedback}
                 >
-                  <HelpOutline sx={{ 
-                    fontSize: "1.5rem", 
-                    color: "#5F6368" 
+                  <HelpOutline sx={{
+                    fontSize: "1.5rem",
+                    color: iconColor
                   }} />
                 </IconButton>
               </Tooltip>
@@ -468,127 +430,11 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                 />
               </IconButton>
             </Tooltip>
-            <Menu
-              sx={{ mt: "2.8125rem" }} // 45px
-              id="menu-appbar"
+            <UserAccountDropdown
               anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
-            >
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: "0.25rem" 
-                  }}
-                  onClick={()=>{navigate(getNavPath(setting))}}
-                  >
-                    {getMenuIcon(setting)}
-                    <Typography sx={{ 
-                      textAlign: 'center',
-                      fontSize: "0.875rem", // 14px
-                      fontWeight: 500,
-                      lineHeight: 1.43
-                    }}>
-                      {setting}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-              <MenuItem key="SignOut" onClick={() => {
-                  sessionStorage.removeItem('welcomeShown');
-                  logout();
-              }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: "0.25rem" 
-                }}>
-                  <Logout sx={{ 
-                    fontSize: "1.25rem", // 20px
-                    color: "#5F6367"
-                  }} />
-                  <Typography sx={{ 
-                    textAlign: 'center',
-                    fontSize: "0.875rem", // 14px
-                    fontWeight: 500,
-                    lineHeight: 1.43
-                  }}>
-                    SignOut
-                  </Typography>
-                </Box>
-              </MenuItem>
-            </Menu>
-            {/* Help Menu */}
-            {/* <Menu
-              sx={{ mt: "2.8125rem" }} // 45px
-              id="menu-help"
-              anchorEl={anchorElHelp}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorElHelp)}
-              onClose={handleCloseHelpMenu} // Just close this menu
-            > */}
-              {/* Help Item */}
-              {/* <MenuItem onClick={() => handleHelpMenuAction('/help')}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: "0.25rem" 
-                }}>
-                  <HelpOutline sx={{ 
-                    fontSize: "1.25rem", // 20px
-                    color: "#5F6367"
-                  }} />
-                  <Typography sx={{ 
-                    textAlign: 'center',
-                    fontSize: "0.875rem", // 14px
-                    fontWeight: 500,
-                    lineHeight: 1.43
-                  }}>
-                    Help
-                  </Typography>
-                </Box>
-              </MenuItem> */}
-              {/* Give Feedback Item (Placeholder) */}
-              {/* <MenuItem onClick={() => handleHelpMenuAction(null)}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: "0.25rem" 
-                }}>
-                  <Feedback sx={{ 
-                    fontSize: "1.25rem", // 20px
-                    color: "#5F6367"
-                  }} />
-                  <Typography sx={{ 
-                    textAlign: 'center',
-                    fontSize: "0.875rem", // 14px
-                    fontWeight: 500,
-                    lineHeight: 1.43
-                  }}>
-                    Give Feedback
-                  </Typography>
-                </Box>
-              </MenuItem> */}
-            {/* </Menu> */}
+            />
           </Box>
         </Toolbar>
       </Container>

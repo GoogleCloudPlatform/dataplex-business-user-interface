@@ -542,12 +542,12 @@ const ListView: React.FC<LineageListViewProps> = ({ listData, entry }) => {
           }
         }}
       >
-        {!selectedProperty ? (
-          <>
-          <MenuItem 
-            sx={{ 
-              fontSize: '0.6875rem', 
-              fontWeight: 500, 
+        {!selectedProperty ? [
+          <MenuItem
+            key="header"
+            sx={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
               backgroundColor: '#F8F9FA',
               borderBottom: '1px solid #E0E0E0',
               height: "32px",
@@ -566,23 +566,22 @@ const ListView: React.FC<LineageListViewProps> = ({ listData, entry }) => {
               fontWeight: 500,
               fontSize: '12px',
             }}/>
-          </MenuItem>
-          {getPropertyNames().map((property) => (
-            <MenuItem 
-              key={property} 
+          </MenuItem>,
+          ...getPropertyNames().map((property) => (
+            <MenuItem
+              key={property}
               onClick={() => handlePropertySelect(property)}
               sx={{ fontSize: '12px' }}
             >
               <ListItemText primary={formatPropertyName(property)} primaryTypographyProps={{ fontSize: '12px'}}/>
             </MenuItem>
-          ))}
-          </>
-        ) : (
+          ))
+        ] : [
           // Show values for selected property
-          <>
-            <MenuItem 
+            <MenuItem
+              key="back"
               onClick={() => setSelectedProperty('')}
-              sx={{ fontSize: '0.6875rem', 
+              sx={{ fontSize: '0.6875rem',
                 fontWeight: 400,
                 backgroundColor: '#F8F9FA',
                 borderBottom: '1px solid #E0E0E0',
@@ -591,11 +590,12 @@ const ListView: React.FC<LineageListViewProps> = ({ listData, entry }) => {
                 paddingBottom: 1.30, }}
             >
               <ListItemText primary={`← Back to Properties`} primaryTypographyProps={{ fontSize: '12px' }} />
-            </MenuItem>
-            <MenuItem 
-                        sx={{ 
-                          fontSize: '0.6875rem', 
-                          fontWeight: 400, 
+            </MenuItem>,
+            <MenuItem
+                        key="filter-header"
+                        sx={{
+                          fontSize: '0.6875rem',
+                          fontWeight: 400,
                           backgroundColor: '#F8F9FA',
                           borderBottom: '1px solid #E0E0E0'
                         }}
@@ -604,12 +604,12 @@ const ListView: React.FC<LineageListViewProps> = ({ listData, entry }) => {
                         <ListItemText primary={`Filter by: ${formatPropertyName(selectedProperty)}`} primaryTypographyProps={{
                     fontSize: '12px',
                   }}/>
-                      </MenuItem>
-            {getPropertyValues(selectedProperty).map((value) => (
-              <MenuItem 
-                key={value} 
+                      </MenuItem>,
+            ...getPropertyValues(selectedProperty).map((value) => (
+              <MenuItem
+                key={value}
                 onClick={() => handleValueToggle(value)}
-                sx={{ fontSize: '12px', 
+                sx={{ fontSize: '12px',
                       paddingTop: '2px',
                       paddingBottom: '2px',
                       paddingLeft: '8px',
@@ -617,15 +617,14 @@ const ListView: React.FC<LineageListViewProps> = ({ listData, entry }) => {
                       minHeight: 'auto'
                     }}
               >
-                <Checkbox 
+                <Checkbox
                   checked={selectedValues.includes(value)}
                   size="small"
                 />
                 <ListItemText primary={value} primaryTypographyProps={{ fontSize: '12px'}}/>
               </MenuItem>
-            ))}
-          </>
-        )}
+            ))
+        ]}
       </Menu>
 
       {/* Table */}

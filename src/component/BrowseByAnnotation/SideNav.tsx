@@ -7,10 +7,13 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
+  Paper,
+  Tooltip,
 } from '@mui/material';
 import { ExpandMore } from '@mui/icons-material';
 import AnnotationsIconBlue from '../../assets/svg/annotations-icon-blue.svg';
 import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
+import ShimmerLoader from '../Shimmer/ShimmerLoader';
 
 /**
  * @file SideNav.tsx
@@ -27,58 +30,69 @@ import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
  * 2.  It calls the `onSubItemClick` prop function, passing the specific sub-item
  * that was clicked.
  *
- * These callbacks allow the parent component (e.g., `BrowseByAnnotation`) to
- * update the application's main content area.
- *
- * The component uses the `selectedSubItem` prop to apply active styling
- * (light blue background, bold text) to the sub-item that is currently selected.
+ * These callbacks allow the parent component to navigate to the ResourceViewer.
  *
  * @param {object} props - The props for the SideNav component.
  * @param {any} props.selectedItem - The currently selected top-level aspect item.
- * @param {() => void} props.onItemClick - Callback function to notify the
- * parent when an item (aspect) is selected (triggered by clicking a sub-item).
- * @param {any} props.selectedSubItem - The currently selected sub-item. This
- * is used to apply active styling.
- * @param {() => void} props.onSubItemClick - Callback function to notify the
- * parent when a sub-item is clicked.
- * @param {any[]} props.annotationsData - The array of aspect objects, each
- * containing a `title` and a `subItems` array, to be rendered.
+ * @param {(item: any) => void} props.onItemClick - Callback function when an aspect is clicked.
+ * @param {any} props.selectedSubItem - The currently selected sub-item.
+ * @param {(subItem: any) => void} props.onSubItemClick - Callback function when a sub-item is clicked.
+ * @param {any[]} props.annotationsData - The array of aspect objects to be rendered.
  *
  * @returns {JSX.Element} The rendered React component for the side navigation bar.
  */
 
 interface SideNavProps {
   selectedItem: any;
-  onItemClick: any | (() => void);
+  onItemClick: (item: any) => void;
   selectedSubItem: any;
-  onSubItemClick: any | (() => void);
+  onSubItemClick: (subItem: any) => void;
   annotationsData: any[];
+  loadingAspectName?: string | null;
 }
 
-const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSubItem, onSubItemClick, annotationsData }) => {
-    
-  const [expandedItem, setExpandedItem] = React.useState<number | false>(false);
+const SideNav: React.FC<SideNavProps> = ({
+  selectedItem,
+  onItemClick,
+  selectedSubItem,
+  onSubItemClick,
+  annotationsData,
+  loadingAspectName = null,
+}) => {
 
-  const handleSubItemClick = (subItem:any, item:any) => {
-    console.log(selectedItem);
-    if (selectedItem?.title !== item?.title) {
+  const [expandedItem, setExpandedItem] = React.useState<number | false>(0); // Auto-expand first item
+
+  const handleAspectClick = (annotation: any, index: number) => {
+    // Toggle expansion
+    setExpandedItem(expandedItem === index ? false : index);
+    // Select the aspect
+    onItemClick(annotation);
+  };
+
+  const handleSubItemClick = (subItem: any, item: any) => {
+    if (selectedItem?.name !== item?.name) {
       onItemClick(item);
-    } 
+    }
     onSubItemClick(subItem);
-   //dispatch(browseResourcesByAspects({term : '', id_token: id_token, annotationName : title, subAnnotationName: subItem?.title || null}));
   };
 
   return (
-    <Box
+    <Paper
+      elevation={0}
       sx={{
-        width: '250px',
-        backgroundColor: '#FFFFFF',
-        borderRadius: '20px',
-        height: 'calc(100vh - 1.5rem)',
-        marginTop: "0px",
-        marginRight: "10px",
+        width: '18%',
+        minWidth: '240px',
+        height: 'calc(100vh - 80px)',
+        borderRadius: '24px',
+        backgroundColor: '#fff',
+        border: 'transparent',
+        mr: '2%',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        overflow: 'hidden',
         py: '20px',
-        overflowY: 'auto',
+        gap: '8px',
       }}
     >
       <Typography
@@ -96,17 +110,17 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
         Aspects
       </Typography>
 
-      <List component="div" disablePadding>
+      <List component="div" disablePadding sx={{ overflowY: 'auto', flex: 1, pt: 0, px: 0 }}>
         {annotationsData.map((annotation: any, index: number) => {
           const isExpanded = expandedItem === index;
+          const isSelected = selectedItem?.name === annotation.name;
 
           return (
-            <Box key={index}>
+            <Box key={annotation.name || index}>
               {/* Parent Item - Aspect */}
               <ListItemButton
-                onClick={() => {
-                  setExpandedItem(isExpanded ? false : index);
-                }}
+                selected={isSelected && !selectedSubItem}
+                onClick={() => handleAspectClick(annotation, index)}
                 sx={{
                   ml: '15px',
                   mr: '20px',
@@ -116,9 +130,15 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
                   height: '32px',
                   borderRadius: '200px',
                   mb: 0.5,
-                  backgroundColor: undefined,
+                  "&.Mui-selected": {
+                    backgroundColor: "#C2E7FF",
+                    color: "#1F1F1F",
+                    "&:hover": { backgroundColor: "#C2E7FF" },
+                    "& .MuiListItemIcon-root": { color: "#1F1F1F" },
+                    "& .MuiTypography-root": { fontWeight: 500 },
+                  },
                   '&:hover': {
-                    backgroundColor: '#F1F3F4',
+                    backgroundColor: (isSelected && !selectedSubItem) ? '#C2E7FF' : '#F1F3F4',
                   },
                 }}
               >
@@ -153,7 +173,7 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
                   primaryTypographyProps={{
                     fontFamily: 'Product Sans',
                     fontSize: '12px',
-                    fontWeight: isExpanded ? 500 : 400,
+                    fontWeight: isExpanded || isSelected ? 500 : 400,
                     color: '#1F1F1F',
                     noWrap: true,
                     letterSpacing: '0.1px',
@@ -163,68 +183,80 @@ const SideNav: React.FC<SideNavProps> = ({ selectedItem, onItemClick,selectedSub
 
               {/* Sub-Items - Collapsed */}
               <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {annotation.subItems.map((subItem: any, subIndex: number) => {
-                    const isSelected = selectedSubItem?.title === subItem.title;
+                {loadingAspectName === annotation.name && !annotation.subTypesLoaded ? (
+                  <Box sx={{ pl: '40px', pr: '20px', pt: 1 }}>
+                    <ShimmerLoader count={4} type="simple-list" />
+                  </Box>
+                ) : (
+                  <List component="div" disablePadding>
+                    {annotation.subItems.map((subItem: any, subIndex: number) => {
+                      const isSubItemSelected = selectedSubItem?.title === subItem.title && selectedItem?.name === annotation.name;
 
-                    return (
-                      <ListItemButton
-                        key={subIndex}
-                        selected={isSelected}
-                        onClick={() => handleSubItemClick(subItem, annotation)}
-                        sx={{
-                          ml: '40px',
-                          mr: '20px',
-                          pl: '8px',
-                          pr: '12px',
-                          py: '8px',
-                          height: '32px',
-                          borderRadius: '200px',
-                          mb: 0.5,
-                          backgroundColor: undefined,
-                          '&.Mui-selected': {
-                            backgroundColor: '#C2E7FF',
-                            color: '#1F1F1F',
-                            '&:hover': { backgroundColor: '#C2E7FF' },
-                            '& .MuiListItemIcon-root': { color: '#1F1F1F' },
-                            '& .MuiTypography-root': { fontWeight: 500 },
-                          },
-                          '&:hover': {
-                            backgroundColor: isSelected ? '#C2E7FF' : '#F1F3F4',
-                          },
-                        }}
-                      >
-                        {/* Sub-item Icon */}
-                        <ListItemIcon sx={{ minWidth: 20, mr: 0.1, color: '#1F1F1F' }}>
-                          <img
-                            src={AnnotationSubitemIcon}
-                            alt=""
-                            style={{ width: '16px', height: '16px' }}
-                          />
-                        </ListItemIcon>
-
-                        {/* Sub-item Title */}
-                        <ListItemText
-                          primary={subItem.title}
-                          primaryTypographyProps={{
-                            fontFamily: 'Google Sans',
-                            fontSize: '12px',
-                            fontWeight: isSelected ? 500 : 400,
-                            color: '#1F1F1F',
-                            noWrap: true,
-                            letterSpacing: '0.1px',
+                      return (
+                        <ListItemButton
+                          key={subIndex}
+                          selected={isSubItemSelected}
+                          onClick={() => handleSubItemClick(subItem, annotation)}
+                          sx={{
+                            ml: '40px',
+                            mr: '20px',
+                            pl: '8px',
+                            pr: '12px',
+                            py: '8px',
+                            height: '32px',
+                            borderRadius: '200px',
+                            mb: 0.5,
+                            '&.Mui-selected': {
+                              backgroundColor: '#C2E7FF',
+                              color: '#1F1F1F',
+                              '&:hover': { backgroundColor: '#C2E7FF' },
+                              '& .MuiListItemIcon-root': { color: '#1F1F1F' },
+                              '& .MuiTypography-root': { fontWeight: 500 },
+                            },
+                            '&:hover': {
+                              backgroundColor: isSubItemSelected ? '#C2E7FF' : '#F1F3F4',
+                            },
                           }}
-                        />
-                      </ListItemButton>
-                    );
-                  })}
-                </List>
+                        >
+                          {/* Sub-item Icon */}
+                          <ListItemIcon sx={{ minWidth: 20, mr: 0.1, color: '#1F1F1F' }}>
+                            <img
+                              src={AnnotationSubitemIcon}
+                              alt=""
+                              style={{ width: '12px', height: '12px' }}
+                            />
+                          </ListItemIcon>
+
+                          {/* Sub-item Title - Show displayName if available */}
+                          <Tooltip
+                            title={subItem.displayName || subItem.title}
+                            placement="right"
+                            enterDelay={500}
+                            arrow
+                          >
+                            <ListItemText
+                              primary={subItem.displayName || subItem.title}
+                              primaryTypographyProps={{
+                                fontFamily: 'Google Sans',
+                                fontSize: '12px',
+                                fontWeight: isSubItemSelected ? 500 : 400,
+                                color: '#1F1F1F',
+                                noWrap: true,
+                                letterSpacing: '0.1px',
+                              }}
+                            />
+                          </Tooltip>
+                        </ListItemButton>
+                      );
+                    })}
+                  </List>
+                )}
               </Collapse>
             </Box>
           );
         })}
       </List>
-    </Box>
+    </Paper>
   );
 };
 

@@ -1457,7 +1457,6 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
                             <Box sx={{
                                 display: "grid",
                                 gridTemplateColumns: "repeat(2, 1fr)",
-                                overflowX: 'auto',
                                 gap: "4px",
                                 width: "100%"
                             }}>
@@ -1469,7 +1468,7 @@ const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(entry?.
                                             alignItems: "center",
                                             gap: "8px",
                                             padding: "8px",
-                                            width: "160px",
+                                            minWidth: 0,
                                             height: "auto",
                                             borderRadius: "8px",
                                             background: "#E7F0FE",
