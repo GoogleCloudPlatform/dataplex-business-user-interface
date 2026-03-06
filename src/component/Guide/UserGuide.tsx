@@ -58,7 +58,7 @@ gcloud artifacts repositories create \`[REPO_NAME]\` --repository-format=docker 
 gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]/[APP_NAME]:latest
 
 # Step 7: Deploy to Cloud Run
-# Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the OAuth credentials you created in earlier steps.
+# Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then replace [CLIENT_ID] with the OAuth client ID you created in earlier steps.
 
 # Deploy the container image you just built to Cloud Run using the below command after replacing the mentioned values.
 
@@ -76,8 +76,7 @@ gcloud run deploy [SERVICE_NAME] \
 --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
 --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
 --set-env-vars  GCP_LOCATION="global" \
---set-env-vars  GCP_REGION="global" \
---set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+--set-env-vars  GCP_REGION="global"
 
 # After successfull deployment it will return a url to access the application.
 
@@ -407,7 +406,7 @@ const UserGuide: React.FC = () => {
               Step 4: Deploy to Cloud Run
             </Typography>
             <Typography paragraph>
-              Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the OAuth credentials you created in earlier steps.
+              Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then replace [CLIENT_ID] with the OAuth client ID you created in earlier steps.
               Deploy the container image you just built to Cloud Run using the below command after replacing the mentioned values. After successfull deployment it will return a url to access the application.
             </Typography>
             {/* --- gcloud run deploy... --- */}
@@ -427,8 +426,7 @@ const UserGuide: React.FC = () => {
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \\
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \\
   --set-env-vars  GCP_LOCATION="global" \\
-  --set-env-vars  GCP_REGION="global" \\
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"`}
+  --set-env-vars  GCP_REGION="global"`}
               </Box>
             </Box>
 
