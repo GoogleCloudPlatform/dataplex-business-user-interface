@@ -74,14 +74,13 @@ Under Authorized JavaScript origins, add http://localhost:5173.
 
 Under Authorized redirect URIs, add http://localhost:5173.
 
-Click CREATE and copy the generated **Client ID and Secret**.
+Click CREATE and copy the generated **Client ID**.
 
 #### Step 3: Update Client ID in the Project
 Open the `.env` file and replace the placeholder with your actual Client ID:
 ```shell
 // .env
 VITE_GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // <-- PASTE YOUR ID HERE
-VITE_GOOGLE_CLIENT_SECRET = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 ```
 #### Step 4: Run the Application
 Start the Vite development server.
@@ -227,7 +226,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 ```
 
 #### Step 7: Deploy to Cloud Run
-Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the **OAuth credentials** you created in earlier steps.
+Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then replace [CLIENT_ID] with the **OAuth client ID** you created in earlier steps.
 
 Deploy the container image you just built to **Cloud Run** using the below command after replacing the mentioned values.
 After successful deployment it will return a url to access the application.
@@ -247,8 +246,7 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 **--platform managed**: Specifies the fully managed Cloud Run environment.
 
@@ -295,7 +293,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 ```
 
 #### Step 4: Deploy to Cloud Run
-Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the **OAuth credentials** you created in earlier steps.
+Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then replace [CLIENT_ID] with the **OAuth client ID** you created in earlier steps.
 
 Deploy the container image you just built to Cloud Run using the below command after replacing the mentioned values.
 After successful deployment it will return a url to access the application.
@@ -315,8 +313,7 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
@@ -337,4 +334,3 @@ Bug Fixes:
   - Bug fix in data products.
   - Bug fixes in browse by glossary.
   - Data products Access and permissions tab, template group was showing rather then actual now it's actual.
-

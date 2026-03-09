@@ -61,8 +61,5 @@ jobs:
             GCP_LOCATION=global
             GCP_REGION=global
 
-          secrets:
-            VITE_GOOGLE_CLIENT_SECRET=VITE_GOOGLE_CLIENT_SECRET:latest
-        
       - name: Show Cloud Run URL
         run: echo "Deployment successful! Visit your service at ${{ steps.deploy.outputs.url }}"
