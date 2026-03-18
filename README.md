@@ -81,7 +81,6 @@ Open the `.env` file and replace the placeholder with your actual Client ID:
 ```shell
 // .env
 VITE_GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // <-- PASTE YOUR ID HERE
-VITE_GOOGLE_CLIENT_SECRET = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 ```
 #### Step 4: Run the Application
 Start the Vite development server.
@@ -243,8 +242,7 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 **--platform managed**: Specifies the fully managed Cloud Run environment.
 
@@ -315,8 +313,7 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
