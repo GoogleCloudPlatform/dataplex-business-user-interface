@@ -319,7 +319,20 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
       );
     }
   } else {
-    accessPermissionView = <div style={{paddingTop:"48px", paddingLeft: "410px", fontSize:'14px', color: "#575757"}}>No data to display</div>;
+    accessPermissionView = (
+      <Box sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 0",
+          gap: 2,
+      }}>
+          <Typography variant="body1" color="text.secondary">
+              No asset permissions available for this data product.
+          </Typography>
+      </Box>
+    );
   }
 
 
@@ -380,19 +393,19 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                             <Grid container spacing={4}>
                                 {
                                   Object.keys(accessGroups).length === 0 && (
-                                      <Typography 
-                                          component="span"
-                                          variant="heading2Medium"
-                                          sx={{
-                                              fontWeight: 400,
-                                              fontSize: "14px",
-                                              lineHeight: "1.33em",
-                                              color: "#575757", 
-                                              marginTop: "10px",
-                                          }}
-                                      >
-                                          No access groups defined for this data product.
-                                      </Typography>
+                                      <Box sx={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          width: "100%",
+                                          padding: "40px 0",
+                                          gap: 2,
+                                      }}>
+                                          <Typography variant="body1" color="text.secondary">
+                                              No access groups available for this data product.
+                                          </Typography>
+                                      </Box>
                                   )
                                 }
                                 { Object.keys(accessGroups).map((key:any) => (
@@ -476,7 +489,20 @@ const AccessGroup: React.FC<AccessGroupProps> = ({ entry, css }) => {
                         paddingTop: '0px',
                         paddingLeft: '16px',
                     }}>
-                        {dataProductAssetsStatus === 'succeeded' && accessPermissionView}
+                        {dataProductAssetsStatus === 'succeeded' ? accessPermissionView : (
+                            <Box sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "40px 0",
+                                gap: 2,
+                            }}>
+                                <Typography variant="body1" color="text.secondary">
+                                    No asset permissions available for this data product.
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
             </Grid>
         </Grid>

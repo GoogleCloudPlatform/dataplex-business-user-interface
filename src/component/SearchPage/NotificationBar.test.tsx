@@ -120,10 +120,17 @@ describe("NotificationBar", () => {
   // ==========================================================================
 
   describe("Undo Button", () => {
-    it("renders Undo text", () => {
+    it("renders Undo text when onUndo is provided", () => {
       render(<NotificationBar {...defaultProps} />);
 
       expect(screen.getByText("Undo")).toBeInTheDocument();
+    });
+
+    it("does not render Undo text when onUndo is not provided", () => {
+      const { onUndo, ...propsWithoutUndo } = defaultProps;
+      render(<NotificationBar {...propsWithoutUndo} />);
+
+      expect(screen.queryByText("Undo")).not.toBeInTheDocument();
     });
 
     it("calls onUndo when Undo is clicked", () => {

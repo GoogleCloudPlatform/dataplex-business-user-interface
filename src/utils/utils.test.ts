@@ -612,7 +612,7 @@ describe("persistence", () => {
     it("should load entry state", () => {
       localStorageMock.setItem("entryState", JSON.stringify({ current: "test" }));
       const result = loadStateFromStorage();
-      expect(result.entry).toEqual({ current: "test" });
+      expect(result.entry).toEqual({ current: "test", accessCheckCache: {} });
     });
 
     it("should return empty object when no state stored", () => {

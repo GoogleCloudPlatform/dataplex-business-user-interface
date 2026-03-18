@@ -6,6 +6,8 @@ type searchState = {
   searchType: string; // Add search type to persist dropdown selection
   searchFilters:any[];
   semanticSearch?: boolean;
+  isSearchFiltersOpen: boolean;
+  searchSubmitted: boolean;
 };
 
 const initialState : searchState = {
@@ -14,6 +16,8 @@ const initialState : searchState = {
   searchType: 'All', // Default to 'All',
   searchFilters:[],
   semanticSearch: true,
+  isSearchFiltersOpen: true,
+  searchSubmitted: false,
 };
 
 export const searchSlice = createSlice({
@@ -35,9 +39,15 @@ export const searchSlice = createSlice({
     setSemanticSearch: (state, action) => {
       state.semanticSearch = action.payload.semanticSearch;
     },
+    setSearchFiltersOpen: (state, action) => {
+      state.isSearchFiltersOpen = action.payload;
+    },
+    setSearchSubmitted: (state, action) => {
+      state.searchSubmitted = action.payload;
+    },
   },
 });
 
-export const { setSearchResult, setSearchTerm, setSearchType, setSearchFilters, setSemanticSearch } = searchSlice.actions;
+export const { setSearchResult, setSearchTerm, setSearchType, setSearchFilters, setSemanticSearch, setSearchFiltersOpen, setSearchSubmitted } = searchSlice.actions;
 
 export default searchSlice.reducer;

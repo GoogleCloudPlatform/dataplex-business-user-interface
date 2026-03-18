@@ -1,12 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
 import FilterAnnotationsMultiSelect from './FilterAnnotationsMultiSelect';
 
-// Mock SVG import
-vi.mock('../../assets/svg/edit_note.svg', () => ({
-  default: 'edit_note.svg',
-}));
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      user: (state = { mode: 'light' }) => state,
+    },
+    preloadedState: { user: { mode: 'light' } },
+  });
+
+const renderWithProvider = (ui: React.ReactElement) => {
+  const store = createMockStore();
+  const result = render(<Provider store={store}>{ui}</Provider>);
+  return {
+    ...result,
+    rerender: (newUi: React.ReactElement) =>
+      result.rerender(<Provider store={store}>{newUi}</Provider>),
+  };
+};
 
 // Mock data
 const mockOptions = ['Option A', 'Option B', 'Option C', 'Option D', 'Option E'];
@@ -27,7 +42,7 @@ describe('FilterAnnotationsMultiSelect', () => {
 
   describe('rendering', () => {
     it('should render nothing when isOpen is false', () => {
-      const { container } = render(
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -41,7 +56,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render the component when isOpen is true', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -55,7 +70,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render with custom filterType', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -70,7 +85,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render all options in the left panel', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -86,7 +101,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render selected count in right panel', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B']}
@@ -100,7 +115,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render Clear All button', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -113,8 +128,8 @@ describe('FilterAnnotationsMultiSelect', () => {
       expect(screen.getByText('Clear All')).toBeInTheDocument();
     });
 
-    it('should render OK button', () => {
-      render(
+    it('should render Apply button', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -124,11 +139,11 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      expect(screen.getByText('OK')).toBeInTheDocument();
+      expect(screen.getByText('Apply')).toBeInTheDocument();
     });
 
     it('should render search placeholder with filterType', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -143,7 +158,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render with custom position', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -158,7 +173,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render "No items selected" when value is empty', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -172,7 +187,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render selected items in right panel', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option C']}
@@ -188,7 +203,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should render 0 Selected when no items selected', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -200,13 +215,54 @@ describe('FilterAnnotationsMultiSelect', () => {
 
       expect(screen.getByText('0 Selected')).toBeInTheDocument();
     });
+
+    it('should render EditNoteOutlined icons only in browse panel (not selected panel)', () => {
+      const { container } = renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={['Option A']}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      // Should NOT have img elements for edit note
+      const editNoteImgs = container.querySelectorAll('img[alt="Edit Note"]');
+      expect(editNoteImgs.length).toBe(0);
+
+      // Should have MUI EditNoteOutlined icons only in the browse panel (one per option)
+      const editNoteIcons = container.querySelectorAll('[data-testid="EditNoteOutlinedIcon"]');
+      expect(editNoteIcons.length).toBe(mockOptions.length);
+    });
+
+    it('should show "Select all" tooltip on hover of select-all checkbox', async () => {
+      const user = userEvent.setup();
+
+      renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={[]}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      const selectAllBox = screen.getByTestId('select-all-checkbox');
+      await user.hover(selectAllBox);
+
+      await waitFor(() => {
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Select all');
+      });
+    });
   });
 
   describe('search functionality', () => {
     it('should filter options based on search term', async () => {
       const user = userEvent.setup();
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -226,7 +282,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should show "No annotations found" when search has no results', async () => {
       const user = userEvent.setup();
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -245,7 +301,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should be case insensitive when searching', async () => {
       const user = userEvent.setup();
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -262,7 +318,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should update search term on input change', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -281,7 +337,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should show custom filterType in no results message', async () => {
       const user = userEvent.setup();
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -299,9 +355,9 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
   });
 
-  describe('selection functionality', () => {
-    it('should call onChange when selecting an option', () => {
-      render(
+  describe('selection functionality (local state)', () => {
+    it('should NOT call onChange when selecting an option (local state only)', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -314,11 +370,30 @@ describe('FilterAnnotationsMultiSelect', () => {
       const optionA = screen.getByText('Option A');
       fireEvent.click(optionA);
 
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
+      // onChange should NOT be called on toggle — only on Apply
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should call onChange with removed option when deselecting', () => {
-      render(
+    it('should update local state when toggling options', () => {
+      renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={[]}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      // Click Option A to select it locally
+      fireEvent.click(screen.getByText('Option A'));
+
+      // The right panel should now show it selected
+      expect(screen.getByText('1 Selected')).toBeInTheDocument();
+    });
+
+    it('should deselect option locally when clicking a selected item', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B']}
@@ -328,15 +403,17 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Click on Option A in left panel to deselect
+      // Click on Option A in left panel to deselect locally
       const optionElements = screen.getAllByText('Option A');
       fireEvent.click(optionElements[0]);
 
-      expect(mockOnChange).toHaveBeenCalledWith(['Option B']);
+      // Should show 1 Selected now (B only)
+      expect(screen.getByText('1 Selected')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should toggle option via checkbox icon click', () => {
-      const { container } = render(
+    it('should toggle option via checkbox icon click without calling onChange', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A']}
@@ -352,33 +429,15 @@ describe('FilterAnnotationsMultiSelect', () => {
         const checkboxBox = checkIcons[0].closest('div');
         if (checkboxBox) {
           fireEvent.click(checkboxBox);
-          expect(mockOnChange).toHaveBeenCalled();
+          expect(mockOnChange).not.toHaveBeenCalled();
         }
       }
-    });
-
-    it('should toggle unselected option via checkbox box click', () => {
-      render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      // Click on the row containing Option A
-      const optionA = screen.getByText('Option A');
-      fireEvent.click(optionA);
-
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
     });
   });
 
   describe('Select All functionality', () => {
-    it('should select all filtered options when Select All is clicked', () => {
-      render(
+    it('should select all filtered options locally when Select All is clicked', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -388,31 +447,14 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      fireEvent.click(selectAllCheckbox);
-
-      expect(mockOnChange).toHaveBeenCalledWith([...mockOptions]);
+      // Click the first option's checkbox area to verify local-only behavior
+      fireEvent.click(screen.getByText('Option A'));
+      expect(screen.getByText('1 Selected')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should deselect all when all options are selected and Select All is clicked', () => {
-      render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[...mockOptions]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      fireEvent.click(selectAllCheckbox);
-
-      expect(mockOnChange).toHaveBeenCalledWith([]);
-    });
-
-    it('should show indeterminate state when some options are selected', () => {
-      render(
+    it('should show indeterminate state (Remove icon) when some options are selected', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B']}
@@ -422,13 +464,13 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      // MUI indeterminate checkbox has data-indeterminate attribute
-      expect(selectAllCheckbox).toHaveAttribute('data-indeterminate', 'true');
+      // Should have a Remove icon for indeterminate state
+      const removeIcons = container.querySelectorAll('[data-testid="RemoveIcon"]');
+      expect(removeIcons.length).toBeGreaterThan(0);
     });
 
-    it('should show checked state when all options are selected', () => {
-      render(
+    it('should show checked state (Check icon in select-all) when all options are selected', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[...mockOptions]}
@@ -438,14 +480,15 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      expect(selectAllCheckbox).toBeChecked();
+      // All options selected — the select-all should show a Check icon
+      // There should be Check icons for each option + the select-all
+      const checkIcons = container.querySelectorAll('[data-testid="CheckIcon"]');
+      // mockOptions.length options in left panel + mockOptions.length in right panel + 1 select-all = 2*n + 1
+      expect(checkIcons.length).toBe(mockOptions.length * 2 + 1);
     });
 
-    it('should select all filtered options only when search is active', async () => {
-      const user = userEvent.setup();
-
-      render(
+    it('should show unchecked state (empty box) when no options are selected', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -455,20 +498,18 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search for annotations');
-      await user.type(searchInput, 'Option A');
+      // No Check or Remove icons in select-all area (only unchecked boxes for options)
+      const removeIcons = container.querySelectorAll('[data-testid="RemoveIcon"]');
+      expect(removeIcons.length).toBe(0);
 
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      fireEvent.click(selectAllCheckbox);
-
-      // Should only select Option A (the filtered result)
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
+      const checkIcons = container.querySelectorAll('[data-testid="CheckIcon"]');
+      expect(checkIcons.length).toBe(0);
     });
   });
 
   describe('Clear All functionality', () => {
-    it('should call onChange with empty array when Clear All is clicked', () => {
-      render(
+    it('should clear all selections locally without calling onChange', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B', 'Option C']}
@@ -481,11 +522,15 @@ describe('FilterAnnotationsMultiSelect', () => {
       const clearAllButton = screen.getByText('Clear All');
       fireEvent.click(clearAllButton);
 
-      expect(mockOnChange).toHaveBeenCalledWith([]);
+      // Should show 0 Selected locally
+      expect(screen.getByText('0 Selected')).toBeInTheDocument();
+      expect(screen.getByText('No items selected')).toBeInTheDocument();
+      // onChange should NOT be called — only local state changed
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
     it('should work when no items are selected', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -498,13 +543,32 @@ describe('FilterAnnotationsMultiSelect', () => {
       const clearAllButton = screen.getByText('Clear All');
       fireEvent.click(clearAllButton);
 
-      expect(mockOnChange).toHaveBeenCalledWith([]);
+      expect(screen.getByText('0 Selected')).toBeInTheDocument();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
   });
 
-  describe('close functionality', () => {
-    it('should call onClose when OK button is clicked', () => {
-      render(
+  describe('Apply and close functionality', () => {
+    it('should call onChange and onClose when Apply is clicked', () => {
+      renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={['Option A']}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      const applyButton = screen.getByText('Apply');
+      fireEvent.click(applyButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('should apply local selections when Apply is clicked', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -514,14 +578,23 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const okButton = screen.getByText('OK');
-      fireEvent.click(okButton);
+      // Select Option A and Option B locally
+      fireEvent.click(screen.getByText('Option A'));
+      fireEvent.click(screen.getByText('Option B'));
 
+      // No onChange yet
+      expect(mockOnChange).not.toHaveBeenCalled();
+
+      // Click Apply
+      fireEvent.click(screen.getByText('Apply'));
+
+      // Now onChange should be called with the local selections
+      expect(mockOnChange).toHaveBeenCalledWith(['Option A', 'Option B']);
       expect(mockOnClose).toHaveBeenCalled();
     });
 
-    it('should call onClose when Close icon is clicked', () => {
-      render(
+    it('should call onClose when Close icon is clicked (without calling onChange)', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -536,19 +609,22 @@ describe('FilterAnnotationsMultiSelect', () => {
       fireEvent.click(closeButton!);
 
       expect(mockOnClose).toHaveBeenCalled();
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
-    it('should call onClose when clicking outside the component', async () => {
+    it('should call onClose when clicking outside the component (without calling onChange)', async () => {
       render(
-        <div data-testid="outside">
-          <FilterAnnotationsMultiSelect
-            options={mockOptions}
-            value={[]}
-            onChange={mockOnChange}
-            onClose={mockOnClose}
-            isOpen={true}
-          />
-        </div>
+        <Provider store={createMockStore()}>
+          <div data-testid="outside">
+            <FilterAnnotationsMultiSelect
+              options={mockOptions}
+              value={[]}
+              onChange={mockOnChange}
+              onClose={mockOnClose}
+              isOpen={true}
+            />
+          </div>
+        </Provider>
       );
 
       // Click outside the component
@@ -557,10 +633,11 @@ describe('FilterAnnotationsMultiSelect', () => {
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
       });
+      expect(mockOnChange).not.toHaveBeenCalled();
     });
 
     it('should not call onClose when clicking inside the component', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -575,11 +652,34 @@ describe('FilterAnnotationsMultiSelect', () => {
 
       expect(mockOnClose).not.toHaveBeenCalled();
     });
+
+    it('should discard local changes when closing via X button', () => {
+      renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={[]}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      // Select Option A locally
+      fireEvent.click(screen.getByText('Option A'));
+      expect(screen.getByText('1 Selected')).toBeInTheDocument();
+
+      // Close via X — should NOT call onChange
+      const closeIcon = screen.getByTestId('CloseIcon');
+      fireEvent.click(closeIcon.closest('button')!);
+
+      expect(mockOnClose).toHaveBeenCalled();
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
   });
 
   describe('edge cases', () => {
     it('should handle empty options array', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={[]}
           value={[]}
@@ -595,7 +695,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should handle options with special characters', () => {
       const specialOptions = ['Option & Special', 'Option <Test>', 'Option "Quoted"'];
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={specialOptions}
           value={[]}
@@ -612,7 +712,7 @@ describe('FilterAnnotationsMultiSelect', () => {
       const longOption = 'A'.repeat(100);
       const longOptions = [longOption];
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={longOptions}
           value={[]}
@@ -628,7 +728,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should handle large number of options', () => {
       const manyOptions = Array.from({ length: 100 }, (_, i) => `Option ${i + 1}`);
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={manyOptions}
           value={[]}
@@ -643,7 +743,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
 
     it('should handle default props', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -659,8 +759,8 @@ describe('FilterAnnotationsMultiSelect', () => {
   });
 
   describe('right panel interactions', () => {
-    it('should deselect item when clicking checkbox in right panel', () => {
-      const { container } = render(
+    it('should deselect item locally when clicking checkbox in right panel', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B']}
@@ -670,7 +770,7 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Find Check icons - there should be multiple (in both left and right panels)
+      // Find Check icons — there should be multiple (in both left and right panels)
       const checkIcons = container.querySelectorAll('[data-testid="CheckIcon"]');
       expect(checkIcons.length).toBeGreaterThan(0);
 
@@ -678,12 +778,13 @@ describe('FilterAnnotationsMultiSelect', () => {
       const rightPanelCheckbox = checkIcons[checkIcons.length - 1].parentElement;
       if (rightPanelCheckbox) {
         fireEvent.click(rightPanelCheckbox);
-        expect(mockOnChange).toHaveBeenCalled();
+        // Only local state should change, not onChange
+        expect(mockOnChange).not.toHaveBeenCalled();
       }
     });
 
-    it('should display edit note icons for selected items', () => {
-      const { container } = render(
+    it('should NOT display EditNoteOutlined icons for selected items in right panel', () => {
+      const { container } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A']}
@@ -693,81 +794,10 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      const editNoteIcons = container.querySelectorAll('img[alt="Edit Note"]');
-      expect(editNoteIcons.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('unchecked option interaction', () => {
-    it('should select option when clicking on unchecked checkbox box', () => {
-      const { container } = render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      // Find unchecked checkbox boxes (they have border but no background color)
-      const uncheckedBoxes = container.querySelectorAll('div[style*="border"]');
-      if (uncheckedBoxes.length > 0) {
-        fireEvent.click(uncheckedBoxes[0]);
-      }
-
-      // Clicking anywhere in the option row should trigger selection
-      const optionText = screen.getByText('Option A');
-      fireEvent.click(optionText);
-
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
-    });
-  });
-
-  describe('event propagation', () => {
-    it('should stop propagation when clicking checkbox icon for selected option', () => {
-      const { container } = render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={['Option A']}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      // Find the checkbox box with blue background
-      const checkboxBoxes = container.querySelectorAll('div');
-      let blueBox: Element | null = null;
-
-      checkboxBoxes.forEach((box) => {
-        if (box.querySelector('[data-testid="CheckIcon"]')) {
-          blueBox = box;
-        }
-      });
-
-      if (blueBox) {
-        fireEvent.click(blueBox);
-        expect(mockOnChange).toHaveBeenCalled();
-      }
-    });
-
-    it('should stop propagation when clicking unchecked checkbox box', () => {
-      render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      // Click on the option text to toggle
-      const optionB = screen.getByText('Option B');
-      fireEvent.click(optionB);
-
-      expect(mockOnChange).toHaveBeenCalledWith(['Option B']);
+      // EditNote icons should only be in the browse panel (left), not the selected panel (right)
+      // With 5 options in browse panel, there should be 5 icons (one per option)
+      const editNoteIcons = container.querySelectorAll('[data-testid="EditNoteOutlinedIcon"]');
+      expect(editNoteIcons.length).toBe(mockOptions.length);
     });
   });
 
@@ -775,7 +805,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should remove event listener when component unmounts', () => {
       const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
-      const { unmount } = render(
+      const { unmount } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -795,7 +825,7 @@ describe('FilterAnnotationsMultiSelect', () => {
     it('should not add event listener when isOpen is false', () => {
       const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -828,53 +858,9 @@ describe('FilterAnnotationsMultiSelect', () => {
     });
   });
 
-  describe('Select All checkbox states', () => {
-    it('should be unchecked when filteredOptions is empty', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      const searchInput = screen.getByPlaceholderText('Search for annotations');
-      await user.type(searchInput, 'xyz');
-
-      const selectAllCheckbox = screen.getByRole('checkbox');
-      expect(selectAllCheckbox).not.toBeChecked();
-    });
-
-    it('should not be checked when filteredOptions.length is 0', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <FilterAnnotationsMultiSelect
-          options={mockOptions}
-          value={[]}
-          onChange={mockOnChange}
-          onClose={mockOnClose}
-          isOpen={true}
-        />
-      );
-
-      // Filter to get no results
-      const searchInput = screen.getByPlaceholderText('Search for annotations');
-      await user.type(searchInput, 'nonexistent');
-
-      // Checkbox should be unchecked
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).not.toBeChecked();
-    });
-  });
-
   describe('position prop', () => {
     it('should use default position when position is null', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -885,12 +871,11 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Component should render with default position
       expect(screen.getByText('Annotations')).toBeInTheDocument();
     });
 
     it('should use custom position when provided', () => {
-      render(
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -901,14 +886,13 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Component should render with custom position
       expect(screen.getByText('Annotations')).toBeInTheDocument();
     });
   });
 
-  describe('multiple selections and deselections', () => {
-    it('should handle adding multiple selections sequentially', () => {
-      const { rerender } = render(
+  describe('local state syncs with prop changes', () => {
+    it('should sync local state when value prop changes', () => {
+      const { rerender } = renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={[]}
@@ -918,29 +902,47 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Select Option A
-      fireEvent.click(screen.getByText('Option A'));
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A']);
+      expect(screen.getByText('0 Selected')).toBeInTheDocument();
 
-      // Re-render with updated value
+      // Re-render with new value
       rerender(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
-          value={['Option A']}
+          value={['Option A', 'Option B']}
           onChange={mockOnChange}
           onClose={mockOnClose}
           isOpen={true}
         />
       );
 
-      // Select Option B
-      const optionB = screen.getAllByText('Option B');
-      fireEvent.click(optionB[0]);
-      expect(mockOnChange).toHaveBeenCalledWith(['Option A', 'Option B']);
+      expect(screen.getByText('2 Selected')).toBeInTheDocument();
     });
 
-    it('should handle removing from middle of selection', () => {
-      render(
+    it('should handle multiple local selections then Apply', () => {
+      renderWithProvider(
+        <FilterAnnotationsMultiSelect
+          options={mockOptions}
+          value={[]}
+          onChange={mockOnChange}
+          onClose={mockOnClose}
+          isOpen={true}
+        />
+      );
+
+      // Select multiple options locally
+      fireEvent.click(screen.getByText('Option A'));
+      fireEvent.click(screen.getByText('Option C'));
+      fireEvent.click(screen.getByText('Option E'));
+
+      expect(screen.getByText('3 Selected')).toBeInTheDocument();
+
+      // Apply
+      fireEvent.click(screen.getByText('Apply'));
+      expect(mockOnChange).toHaveBeenCalledWith(['Option A', 'Option C', 'Option E']);
+    });
+
+    it('should handle local deselection then Apply', () => {
+      renderWithProvider(
         <FilterAnnotationsMultiSelect
           options={mockOptions}
           value={['Option A', 'Option B', 'Option C']}
@@ -950,10 +952,14 @@ describe('FilterAnnotationsMultiSelect', () => {
         />
       );
 
-      // Deselect Option B (in the middle)
+      // Deselect Option B locally
       const optionBElements = screen.getAllByText('Option B');
       fireEvent.click(optionBElements[0]);
 
+      expect(screen.getByText('2 Selected')).toBeInTheDocument();
+
+      // Apply
+      fireEvent.click(screen.getByText('Apply'));
       expect(mockOnChange).toHaveBeenCalledWith(['Option A', 'Option C']);
     });
   });

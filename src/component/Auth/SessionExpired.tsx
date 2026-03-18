@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 /**
  * @file SessionExpired.tsx
@@ -89,6 +90,8 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
 }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const mode = useSelector((state: any) => state.user.mode) as string;
+  const isDark = mode === 'dark';
 
   const getTitle = () => {
     switch (reason) {
@@ -151,7 +154,9 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${redTheme.lightest} 0%, ${redTheme.lighter} 100%)`,
+        background: isDark
+          ? '#131314'
+          : `linear-gradient(135deg, ${redTheme.lightest} 0%, ${redTheme.lighter} 100%)`,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -165,7 +170,9 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
           width: 300,
           height: 300,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${redTheme.light}15 0%, transparent 70%)`,
+          background: isDark
+            ? `radial-gradient(circle, ${redTheme.dark}20 0%, transparent 70%)`
+            : `radial-gradient(circle, ${redTheme.light}15 0%, transparent 70%)`,
         }}
       />
       <Box
@@ -176,7 +183,9 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
           width: 250,
           height: 250,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${redTheme.main}10 0%, transparent 70%)`,
+          background: isDark
+            ? `radial-gradient(circle, ${redTheme.dark}15 0%, transparent 70%)`
+            : `radial-gradient(circle, ${redTheme.main}10 0%, transparent 70%)`,
         }}
       />
 
@@ -188,8 +197,10 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
               p: { xs: 4, sm: 5 },
               textAlign: 'center',
               borderRadius: 4,
-              backgroundColor: '#FFFFFF',
-              boxShadow: shadows.card,
+              backgroundColor: isDark ? '#1e1f20' : '#FFFFFF',
+              boxShadow: isDark
+                ? '0 4px 24px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2)'
+                : shadows.card,
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -221,7 +232,9 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                     width: 80,
                     height: 80,
                     bgcolor: redTheme.main,
-                    boxShadow: shadows.avatar,
+                    boxShadow: isDark
+                      ? '0 2px 12px rgba(0, 0, 0, 0.3)'
+                      : shadows.avatar,
                   }}
                 >
                   {getIcon()}
@@ -237,7 +250,7 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                 sx={{
                   fontFamily: googleFonts.display,
                   fontWeight: 600,
-                  color: redTheme.dark,
+                  color: isDark ? '#f28b82' : redTheme.dark,
                   mb: 1.5,
                   letterSpacing: '-0.01em',
                 }}
@@ -252,7 +265,7 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                 variant="body1"
                 sx={{
                   fontFamily: googleFonts.body,
-                  color: 'text.secondary',
+                  color: isDark ? '#9aa0a6' : 'text.secondary',
                   mb: 4,
                   lineHeight: 1.6,
                   maxWidth: 360,
@@ -287,11 +300,15 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                     textTransform: 'none',
                     fontWeight: 600,
                     fontSize: '0.95rem',
-                    boxShadow: shadows.button,
+                    boxShadow: isDark
+                      ? '0 2px 8px rgba(0, 0, 0, 0.3)'
+                      : shadows.button,
                     transition: 'all 0.2s ease-in-out',
                     '&:hover': {
                       bgcolor: redTheme.dark,
-                      boxShadow: shadows.buttonHover,
+                      boxShadow: isDark
+                        ? '0 4px 12px rgba(0, 0, 0, 0.4)'
+                        : shadows.buttonHover,
                       transform: 'translateY(-1px)',
                     },
                     '&:active': {
@@ -309,8 +326,8 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                     startIcon={<Refresh />}
                     sx={{
                       fontFamily: googleFonts.display,
-                      borderColor: redTheme.main,
-                      color: redTheme.main,
+                      borderColor: isDark ? '#f28b82' : redTheme.main,
+                      color: isDark ? '#f28b82' : redTheme.main,
                       px: 3.5,
                       py: 1.25,
                       borderRadius: 2,
@@ -320,9 +337,9 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                       borderWidth: 1.5,
                       transition: 'all 0.2s ease-in-out',
                       '&:hover': {
-                        borderColor: redTheme.dark,
+                        borderColor: isDark ? '#ee675c' : redTheme.dark,
                         borderWidth: 1.5,
-                        bgcolor: redTheme.lighter,
+                        bgcolor: isDark ? 'rgba(242, 139, 130, 0.08)' : redTheme.lighter,
                         transform: 'translateY(-1px)',
                       },
                     }}
@@ -339,14 +356,14 @@ const SessionExpired: React.FC<SessionExpiredProps> = ({
                 sx={{
                   mt: 4,
                   pt: 3,
-                  borderTop: `1px solid ${redTheme.lighter}`,
+                  borderTop: isDark ? '1px solid #3c4043' : `1px solid ${redTheme.lighter}`,
                 }}
               >
                 <Typography
                   variant="body2"
                   sx={{
                     fontFamily: googleFonts.body,
-                    color: 'text.disabled',
+                    color: isDark ? '#5f6368' : 'text.disabled',
                     fontSize: '0.8rem',
                   }}
                 >

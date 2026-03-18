@@ -1,0 +1,126 @@
+.filter-chip-carousel {
+  position: relative;
+}
+
+.carousel-scroll-container {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.carousel-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Icon color: #5F6367 for unselected chips */
+.carousel-scroll-container .MuiButton-root img {
+  filter: brightness(0) saturate(100%) invert(37%) sepia(6%) saturate(500%) hue-rotate(175deg) brightness(93%) contrast(89%);
+}
+
+/* Selected chip icons: blue #0E4DCA */
+.carousel-scroll-container .carousel-chip-selected img {
+  filter: brightness(0) saturate(100%) invert(22%) sepia(92%) saturate(3000%) hue-rotate(225deg) brightness(85%) contrast(105%);
+}
+
+/* Dark mode selected chip icons: #8ab4f8 */
+.carousel-scroll-container .carousel-chip-selected.dark-selected img {
+  filter: brightness(0) saturate(100%) invert(68%) sepia(30%) saturate(1000%) hue-rotate(190deg) brightness(105%) contrast(95%);
+}
+
+/* Chip hover dimming */
+.carousel-scroll-container span .MuiButton-root {
+  transition: background-color 0.2s ease;
+}
+
+.carousel-scroll-container span .MuiButton-root:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Dark mode chip hover */
+.carousel-scroll-container span.dark-selected .MuiButton-root:hover,
+.carousel-scroll-container span.dark-unselected .MuiButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Gradient fade overlay containers for arrows */
+.carousel-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.carousel-fade-left {
+  left: 0;
+  padding-right: 8px;
+  background: linear-gradient(to right, #ffffff 60%, transparent);
+}
+
+.carousel-fade-right {
+  right: 0;
+  padding-left: 8px;
+  background: linear-gradient(to left, #ffffff 60%, transparent);
+}
+
+/* Dark mode fade */
+.carousel-fade-left.dark {
+  background: linear-gradient(to right, #131314 60%, transparent);
+}
+
+.carousel-fade-right.dark {
+  background: linear-gradient(to left, #131314 60%, transparent);
+}
+
+/* Arrow button */
+.carousel-arrow {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.carousel-arrow:hover {
+  background-color: #e0e0e0;
+}
+
+.carousel-arrow:active {
+  background-color: #d0d0d0;
+}
+
+.carousel-arrow:focus {
+  outline: none;
+}
+
+/* Dark mode */
+.carousel-arrow.dark {
+  background-color: #3c4043;
+}
+
+.carousel-arrow.dark:hover {
+  background-color: #4a4d51;
+}
+
+.carousel-arrow.dark:active {
+  background-color: #5f6368;
+}

@@ -109,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = useCallback(() => {
     isLoggedOut.current = true;
+    revokeGoogleToken(user?.token || '');
     dispatch(setCredentials({token: null, user: null}));
     dispatch(setIsLoaded({ isloaded: false }));
     localStorage.removeItem('sessionUserData');
@@ -168,6 +169,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
   }, [user, updateUser]);
+
+  const revokeGoogleToken = async (token: string) => {
+    // The token to revoke is sent in the request body as a URL-encoded parameter
+    const response = await fetch('https://oauth2.googleapis.com/revoke', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `token=${encodeURIComponent(token)}`
+    });
+
+    if (response.ok) {
+      console.log('Token successfully revoked');
+      // Handle post-revocation actions, e.g., logging the user out of your app
+      // Note: Revoking a token does not sign the user out of their Google Account, only your app's access.
+    } else {
+      // Handle errors (e.g., token already revoked, invalid token, network issues)
+      console.error('Failed to revoke token:', response.statusText);
+    }
+  }
 
   const contextValue = useMemo(() => ({
     user,

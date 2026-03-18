@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { Autocomplete, TextField } from '@mui/material';
@@ -55,6 +55,7 @@ interface SearchProps {
 const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, variant = 'default' }) => {
   const dispatch = useDispatch<AppDispatch>();
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
+  const mode = useSelector((state: any) => state.user.mode) as string;
   const { user } = useAuth();
   const location = useLocation();
   const { isAccessPanelOpen } = useAccessRequest();
@@ -64,8 +65,9 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
   ]);
   const [recentSearches, setRecentSearches] = useState<Array<{ id: number, term: string, timestamp: number }>>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [hoveredSearchId, setHoveredSearchId] = useState<number | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const highlightedOptionRef = useRef<string | null>(null);
+  const [isKeyboardNav, setIsKeyboardNav] = useState(false);
   // Local storage key for recent searches
   const getStorageKey = (userId: string) => `recentSearches_${userId}`;
   
@@ -184,6 +186,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
       dispatch({ type: 'search/setSearchTerm', payload: {searchTerm : sanitizedOption}});
       // Ignore blank searches and only search if minimum 3 characters
       if (sanitizedOption && sanitizedOption.length >= 3) {
+        dispatch({ type: 'search/setSearchSubmitted', payload: true });
         handleSearchSubmit(sanitizedOption);
         // Add to recent searches
         addToRecentSearches(sanitizedOption);
@@ -217,10 +220,11 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
     // Sanitize input to prevent XSS
     const sanitizedTerm = searchTerm?.toString().trim() || '';
     if (!sanitizedTerm) return;
-    
+
     dispatch({ type: 'search/setSearchTerm', payload: {searchTerm: sanitizedTerm}});
     // Ignore blank searches and only search if minimum 3 characters
     if (sanitizedTerm.length >= 3) {
+      dispatch({ type: 'search/setSearchSubmitted', payload: true });
       handleSearchSubmit(sanitizedTerm);
       // Move selected search to top of recent searches
       addToRecentSearches(sanitizedTerm);
@@ -228,17 +232,27 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
     setIsDropdownOpen(false);
   };
 
-  const handleInputChange = (_event: React.SyntheticEvent, newInputValue: string) => {
-        dispatch({ type: 'search/setSearchTerm', payload: { searchTerm: newInputValue } });
+  const handleInputChange = (_event: React.SyntheticEvent, newInputValue: string, reason: string) => {
+        if (reason === 'input') {
+          dispatch({ type: 'search/setSearchTerm', payload: { searchTerm: newInputValue } });
+          highlightedOptionRef.current = null;
+        }
   };
-  
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            setIsKeyboardNav(true);
+        }
         if (event.key === 'Enter') {
-            const trimmedValue = searchTerm?.toString().trim();
-            if (trimmedValue && trimmedValue.length >= 3) {
-                handleSearchSubmit(trimmedValue);
-                addToRecentSearches(trimmedValue);
-            } else if (trimmedValue && trimmedValue.length > 0 && trimmedValue.length < 3) {
+            event.preventDefault();
+            const optionToSearch = highlightedOptionRef.current || searchTerm?.toString().trim();
+            if (optionToSearch && optionToSearch.length >= 3) {
+                dispatch({ type: 'search/setSearchTerm', payload: { searchTerm: optionToSearch } });
+                dispatch({ type: 'search/setSearchSubmitted', payload: true });
+                handleSearchSubmit(optionToSearch);
+                addToRecentSearches(optionToSearch);
+                setIsDropdownOpen(false);
+            } else if (optionToSearch && optionToSearch.length > 0 && optionToSearch.length < 3) {
                 showError('Please type at least 3 characters to search');
             }
         }
@@ -264,6 +278,11 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
     ? searchData.some(option => option.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : true;
 
+  const autocompleteOptions = useMemo(() =>
+    searchTerm ? searchData.map((option) => option.name) : recentSearches.map(search => search.term),
+    [searchTerm, searchData, recentSearches]
+  );
+
   // Determine if any dropdown is open
   const isAnyDropdownOpen = isDropdownOpen;
 
@@ -286,22 +305,24 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 borderRadius: '170px',
-                background: (isAnyDropdownOpen || variant === 'default') ? '#ffffff' : '#E9EEF6',
+                background: variant === 'navbar'
+                  ? (mode === 'dark' ? '#282a2c' : '#F8FAFD')
+                  : ((isAnyDropdownOpen || variant === 'default') ? (mode === 'dark' ? '#282a2c' : '#ffffff') : (mode === 'dark' ? '#282a2c' : '#E9EEF6')),
                 padding: '0rem 0.5rem 0rem 1rem',
                 width: '100%',
-                maxWidth: 'clamp(600px, 57vw, 1080px)',
+                maxWidth: variant === 'navbar' ? '400px' : 'clamp(600px, 57vw, 1080px)',
                 marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
                 zIndex: isAccessPanelOpen ? 999 : 1100,
                 transition: 'border-radius 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
-                boxShadow: variant === 'default' ? 'inset 0 0 0 1px #DAE2ED' : 'none',
+                boxShadow: variant === 'default' ? `inset 0 0 0 1px ${mode === 'dark' ? '#3c4043' : '#DAE2ED'}` : 'none',
                  border: 'none',
                  boxSizing: 'border-box',
             }}>
             {/* SearchIcon on the left */}
             <SearchIcon style={{
-                color: '#5F6368',
+                color: mode === 'dark' ? '#9aa0a6' : '#5F6368',
                 marginRight: '0.5rem',
                 transition: 'color 0.2s ease',
                 height:"1.25rem",
@@ -313,7 +334,15 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 disablePortal
                 inputValue={searchTerm || ''}
                 disableClearable
+                ListboxProps={{
+                    'data-nav': isKeyboardNav ? 'keyboard' : 'mouse',
+                    onMouseMove: () => { if (isKeyboardNav) setIsKeyboardNav(false); },
+                } as React.HTMLAttributes<HTMLUListElement>}
                 onInputChange={handleInputChange}
+                onChange={() => {}}
+                onHighlightChange={(_event, option) => {
+                  highlightedOptionRef.current = option as string | null;
+                }}
                 open={isDropdownOpen && ((searchTerm && searchTerm.length >= 3) || recentSearches.length > 0) && hasMatchingOptions}
                 onOpen={() => {
                     const shouldOpen = (searchTerm && searchTerm.length >= 3) || recentSearches.length > 0;
@@ -328,7 +357,9 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                       setIsDropdownOpen(false);
                     }
                 }}
-                options={searchTerm ? searchData.map((option) => option.name) : recentSearches.map(search => search.term)}
+                autoSelect={false}
+                autoHighlight={false}
+                options={autocompleteOptions}
                 renderOption={(props, option) => {
                     const { key, ...otherProps } = props;
                     
@@ -337,13 +368,11 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                         const searchItem = recentSearches.find(search => search.term === option);
                         if (searchItem) {
                             return (
-                                <li 
+                                <li
                                     key={key}
-                                    {...otherProps} 
-                                    className="recent-search-item" 
+                                    {...otherProps}
+                                    className={`${otherProps.className || ''} recent-search-item`}
                                     onClick={() => handleRecentSearchSelect(option)}
-                                    onMouseEnter={() => setHoveredSearchId(searchItem.id)}
-                                    onMouseLeave={() => setHoveredSearchId(null)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -355,14 +384,13 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                         fontWeight: 400,
                                         fontSize: '14px',
                                         lineHeight: '1.4285714285714286em',
-                                        color: '#1F1F1F',
+                                        color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                                         cursor: 'pointer',
-                                        transition: 'background-color 0.2s ease'
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                        <AccessTimeIcon style={{ 
-                                            color: '#575757', 
+                                        <AccessTimeIcon style={{
+                                            color: mode === 'dark' ? '#9aa0a6' : '#575757',
                                             fontSize: '20px',
                                             width: '20px',
                                             height: '20px',
@@ -370,24 +398,23 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                         }} />
                                         <span>{option}</span>
                                     </div>
-                                    {hoveredSearchId === searchItem.id && (
-                                        <span
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteRecentSearch(searchItem.id, e);
-                                            }}
-                                            style={{
-                                                color: '#575757',
-                                                fontSize: '14px',
-                                                cursor: 'pointer',
-                                                fontFamily: 'Google Sans Text, sans-serif',
-                                                fontWeight: 400,
-                                                lineHeight: '1.4285714285714286em'
-                                            }}
-                                        >
-                                            Delete
-                                        </span>
-                                    )}
+                                    <span
+                                        className="recent-search-delete"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteRecentSearch(searchItem.id, e);
+                                        }}
+                                        style={{
+                                            color: mode === 'dark' ? '#9aa0a6' : '#575757',
+                                            fontSize: '14px',
+                                            cursor: 'pointer',
+                                            fontFamily: 'Google Sans Text, sans-serif',
+                                            fontWeight: 400,
+                                            lineHeight: '1.4285714285714286em'
+                                        }}
+                                    >
+                                        Delete
+                                    </span>
                                 </li>
                             );
                         }
@@ -396,7 +423,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                     return (
                         <li
                             key={key}
-                            {...otherProps} 
+                            {...otherProps}
                             onClick={() => handleSelectOption(option)}
                             style={{
                                 display: 'flex',
@@ -407,13 +434,13 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                 fontWeight: 400,
                                 fontSize: '14px',
                                 lineHeight: '1.4285714285714286em',
-                                color: '#1F1F1F',
+                                color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                                 cursor: 'pointer'
                             }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                               <SearchIcon style={{
-                                  color: '#575757',
+                                  color: mode === 'dark' ? '#9aa0a6' : '#575757',
                                   fontSize: '20px',
                                   width: '20px',
                                   height: '20px',
@@ -461,10 +488,12 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                             }}
                             style={{
                                 fontFamily: '"Google Sans Text", sans-serif',
-                                color: '#1F1F1F',
+                                color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                                 width: "100%",
                                 flex: 1,
-                                background: (isAnyDropdownOpen || variant === 'default') ? "#ffffff" : "#E9EEF6",
+                                background: variant === 'navbar'
+                                  ? (mode === 'dark' ? '#282a2c' : '#F8FAFD')
+                                  : ((isAnyDropdownOpen || variant === 'default') ? (mode === 'dark' ? '#282a2c' : '#ffffff') : (mode === 'dark' ? '#282a2c' : '#E9EEF6')),
                                 fontWeight: "500",
                                 fontSize: "0.875rem",
                             }}
@@ -475,7 +504,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                                         fontSize: "0.875rem",
                                         fontWeight: "500",
                                         opacity: "0.8",
-                                        color: '#1F1F1F',
+                                        color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                                         fontStyle: "normal",
                                         padding: "0rem 0.5625rem 0rem 0rem"
                                     },
@@ -492,9 +521,9 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                         ...props.style,
                         borderRadius: '24px',
                         border: 'none',
-                        boxShadow: '0 4px 6px rgba(32,33,36,.28)',
+                        boxShadow: mode === 'dark' ? '0 4px 6px rgba(0,0,0,0.5)' : '0 4px 6px rgba(32,33,36,.28)',
                         padding: '10px 0px',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: mode === 'dark' ? '#282a2c' : '#ffffff',
                         width: '100%',
                         zIndex: 2000,
                         overflow: "hidden",
@@ -515,16 +544,30 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                     flex: '1 1 auto',
                     minWidth: 0,
                     position: 'static',
-                    '& .MuiAutocomplete-listbox': {
-                        padding: '0px'
-                    }
+                    '& .MuiAutocomplete-listbox': { padding: '0px' },
+                    '& .MuiAutocomplete-option:hover': {
+                        backgroundColor: mode === 'dark' ? '#3c4043 !important' : '#E8EAED !important',
+                    },
+                    '& .MuiAutocomplete-option.Mui-focused': {
+                        backgroundColor: 'transparent !important',
+                    },
+                    '& .MuiAutocomplete-option[aria-selected="true"]': {
+                        backgroundColor: 'transparent !important',
+                    },
                 } : {
-                  flex: 1,
-                  minWidth: 0,
+                    flex: 1,
+                    minWidth: 0,
                     position: 'static',
-                    '& .MuiAutocomplete-listbox': {
-                        padding: '0px'
-                    }
+                    '& .MuiAutocomplete-listbox': { padding: '0px' },
+                    '& .MuiAutocomplete-option:hover': {
+                        backgroundColor: mode === 'dark' ? '#3c4043 !important' : '#E8EAED !important',
+                    },
+                    '& .MuiAutocomplete-option.Mui-focused': {
+                        backgroundColor: 'transparent !important',
+                    },
+                    '& .MuiAutocomplete-option[aria-selected="true"]': {
+                        backgroundColor: 'transparent !important',
+                    },
                 }}
                 noOptionsText={!searchTerm && recentSearches.length === 0 ? "No recent searches" : "No options"}
             />

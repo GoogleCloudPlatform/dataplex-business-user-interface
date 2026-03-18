@@ -41,16 +41,19 @@
     display: flex !important;
     align-items: center !important;
     cursor: pointer !important;
-    transition: background-color 0.2s ease !important;
 }
 
-.MuiAutocomplete-listbox li:hover,
-.MuiAutocomplete-listbox li.Mui-focused {
-    background-color: #F8FAFD !important;
+/* Remove persistent MUI focus highlight — only show on hover */
+.MuiAutocomplete-listbox .MuiAutocomplete-option.Mui-focused:not(:hover) {
+    background-color: transparent !important;
+}
+
+/* Keyboard navigation highlight via data-nav attribute */
+.MuiAutocomplete-listbox[data-nav="keyboard"] .MuiAutocomplete-option.Mui-focused {
+    background-color: #E8EAED !important;
 }
 
 .recent-search-item {
-    transition: background-color 0.2s ease !important;
     cursor: pointer !important;
     display: flex !important;
     align-items: center !important;
@@ -65,8 +68,12 @@
     color: #1F1F1F !important;
 }
 
-.recent-search-item:hover {
-    background-color: #F8FAFD !important;
+.recent-search-item .recent-search-delete {
+    visibility: hidden;
+}
+
+.recent-search-item:hover .recent-search-delete {
+    visibility: visible;
 }
 
 #search-bar .MuiOutlinedInput-root {
@@ -141,11 +148,15 @@
     transition: none !important;
     box-sizing: border-box !important;
     width: auto !important;
-    max-width: 100% !important;
+}
+
+#search-bar.navbar-variant {
+    max-width: clamp(280px, 47vw, 680px) !important;
+    height: clamp(36px, 3.3vw, 48px) !important;
 }
 
 #search-bar.navbar-variant.dropdown-open {
-    background: #ffffff !important;
+    background: #F8FAFD !important;
     border-radius: 170px 0px 0px 170px !important;
     box-shadow: 0px 2px 3px 1px rgba(0, 0, 0, 0.12), 0px 2px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 5px 0px rgba(0, 0, 0, 0.2) !important;
 }
@@ -158,7 +169,7 @@
     right: -1px;
     width: calc(9.375rem + 2px); /* Width of the select menu + padding for gaps */
     height: calc(100% + 2px);
-    background: #E9EEF6;
+    background: #F8FAFD;
     border-top-right-radius: 3.125rem;
     border-bottom-right-radius: 3.125rem;
     border-left: 0.0625rem solid #C5C7C5;
@@ -240,6 +251,48 @@ input[type="search"]::-webkit-search-cancel-button {
         max-width: 100% !important;
         top: calc(100% + 8px) !important;
     }
+}
+
+/* ==========================================================================
+   Dark Mode Overrides
+   ========================================================================== */
+
+html[data-theme="dark"] .MuiAutocomplete-paper {
+    background-color: #282a2c !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .MuiAutocomplete-listbox li {
+    color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] .MuiAutocomplete-listbox .MuiAutocomplete-option.Mui-focused:not(:hover) {
+    background-color: transparent !important;
+}
+
+html[data-theme="dark"] .MuiAutocomplete-listbox[data-nav="keyboard"] .MuiAutocomplete-option.Mui-focused {
+    background-color: #3c4043 !important;
+}
+
+html[data-theme="dark"] .recent-search-item {
+    color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant.dropdown-open {
+    background: #282a2c !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant.dropdown-open::after {
+    background: #282a2c;
+    border-left-color: #3c4043;
+}
+
+html[data-theme="dark"] .animated-placeholder {
+    color: #7c7f82;
+}
+
+html[data-theme="dark"] input[type="search"]::-webkit-search-cancel-button {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%239aa0a6" d="M8 6.586L3.707 2.293a1 1 0 00-1.414 1.414L6.586 8l-4.293 4.293a1 1 0 001.414 1.414L8 9.414l4.293 4.293a1 1 0 001.414-1.414L9.414 8l4.293-4.293a1 1 0 00-1.414-1.414L8 6.586z"/></svg>') no-repeat center;
 }
 
 @media (max-width: 480px) {

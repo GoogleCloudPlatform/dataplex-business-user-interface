@@ -19,6 +19,7 @@ let mockResourcesError: string | null = null;
 let mockResourcesTotalSize = 0;
 let mockResourcesRequestData: any = null;
 let mockRequestItemStore: any[] = [];
+let mockIsSearchFiltersOpen = false;
 
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
@@ -28,6 +29,7 @@ vi.mock("react-redux", () => ({
         searchTerm: mockSearchTerm,
         searchType: mockSearchType,
         semanticSearch: mockSemanticSearch,
+        isSearchFiltersOpen: mockIsSearchFiltersOpen,
       },
       resources: {
         items: mockResources,
@@ -36,6 +38,9 @@ vi.mock("react-redux", () => ({
         totalItems: mockResourcesTotalSize,
         itemsRequestData: mockResourcesRequestData,
         itemsStore: mockRequestItemStore,
+      },
+      user: {
+        mode: 'light',
       },
     };
     return selector(state);
@@ -205,6 +210,7 @@ describe("SearchPage", () => {
     mockResourcesTotalSize = 0;
     mockResourcesRequestData = null;
     mockRequestItemStore = [];
+    mockIsSearchFiltersOpen = false;
 
     // Reset captured props
     capturedFilterDropdownProps = null;
@@ -281,26 +287,38 @@ describe("SearchPage", () => {
 
   describe("Filter Panel Toggle", () => {
     it("toggles filter panel when Tune icon is clicked", async () => {
-      render(<SearchPage />);
+      mockIsSearchFiltersOpen = false;
+      const { rerender } = render(<SearchPage />);
 
       const tuneIcon = screen.getByTestId("TuneIcon").closest("span");
       expect(tuneIcon).toBeInTheDocument();
 
-      // Initial state - filters open
-      expect(tuneIcon).toHaveStyle({ background: "rgb(231, 240, 254)" });
+      // Initial state - filters closed
+      expect(tuneIcon).toHaveStyle({ background: "none" });
 
-      // Click to close
+      // Click to open
       fireEvent.click(tuneIcon!);
 
+      // Simulate state change to open
+      mockIsSearchFiltersOpen = true;
+      rerender(<SearchPage />);
+
       await waitFor(() => {
-        expect(tuneIcon).toHaveStyle({ background: "none" });
+        const iconSpan = screen.getByTestId("CloseIcon").closest("span");
+        expect(iconSpan).toHaveStyle({ background: "#0E4DCA" });
       });
 
-      // Click to open again
-      fireEvent.click(tuneIcon!);
+      // Click to close again
+      const closeIcon = screen.getByTestId("CloseIcon").closest("span");
+      fireEvent.click(closeIcon!);
+
+      // Simulate state change to closed
+      mockIsSearchFiltersOpen = false;
+      rerender(<SearchPage />);
 
       await waitFor(() => {
-        expect(tuneIcon).toHaveStyle({ background: "rgb(231, 240, 254)" });
+        const iconSpan = screen.getByTestId("TuneIcon").closest("span");
+        expect(iconSpan).toHaveStyle({ background: "none" });
       });
     });
 
@@ -1019,8 +1037,8 @@ describe("SearchPage", () => {
     it("filter panel has correct initial position", () => {
       const { container } = render(<SearchPage />);
 
-      // The filter panel should be at left: 0 when open
-      const filterPanel = container.querySelector('[style*="position: absolute"]');
+      // The filter panel uses fixed positioning for a full-height overlay
+      const filterPanel = container.querySelector('[style*="position: fixed"]');
       expect(filterPanel).toBeInTheDocument();
     });
   });
@@ -1218,11 +1236,12 @@ describe("SearchPage", () => {
 
   describe("Custom Filters Styling", () => {
     it("has correct styles when filters are open", () => {
+      mockIsSearchFiltersOpen = true;
       render(<SearchPage />);
 
-      const tuneIcon = screen.getByTestId("TuneIcon").closest("span");
-      expect(tuneIcon).toHaveStyle({
-        background: "rgb(231, 240, 254)",
+      const closeIcon = screen.getByTestId("CloseIcon").closest("span");
+      expect(closeIcon).toHaveStyle({
+        background: "#0E4DCA",
         borderRadius: "59px",
         padding: "8px 13px",
       });

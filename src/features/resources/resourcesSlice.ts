@@ -17,9 +17,9 @@ const getAspectName = (name: string) => {
 // Thunk for searching resources based on a search term
 export const searchResourcesByTerm = createAsyncThunk('resources/searchResourcesByTerm', async (requestData: any , { rejectWithValue }) => {
   // If the search term is empty, we are returning an empty list.
-  if (!requestData.term) {
-    return [];
-  }
+  // if (!requestData.term) {
+  //   return [];
+  // }
 
   // If the term is not empty, we will perform a search.
   try {

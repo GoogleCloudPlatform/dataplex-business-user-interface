@@ -139,6 +139,10 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
   };
   //let usage = entry.aspects[`${number}.global.usage`]?.data.fields || {};
 
+  const hasContracts = Object.values(contracts).some((value) =>
+    Array.isArray(value) ? value.length > 0 : value && typeof value === 'object' && Object.keys(value).length > 0
+  );
+
 
   return (
     <div style={{ width: '100%', ...css }}>
@@ -158,21 +162,22 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                     overflow: "hidden",
                     backgroundColor: "#FFFFFF"
                 }}>
+                        {hasContracts ? (
+                        <>
                         <Box sx={{
                             display: "flex",
                             alignItems: "center",
                             gap: "8px",
                             marginBottom: "12px"
-
                         }}>
-                              <Typography 
+                              <Typography
                                   component="span"
                                   variant="heading2Medium"
                                   sx={{
-                                      fontWeight: 500, 
-                                      fontSize: "16px", 
+                                      fontWeight: 500,
+                                      fontSize: "16px",
                                       lineHeight: "1.33em",
-                                      color: "#1F1F1F", 
+                                      color: "#1F1F1F",
                                       textTransform: "capitalize",
                                   }}
                               >
@@ -184,12 +189,12 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                             alignItems: "center",
                             gap: "8px"
                         }}>
-                                <Typography 
+                                <Typography
                                     component="span"
                                     variant="heading2Medium"
                             sx={{
-                                        fontWeight: 400, 
-                                        fontSize: "14px", 
+                                        fontWeight: 400,
+                                        fontSize: "14px",
                                         lineHeight: "1.33em",
                                         color: "#1F1F1F",
                                     }}
@@ -199,14 +204,13 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                             </Box>
                         <Grid container spacing={4}>
                     { Object.keys(contracts).map((key:string) => (
-                    // Grid item for each card, defining its responsive width
                     <Grid
-                        size={3} // One-third width (3 columns) on medium screens (4 out of 12 columns)
+                        size={3}
                         key={key}
                         sx={{ marginTop: '16px' }}
                     >
-                        <Box sx={{ 
-                                border: '1px solid #E0E0E0', 
+                        <Box sx={{
+                                border: '1px solid #E0E0E0',
                                 borderRadius: '16px',
                                 height: '100%',
                                 boxSizing: 'border-box',
@@ -221,7 +225,7 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                                 </Typography>
                             </Box>
                             <Box sx={{display: 'flex', alignItems: 'center', padding: '15px', gap: 1 }}>
-                                
+
                                 <table>
                                 <tbody>
                                     {Object.entries(contracts['refresh-cadence']).map(([key1, value]) => (
@@ -237,6 +241,21 @@ const Contract: React.FC<ContractProps> = ({ entry, css }) => {
                     </Grid>
                     ))}
                 </Grid>
+                        </>
+                        ) : (
+                        <Box sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "40px 0",
+                            gap: 2,
+                        }}>
+                            <Typography variant="body1" color="text.secondary">
+                                No contracts available for this data product.
+                            </Typography>
+                        </Box>
+                        )}
                             
                 </Box>
             </Grid>

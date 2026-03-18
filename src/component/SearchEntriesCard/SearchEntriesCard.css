@@ -1,4 +1,22 @@
-.entriesHoverEffect:hover {
-  background-color: rgb(237, 242, 252) !important;
-  border-radius: 0.625rem !important;
+.entriesHoverEffect:not(.selected):hover {
+  background-color: #EDF2FC !important;
+  border-radius: 16px !important;
+  border-color: transparent !important;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15) !important;
+}
+
+html[data-theme="dark"] .entriesHoverEffect:not(.selected):hover {
+  background-color: #3c4043 !important;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5), 0px 1px 3px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+.entriesHoverEffect .hover-actions {
+  display: flex !important;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.entriesHoverEffect:not(.selected):hover .hover-actions {
+  visibility: visible;
+  opacity: 1;
 }

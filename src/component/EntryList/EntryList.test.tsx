@@ -429,9 +429,7 @@ describe('EntryList', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Name')).toBeInTheDocument();
-      expect(screen.getByText('Description')).toBeInTheDocument();
-      expect(screen.getByText('Last Modification Time')).toBeInTheDocument();
+      expect(screen.getByText('No entries available')).toBeInTheDocument();
     });
   });
 

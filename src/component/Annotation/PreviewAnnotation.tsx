@@ -221,10 +221,12 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
       <div style={{
         border: "1px solid #E0E0E0",
         borderRadius: "0.5rem",
-        overflowX: "auto",
+        overflowX: "hidden",
         display: "flex",
         flexDirection: "column",
         flex: "1 1 auto",
+        width: "100%",
+        boxSizing: "border-box" as const,
       }}>
         {/* Table Header */}
         <div
@@ -234,13 +236,15 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
           backgroundColor: "#F8F9FA",
           borderBottom: "1px solid #E0E0E0",
           padding: "0.5rem 1rem",
-          flex: "0 0 auto"
+          flex: "0 0 auto",
+          gap: "0.75rem"
         }}>
           <div
             onMouseEnter={() => setHoveredInfo({ aspectKey: aspectKey, column: 'name' })}
             onMouseLeave={() => setHoveredInfo(null)}
             style={{
-              flex: isTopComponent ? "0 0 30%" : "0 0 50%",
+              flex: isTopComponent ? "0 0 30%" : "0 1 60%",
+              minWidth: 0,
               fontSize: "0.75rem",
               fontWeight: "500",
               color: "#444746",
@@ -264,7 +268,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
             onMouseEnter={() => setHoveredInfo({ aspectKey: aspectKey, column: 'value' })}
             onMouseLeave={() => setHoveredInfo(null)}
             style={{
-              flex: isTopComponent ? "0 0 70%" : "0 0 50%",
+              flex: isTopComponent ? "0 0 70%" : "0 1 40%",
+              minWidth: 0,
               fontSize: "0.75rem",
               fontWeight: "500",
               color: "#444746",
@@ -294,13 +299,13 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
             return item.listValue.values.map((value: any, valueIndex: number) => (
               <div key={`${key}-annotation-${valueIndex}`} style={{
                 display: "flex", borderBottom: "1px solid #E0E0E0", padding: "0.75rem 1rem",
-                backgroundColor: "#FFFFFF", flex: "0 0 auto"
+                backgroundColor: "#FFFFFF", flex: "0 0 auto", gap: "0.75rem"
               }}>
-                <div style={{ flex: isTopComponent ? "0 0 30%" : "0 0 40%", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif",wordBreak: 'break-word' }}>
+                <div style={{ flex: isTopComponent ? "0 0 30%" : "0 1 60%", minWidth: 0, display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif",wordBreak: 'break-word' }}>
                   {key}
                   <img src={HelpOutlineIcon} alt="Help" style={{ width: "0.875rem", height: "0.875rem", opacity: "0.6", flex: "0 0 auto" }} />
                 </div>
-                <div style={{ flex: isTopComponent ? "0 0 70%" : "0 0 60%", fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif", wordBreak: 'break-word' }}>
+                <div style={{ flex: isTopComponent ? "0 0 70%" : "0 1 40%", minWidth: 0, fontSize: "0.75rem", color: "#1F1F1F", fontFamily: "sans-serif", wordBreak: 'break-word' }}>
                   {value.stringValue}
                 </div>
               </div>
@@ -321,15 +326,14 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                 minHeight: '36px',
                 display: "flex",
                 borderBottom: index === sortedFieldKeys.length - 1 ? 'none' : '1px solid #E0E0E0',
-                paddingLeft: '1rem',
-                paddingTop: '0.5rem',
-                paddingBottom: '0.5rem',
+                padding: '0.5rem 1rem',
                 backgroundColor: "#FFFFFF",
                 flex: "0 0 auto",
-                gap: '0.3rem'
+                gap: '0.75rem'
               }}>
                 <div style={{
-                  flex: isTopComponent ? "0 0 30%" : "0 0 50%",
+                  flex: isTopComponent ? "0 0 30%" : "0 1 60%",
+                  minWidth: 0,
                   display: "flex",
                   alignItems: "center",
                   gap: "0.375rem",
@@ -341,14 +345,12 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                   {key}
                 </div>
                 <div style={{
-                  flex: isTopComponent ? "0 0 70%" : "0 0 50%",
+                  flex: isTopComponent ? "0 0 70%" : "0 1 40%",
+                  minWidth: 0,
                   fontSize: "0.75rem",
                   color: "#1F1F1F",
                   fontFamily: "Google Sans Text, sans-serif",
                   fontWeight: "400",
-                  bottom: '-1px',
-                  right: '6px',
-                  position: "relative",
                   wordBreak: 'break-word',
                 }}>
                   {displayValue}
@@ -427,7 +429,9 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
               alignItems: 'center',
               gap: '0.75rem',
               flex: '1 1 auto',
-              marginRight: isGlossary ? '0.5rem' : '3.75rem'
+              minWidth: 0,
+              overflow: 'hidden',
+              marginRight: '0.5rem'
             }}>
               <Typography component="span" sx={{
                 fontFamily: 'Google Sans Text, sans-serif',
@@ -436,7 +440,13 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                 lineHeight: 1.43,
                 color: "#1f1f1f",
                 textTransform: "capitalize",
-                wordBreak: isGlossary ? 'break-word' : 'normal',
+                wordBreak: 'break-word',
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                flex: '1 1 0',
+                minWidth: 0,
               }}>
                 {aspectName}
               </Typography>
@@ -450,7 +460,8 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 lineHeight: 1,
-                fontWeight: 500
+                fontWeight: 500,
+                flexShrink: 0,
               }}>
                 Aspect
               </span>
@@ -485,7 +496,7 @@ const PreviewAnnotation: React.FC<PreviewAnnotationProps> = ({
                     cursor: 'pointer',
                   }}
                   sx={{
-                    '& .MuiAccordionSummary-content': { margin: 0 },
+                    '& .MuiAccordionSummary-content': { margin: 0, overflow: 'hidden', minWidth: 0 },
                     '& .MuiAccordionSummary-expandIconWrapper': {
                       color: '#575757'
                     }

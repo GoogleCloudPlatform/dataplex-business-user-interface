@@ -184,7 +184,7 @@ vi.mock('../SearchPage/NotificationBar', () => ({
       <div data-testid="notification-bar">
         {message}
         <button onClick={onClose} data-testid="close-notification">Close</button>
-        <button onClick={onUndo} data-testid="undo-notification">Undo</button>
+        {onUndo && <button onClick={onUndo} data-testid="undo-notification">Undo</button>}
       </div>
     ) : null;
   }
@@ -592,7 +592,7 @@ describe('DataProductsDetailView', () => {
       expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
     });
 
-    it('closes notification when undo is clicked', () => {
+    it('does not show undo button in request access notification', () => {
       renderWithProviders(<DataProductsDetailView />);
 
       // Open and submit
@@ -602,11 +602,9 @@ describe('DataProductsDetailView', () => {
       const submitBtn = screen.getByTestId('submit-success');
       fireEvent.click(submitBtn);
 
-      // Click undo
-      const undoBtn = screen.getByTestId('undo-notification');
-      fireEvent.click(undoBtn);
-
-      expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
+      // Notification should be visible but without undo button
+      expect(screen.getByTestId('notification-bar')).toBeInTheDocument();
+      expect(screen.queryByTestId('undo-notification')).not.toBeInTheDocument();
     });
   });
 

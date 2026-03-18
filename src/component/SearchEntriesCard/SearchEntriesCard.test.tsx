@@ -1,5 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, beforeEach, it, describe, expect } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
 import SearchEntriesCard from './SearchEntriesCard';
 
 // Mock SVG imports
@@ -40,6 +43,25 @@ vi.mock('../Tags/Tag', () => ({
     <span data-testid="tag" style={css}>{text}</span>
   )
 }));
+
+// Custom render with Redux Provider and Router
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      entry: (state = { accessCheckCache: {} }) => state,
+      user: (state = { mode: 'light' }) => state,
+    },
+  });
+
+const render = (ui: React.ReactElement, options?: any) => {
+  const store = createMockStore();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <Provider store={store}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </Provider>
+  );
+  return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
 
 describe('SearchEntriesCard', () => {
   const createMockEntry = (overrides: any = {}) => ({
@@ -318,8 +340,8 @@ describe('SearchEntriesCard', () => {
       await waitFor(() => {
         const innerBox = container.querySelector('.entriesHoverEffect');
         expect(innerBox).toBeInTheDocument();
-        // When not selected, borderRadius should be 0
-        expect(innerBox).toHaveStyle('border-radius: 0');
+        // When not selected, background should be white
+        expect(innerBox).toHaveStyle('background-color: rgb(255, 255, 255)');
       });
     });
   });
@@ -477,8 +499,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', expectedAlt);
+        expect(screen.getByAltText(expectedAlt)).toBeInTheDocument();
       });
     };
 
@@ -498,8 +519,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Code asset');
+        expect(screen.getByAltText('Code asset')).toBeInTheDocument();
       });
     });
 
@@ -519,8 +539,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Dashboard element');
+        expect(screen.getByAltText('Dashboard element')).toBeInTheDocument();
       });
     });
 
@@ -532,8 +551,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data exchange');
+        expect(screen.getByAltText('Data exchange')).toBeInTheDocument();
       });
     });
 
@@ -545,8 +563,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data source connection');
+        expect(screen.getByAltText('Data source connection')).toBeInTheDocument();
       });
     });
 
@@ -558,8 +575,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data stream');
+        expect(screen.getByAltText('Data stream')).toBeInTheDocument();
       });
     });
 
@@ -575,8 +591,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Database schema');
+        expect(screen.getByAltText('Database schema')).toBeInTheDocument();
       });
     });
 
@@ -596,8 +611,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature group');
+        expect(screen.getByAltText('Feature group')).toBeInTheDocument();
       });
     });
 
@@ -609,8 +623,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature online store');
+        expect(screen.getByAltText('Feature online store')).toBeInTheDocument();
       });
     });
 
@@ -622,8 +635,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature view');
+        expect(screen.getByAltText('Feature view')).toBeInTheDocument();
       });
     });
 
@@ -651,8 +663,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Glossary Category');
+        expect(screen.getByAltText('Glossary Category')).toBeInTheDocument();
       });
     });
 
@@ -664,8 +675,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Glossary Term');
+        expect(screen.getByAltText('Glossary Term')).toBeInTheDocument();
       });
     });
 
@@ -709,8 +719,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Unknown');
+        expect(screen.getByAltText('Unknown')).toBeInTheDocument();
       });
     });
   });
@@ -724,8 +733,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Table');
+        expect(screen.getByAltText('Table')).toBeInTheDocument();
       });
     });
 

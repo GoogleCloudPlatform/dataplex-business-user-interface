@@ -16,6 +16,8 @@ type SearchState = {
   searchType: string;
   searchFilters: any[];
   semanticSearch?: boolean;
+  isSearchFiltersOpen: boolean;
+  searchSubmitted: boolean;
 };
 
 describe('searchSlice', () => {
@@ -440,6 +442,8 @@ describe('searchSlice', () => {
         searchType: 'All',
         searchFilters: [],
         semanticSearch: false,
+        isSearchFiltersOpen: true,
+        searchSubmitted: false,
       };
 
       const action = setSearchTerm({ searchTerm: 'direct test' });
@@ -455,6 +459,8 @@ describe('searchSlice', () => {
         searchType: 'All',
         searchFilters: [],
         semanticSearch: false,
+        isSearchFiltersOpen: true,
+        searchSubmitted: false,
       };
 
       const action = setSearchResult({ data: 'test' });
@@ -470,6 +476,8 @@ describe('searchSlice', () => {
         searchType: 'All',
         searchFilters: [],
         semanticSearch: false,
+        isSearchFiltersOpen: true,
+        searchSubmitted: false,
       };
 
       const action = setSearchType({ searchType: 'View' });
@@ -485,6 +493,8 @@ describe('searchSlice', () => {
         searchType: 'All',
         searchFilters: [],
         semanticSearch: false,
+        isSearchFiltersOpen: true,
+        searchSubmitted: false,
       };
 
       const action = setSearchFilters({ searchFilters: [{ type: 'test' }] });
@@ -500,6 +510,8 @@ describe('searchSlice', () => {
         searchType: 'All',
         searchFilters: [],
         semanticSearch: false,
+        isSearchFiltersOpen: true,
+        searchSubmitted: false,
       };
 
       const action = setSemanticSearch({ semanticSearch: true });

@@ -2,8 +2,8 @@ import React from 'react';
 import './GlobalSidebar.css';
 
 interface SidebarMenuItemProps {
-  icon: React.ReactNode;
-  label: string;
+  icon: string;
+  label: React.ReactNode;
   isActive?: boolean;
   onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   disabled?: boolean;
@@ -33,7 +33,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       aria-disabled={disabled}
     >
       <div className="menu-icon-container">
-        {icon}
+        <span className="material-symbols-outlined sidebar-icon">{icon}</span>
       </div>
       <span className="menu-label">{label}</span>
     </div>
