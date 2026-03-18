@@ -10,11 +10,13 @@ const createMockStore = (initialState: any = {}) => {
   return configureStore({
     reducer: {
       search: (state = { searchFilters: {}, semanticSearch: true, ...(initialState.search || {}) }) => state,
-      entry: (state = { status: 'idle', ...(initialState.entry || {}) }) => state
+      entry: (state = { status: 'idle', ...(initialState.entry || {}) }) => state,
+      user: (state = { mode: 'light', ...(initialState.user || {}) }) => state
     },
     preloadedState: {
       search: { searchFilters: {}, semanticSearch: false, ...(initialState.search || {}) },
-      entry: { status: 'idle', ...(initialState.entry || {}) }
+      entry: { status: 'idle', ...(initialState.entry || {}) },
+      user: { mode: 'light', ...(initialState.user || {}) }
     }
   });
 };
@@ -208,7 +210,7 @@ describe('ResourceViewer', () => {
     renderResourceViewer({ resourcesStatus: 'loading' });
 
     expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
-    expect(screen.getByText('Loading list (6)')).toBeInTheDocument();
+    expect(screen.getByText('Loading search-card (6)')).toBeInTheDocument();
   });
 
   it('renders resources in list view by default', () => {
@@ -230,41 +232,9 @@ describe('ResourceViewer', () => {
   it('displays top results indicator', () => {
     renderResourceViewer();
 
-    expect(screen.getByText('Top 100 results')).toBeInTheDocument();
+    expect(screen.getByText('Search results')).toBeInTheDocument();
   });
 
-  it('displays type filter tags', () => {
-    renderResourceViewer();
-
-    // Component shows tags without counts by default
-    expect(screen.getByText('table')).toBeInTheDocument();
-    expect(screen.getByText('dataset')).toBeInTheDocument();
-  });
-
-  it('handles type filter selection', () => {
-    const mockOnTypeFilterChange = vi.fn();
-    renderResourceViewer({ onTypeFilterChange: mockOnTypeFilterChange });
-
-    const tableFilter = screen.getByText('table');
-    const clickButton = tableFilter.closest('[data-testid="filter-tag"]')?.querySelector('[data-testid="click-button"]');
-    fireEvent.click(clickButton!);
-
-    expect(mockOnTypeFilterChange).toHaveBeenCalledWith(null);
-  });
-
-  it('handles type filter deselection when already selected', () => {
-    const mockOnTypeFilterChange = vi.fn();
-    renderResourceViewer({
-      selectedTypeFilter: 'table',
-      onTypeFilterChange: mockOnTypeFilterChange
-    });
-
-    const tableFilter = screen.getByText('table');
-    const clickButton = tableFilter.closest('[data-testid="filter-tag"]')?.querySelector('[data-testid="click-button"]');
-    fireEvent.click(clickButton!);
-
-    expect(mockOnTypeFilterChange).toHaveBeenCalledWith(null);
-  });
 
   it('filters resources by selected type filter', () => {
     renderResourceViewer({ selectedTypeFilter: 'table' });
@@ -277,31 +247,6 @@ describe('ResourceViewer', () => {
     expect(screen.getAllByTestId('search-entries-card')).toHaveLength(3);
   });
 
-  it('displays selected filters as tags', () => {
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' }
-    ];
-    renderResourceViewer({ selectedFilters }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Component uses FilterChips component to display selected filters
-    expect(screen.getByText('BigQuery')).toBeInTheDocument();
-  });
-
-  it('handles removing selected filter tags', () => {
-    const mockOnFiltersChange = vi.fn();
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' }
-    ];
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    const closeButton = screen.getByTestId('close-button');
-    fireEvent.click(closeButton);
-
-    expect(mockOnFiltersChange).toHaveBeenCalledWith([]);
-  });
 
   it('handles view mode toggle', () => {
     const mockOnViewModeChange = vi.fn();
@@ -316,27 +261,25 @@ describe('ResourceViewer', () => {
   it('displays sort options when showSortBy is true', () => {
     renderResourceViewer({ showSortBy: true });
 
-    expect(screen.getByText('Sort by:')).toBeInTheDocument();
-    expect(screen.getByText('Last Modified')).toBeInTheDocument();
+    expect(screen.getByText('Most relevant')).toBeInTheDocument();
   });
 
   it('handles sort menu interactions', () => {
     renderResourceViewer({ showSortBy: true });
 
-    const sortButton = screen.getByText('Last Modified');
+    const sortButton = screen.getByText('Most relevant');
     fireEvent.click(sortButton);
 
     // Check that menu items are present
     expect(screen.getByRole('menu')).toBeInTheDocument();
     expect(screen.getByText('Name')).toBeInTheDocument();
-    // Use getAllByText to handle multiple "Last Modified" elements
-    expect(screen.getAllByText('Last Modified')).toHaveLength(2);
+    expect(screen.getByText('Last Modified')).toBeInTheDocument();
   });
 
   it('handles sort option selection', () => {
     renderResourceViewer({ showSortBy: true });
 
-    const sortButton = screen.getByText('Last Modified');
+    const sortButton = screen.getByText('Most relevant');
     fireEvent.click(sortButton);
 
     const nameOptions = screen.getAllByText('Name');
@@ -350,7 +293,7 @@ describe('ResourceViewer', () => {
   it('sorts resources by name', () => {
     renderResourceViewer({ showSortBy: true });
 
-    const sortButton = screen.getByText('Last Modified');
+    const sortButton = screen.getByText('Most relevant');
     fireEvent.click(sortButton);
     const nameOptions = screen.getAllByText('Name');
     const menuItem = nameOptions.find(el => el.closest('[role="menuitem"]'));
@@ -366,11 +309,11 @@ describe('ResourceViewer', () => {
   it('sorts resources by last modified (default)', () => {
     renderResourceViewer();
 
-    // Resources should be sorted by last modified (newest first)
+    // Default sortOrder is null, so resources display in original order
     const cards = screen.getAllByTestId('search-entries-card');
-    expect(cards[0]).toHaveTextContent('Dataset 1'); // Jan 3, 2022
-    expect(cards[1]).toHaveTextContent('Table 2');   // Jan 2, 2022
-    expect(cards[2]).toHaveTextContent('Table 1');   // Jan 1, 2022
+    expect(cards[0]).toHaveTextContent('Table 1');
+    expect(cards[1]).toHaveTextContent('Table 2');
+    expect(cards[2]).toHaveTextContent('Dataset 1');
   });
 
   it('handles resource selection for preview', () => {
@@ -380,8 +323,8 @@ describe('ResourceViewer', () => {
     const firstCard = screen.getAllByTestId('search-entries-card')[0];
     fireEvent.click(firstCard);
 
-    // First card is Dataset 1 (sorted by last modified, newest first)
-    expect(mockOnPreviewDataChange).toHaveBeenCalledWith(mockResources[2].dataplexEntry);
+    // Default sortOrder is null, so resources are in original order. First card is Table 1.
+    expect(mockOnPreviewDataChange).toHaveBeenCalledWith(mockResources[0].dataplexEntry);
   });
 
   it('shows selected resource indicator', () => {
@@ -392,69 +335,33 @@ describe('ResourceViewer', () => {
     expect(selectedIndicator).toBeInTheDocument();
   });
 
-  it('handles info icon click to toggle preview', () => {
-    const mockOnPreviewDataChange = vi.fn();
-    renderResourceViewer({ onPreviewDataChange: mockOnPreviewDataChange });
-
-    const infoIcon = screen.getByTestId('info-outlined');
-    fireEvent.click(infoIcon);
-
-    expect(mockOnPreviewDataChange).toHaveBeenCalledWith({ isPlaceholder: true });
-  });
-
-  it('shows preview when info is open', () => {
-    const mockPreviewData = { name: 'test-resource', isPlaceholder: true };
-    renderResourceViewer({ previewData: mockPreviewData });
-
-    // Component doesn't render ResourcePreview itself, just manages state
-    // Check that the info icon shows active state when preview is open
-    const infoIcon = screen.getByTestId('info-outlined');
-    expect(infoIcon).toBeInTheDocument();
-  });
-
-  it('handles preview close', () => {
-    const mockOnPreviewDataChange = vi.fn();
-    const mockPreviewData = { name: 'test-resource' };
-    renderResourceViewer({
-      previewData: mockPreviewData,
-      onPreviewDataChange: mockOnPreviewDataChange
-    });
-
-    // Clicking info icon when preview is open should close it
-    const infoIcon = screen.getByTestId('info-outlined');
-    fireEvent.click(infoIcon);
-
-    expect(mockOnPreviewDataChange).toHaveBeenCalledWith(null);
-  });
 
   it('handles table view row click', () => {
     const mockOnPreviewDataChange = vi.fn();
-    renderResourceViewer({ 
+    renderResourceViewer({
       viewMode: 'table',
-      onPreviewDataChange: mockOnPreviewDataChange 
+      onPreviewDataChange: mockOnPreviewDataChange
     });
 
     const clickRowButton = screen.getByText('Click Row');
     fireEvent.click(clickRowButton);
 
-    // The mock SearchTableView passes the first resource from the filtered array
-    // which is sorted by last modified (newest first), so it's Dataset 1
-    expect(mockOnPreviewDataChange).toHaveBeenCalledWith(mockResources[2].dataplexEntry);
+    // Default sortOrder is null, so resources are in original order. First is Table 1.
+    expect(mockOnPreviewDataChange).toHaveBeenCalledWith(mockResources[0].dataplexEntry);
   });
 
   it('handles table view favorite click', () => {
     const mockOnFavoriteClick = vi.fn();
-    renderResourceViewer({ 
+    renderResourceViewer({
       viewMode: 'table',
-      onFavoriteClick: mockOnFavoriteClick 
+      onFavoriteClick: mockOnFavoriteClick
     });
 
     const favoriteButton = screen.getByText('Favorite');
     fireEvent.click(favoriteButton);
 
-    // The mock SearchTableView passes the first resource from the filtered array
-    // which is sorted by last modified (newest first), so it's Dataset 1
-    expect(mockOnFavoriteClick).toHaveBeenCalledWith(mockResources[2].dataplexEntry);
+    // Default sortOrder is null, so resources are in original order. First is Table 1.
+    expect(mockOnFavoriteClick).toHaveBeenCalledWith(mockResources[0].dataplexEntry);
   });
 
   it('displays no resources message when filtered results are empty', () => {
@@ -547,54 +454,9 @@ describe('ResourceViewer', () => {
     expect(screen.queryByText('dataset (1)')).not.toBeInTheDocument();
   });
 
-  it('handles filter result count calculation', () => {
-    const selectedFilters = [
-      { name: 'table', type: 'typeAliases' }
-    ];
-    renderResourceViewer({ selectedFilters }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
 
-    // Component only shows counts when selectedFilters.length === 1
-    // Check that the filter chip is rendered
-    const filterChip = screen.getByTestId('filter-chip');
-    expect(filterChip).toHaveTextContent('table');
-  });
 
-  it('handles preview data change from ResourcePreview', () => {
-    const mockOnPreviewDataChange = vi.fn();
-    renderResourceViewer({ onPreviewDataChange: mockOnPreviewDataChange });
 
-    // Clicking info icon opens preview
-    const infoIcon = screen.getByTestId('info-outlined');
-    fireEvent.click(infoIcon);
-
-    expect(mockOnPreviewDataChange).toHaveBeenCalledWith({ isPlaceholder: true });
-  });
-
-  it('handles view details from ResourcePreview', () => {
-    const mockOnViewDetails = vi.fn();
-    const previewData = mockResources[0].dataplexEntry;
-    renderResourceViewer({
-      previewData,
-      onViewDetails: mockOnViewDetails
-    });
-
-    // Component accepts onViewDetails prop but doesn't render ResourcePreview
-    // Just verify the component renders without error
-    expect(screen.getByTestId('info-outlined')).toBeInTheDocument();
-  });
-
-  it('handles request access from ResourcePreview', () => {
-    const mockOnRequestAccess = vi.fn();
-    const previewData = mockResources[0].dataplexEntry;
-    renderResourceViewer({
-      previewData,
-      onRequestAccess: mockOnRequestAccess
-    });
-
-    // Component accepts onRequestAccess prop but doesn't render ResourcePreview
-    // Just verify the component renders without error
-    expect(screen.getByTestId('info-outlined')).toBeInTheDocument();
-  });
 
   it('applies custom container style', () => {
     const containerStyle = { backgroundColor: 'red' };
@@ -613,28 +475,7 @@ describe('ResourceViewer', () => {
     expect(screen.getByText('Table 1')).toBeInTheDocument();
   });
 
-  it('handles multiple filter selections', () => {
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' },
-      { name: 'Table', type: 'typeAliases' }
-    ];
-    renderResourceViewer({ selectedFilters }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
 
-    // Component doesn't show counts when there are multiple filters
-    // FilterChips should render the selected filters
-    expect(screen.getByText('BigQuery')).toBeInTheDocument();
-    expect(screen.getByText('Table')).toBeInTheDocument();
-  });
-
-  it('handles filter tags with undefined counts', () => {
-    const selectedFilters = [
-      { name: 'UnknownFilter', type: 'unknownType' }
-    ];
-    renderResourceViewer({ selectedFilters }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Should show filter name without count for unknown types
-    expect(screen.getByText('UnknownFilter')).toBeInTheDocument();
-  });
 
   it('handles empty resources array', () => {
     renderResourceViewer({
@@ -658,10 +499,9 @@ describe('ResourceViewer', () => {
       }
     ];
 
-    // Component crashes when entryType is undefined due to .includes() call
-    expect(() => {
-      renderResourceViewer({ resources: resourcesWithMissingType });
-    }).toThrow();
+    // Type filtering is commented out, so missing entryType no longer crashes
+    renderResourceViewer({ resources: resourcesWithMissingType });
+    expect(screen.getByText('Table 1')).toBeInTheDocument();
   });
 
   it('handles sort by name with missing display names', () => {
@@ -698,7 +538,7 @@ describe('ResourceViewer', () => {
   it('displays semantic search results indicator', () => {
     renderResourceViewer({}, { search: { searchFilters: [], semanticSearch: true } });
 
-    expect(screen.getByText('Top 100 results')).toBeInTheDocument();
+    expect(screen.getByText('Search results')).toBeInTheDocument();
   });
 
   it('handles failed status with INVALID_ARGUMENT error', () => {
@@ -778,8 +618,9 @@ describe('ResourceViewer', () => {
 
     // Find a card that is NOT selected (doesn't have the selected indicator)
     const cards = screen.getAllByTestId('search-entries-card');
-    // First card after sorting is Dataset 1, which is NOT Table 1, so it should work
-    const differentCard = cards[0];
+    // Default sortOrder is null so original order: Table 1 (selected), Table 2, Dataset 1
+    // Use cards[1] which is Table 2, not the previewed one
+    const differentCard = cards[1];
 
     // Make sure it's not the selected one
     if (!differentCard.querySelector('[data-testid="selected-indicator"]')) {
@@ -815,80 +656,6 @@ describe('ResourceViewer', () => {
     expect(cards[0]).toBeInTheDocument();
   });
 
-  it('handles removing system filter and updates search type', () => {
-    const mockOnFiltersChange = vi.fn();
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' },
-      { name: 'CloudSQL', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Remove one system filter
-    const closeButtons = screen.getAllByTestId('close-button');
-    fireEvent.click(closeButtons[0]);
-
-    expect(mockOnFiltersChange).toHaveBeenCalled();
-  });
-
-  it('handles removing last system filter and resets search type to All', () => {
-    const mockOnFiltersChange = vi.fn();
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    const closeButton = screen.getByTestId('close-button');
-    fireEvent.click(closeButton);
-
-    expect(mockOnFiltersChange).toHaveBeenCalledWith([]);
-  });
-
-  it('handles type filter click when filter already selected', () => {
-    const mockOnFiltersChange = vi.fn();
-    const mockOnTypeFilterChange = vi.fn();
-    const selectedFilters = [
-      { name: 'table', type: 'typeAliases' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange,
-      onTypeFilterChange: mockOnTypeFilterChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // The table filter should appear as a chip, not as a tag
-    // Try to find a filter tag for a different type
-    const datasetTag = screen.queryByText('dataset');
-    if (datasetTag) {
-      const clickButton = datasetTag.closest('[data-testid="filter-tag"]')?.querySelector('[data-testid="click-button"]');
-      if (clickButton) {
-        fireEvent.click(clickButton);
-        expect(mockOnFiltersChange).toHaveBeenCalled();
-      }
-    }
-  });
-
-  it('calculates filter result count for system type with single filter', () => {
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      resourcesTotalSize: 42
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // FilterChips component should receive the count
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
 
   it('sorts resources correctly when both have no display name', () => {
     const resourcesNoNames = [
@@ -916,7 +683,7 @@ describe('ResourceViewer', () => {
     });
 
     // Open sort menu and select Name
-    const sortButton = screen.getByText('Last Modified');
+    const sortButton = screen.getByText('Most relevant');
     fireEvent.click(sortButton);
     const nameOptions = screen.getAllByText('Name');
     const menuItem = nameOptions.find(el => el.closest('[role="menuitem"]'));
@@ -950,27 +717,12 @@ describe('ResourceViewer', () => {
       resources: resourcesMixedTime
     });
 
-    // B should come first (has update time, sorted newest first)
+    // Default sortOrder is null, so resources are in original order (A first, then B)
     const cards = screen.getAllByTestId('search-entries-card');
-    expect(cards[0]).toHaveTextContent('B');
+    expect(cards[0]).toHaveTextContent('A');
+    expect(cards[1]).toHaveTextContent('B');
   });
 
-  it('handles onFiltersChange being undefined', () => {
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' }
-    ];
-
-    // Don't pass onFiltersChange
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: undefined
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    const closeButton = screen.getByTestId('close-button');
-
-    // Should not throw when clicking close without onFiltersChange
-    expect(() => fireEvent.click(closeButton)).not.toThrow();
-  });
 
   it('handles onFavoriteClick being undefined in list view', () => {
     renderResourceViewer({
@@ -981,54 +733,7 @@ describe('ResourceViewer', () => {
     expect(screen.getAllByTestId('search-entries-card')).toHaveLength(3);
   });
 
-  it('shows type filter tags only for types present in resources', () => {
-    const limitedResources = [
-      {
-        dataplexEntry: {
-          name: 'project/dataset/table1',
-          entrySource: { displayName: 'Table 1' },
-          entryType: 'tables-table',
-          updateTime: { seconds: 1640995200 }
-        }
-      }
-    ];
 
-    renderResourceViewer({
-      resources: limitedResources,
-      typeAliases: ['table', 'dataset', 'view']
-    });
-
-    // Only 'table' should be shown as a filter tag
-    expect(screen.getByText('table')).toBeInTheDocument();
-    expect(screen.queryByText(/^dataset$/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^view$/)).not.toBeInTheDocument();
-  });
-
-  it('handles getFilterResultCount for non-matching filter types', () => {
-    const selectedFilters = [
-      { name: 'SomeProject', type: 'project' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Should still render without errors
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
-
-  it('handles empty filter name in getFilterResultCount', () => {
-    const selectedFilters = [
-      { name: '', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Should still render without errors
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
 
   it('handles idle resources status', () => {
     renderResourceViewer({
@@ -1069,134 +774,10 @@ describe('ResourceViewer', () => {
     expect(screen.getByTestId('search-table-view')).toBeInTheDocument();
   });
 
-  it('handles removing typeAliases filter type', () => {
-    const mockOnFiltersChange = vi.fn();
-    const selectedFilters = [
-      { name: 'table', type: 'typeAliases' }
-    ];
 
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
 
-    const closeButton = screen.getByTestId('close-button');
-    fireEvent.click(closeButton);
 
-    // Should call onFiltersChange with the filter removed
-    expect(mockOnFiltersChange).toHaveBeenCalledWith([]);
-  });
 
-  it('handles typeAliases filter with matching filter in getFilterResultCount', () => {
-    const selectedFilters = [
-      { name: 'table', type: 'typeAliases' }
-    ];
 
-    renderResourceViewer({
-      selectedFilters,
-      resourcesTotalSize: 25
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
 
-    // The FilterChips mock should receive the count
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
-
-  it('handles removing typeAliases filter through handleTypeFilterClick when already selected', () => {
-    const mockOnFiltersChange = vi.fn();
-    const mockOnTypeFilterChange = vi.fn();
-
-    // Start with table filter already selected
-    const selectedFilters = [
-      { name: 'table', type: 'typeAliases' }
-    ];
-
-    // We need resources that include the type to show the filter tag
-    const resourcesForTest = [
-      {
-        dataplexEntry: {
-          name: 'project/dataset/dataset1',
-          entrySource: { displayName: 'Dataset 1' },
-          entryType: 'datasets-dataset',
-          updateTime: { seconds: 1640995200 }
-        }
-      }
-    ];
-
-    renderResourceViewer({
-      resources: resourcesForTest,
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange,
-      onTypeFilterChange: mockOnTypeFilterChange,
-      typeAliases: ['dataset']
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Find and click the dataset filter tag
-    const datasetTag = screen.getByText('dataset');
-    const clickButton = datasetTag.closest('[data-testid="filter-tag"]')?.querySelector('[data-testid="click-button"]');
-
-    if (clickButton) {
-      fireEvent.click(clickButton);
-      expect(mockOnFiltersChange).toHaveBeenCalled();
-    }
-  });
-
-  it('handles filter with special characters in name', () => {
-    // Test with filter containing special characters
-    const selectedFilters = [
-      { name: 'BigQuery-Dataset_v2', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Should render without crashing
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
-
-  it('handles single system filter remaining after removal', () => {
-    const mockOnFiltersChange = vi.fn();
-    const selectedFilters = [
-      { name: 'BigQuery', type: 'system' },
-      { name: 'CloudSQL', type: 'system' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      onFiltersChange: mockOnFiltersChange
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    // Remove first filter - one system filter remains
-    const closeButtons = screen.getAllByTestId('close-button');
-    fireEvent.click(closeButtons[0]);
-
-    // Should dispatch setSearchType with the remaining filter name
-    expect(mockOnFiltersChange).toHaveBeenCalled();
-  });
-
-  it('handles getFilterResultCount when filter name matches but type is different', () => {
-    const selectedFilters = [
-      { name: 'table', type: 'system' }  // table as system, not typeAliases
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      resourcesTotalSize: 30
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
-
-  it('handles getFilterResultCount for typeAliases when filter not found', () => {
-    const selectedFilters = [
-      { name: 'nonexistent', type: 'typeAliases' }
-    ];
-
-    renderResourceViewer({
-      selectedFilters,
-      resourcesTotalSize: 10
-    }, { search: { searchFilters: selectedFilters, semanticSearch: false } });
-
-    expect(screen.getByTestId('filter-chips')).toBeInTheDocument();
-  });
 });

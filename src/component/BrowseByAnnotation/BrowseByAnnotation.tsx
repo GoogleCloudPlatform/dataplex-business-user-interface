@@ -406,7 +406,7 @@ const BrowseByAnnotation = () => {
         pb: 2,
         pt: 0,
         backgroundColor: '#F8FAFD',
-        height: 'calc(100vh - 64px)',
+        height: 'calc(100vh - 72px)',
         width: '100%',
         overflow: 'hidden',
       }}>

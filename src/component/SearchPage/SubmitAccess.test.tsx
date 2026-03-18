@@ -445,14 +445,14 @@ describe('SubmitAccess', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
-    it('shows CircularProgress when entry is null', () => {
+    it('shows panel with skeleton contacts when entry is null', () => {
       render(
         <AuthContext.Provider value={mockAuthContextValue}>
           <SubmitAccess {...defaultProps} entry={null} />
         </AuthContext.Provider>
       );
 
-      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      expect(screen.getByText(/Request Access for/i)).toBeInTheDocument();
     });
 
     it('shows CircularProgress when both previewData and entry are undefined', () => {
@@ -683,8 +683,8 @@ describe('SubmitAccess', () => {
       renderSubmitAccess({ entry: lookupEntry, previewData: lookupPreview, isLookup: true });
 
       await waitFor(() => {
-        // In lookup mode, dates are split on 'T' and displayed
-        expect(screen.getByText(/2021-01-01/)).toBeInTheDocument();
+        // Dates are formatted by getFormattedDateTimePartsByDateTime
+        expect(screen.getByText(/January 1, 2021/)).toBeInTheDocument();
       });
     });
 
@@ -847,7 +847,7 @@ describe('SubmitAccess', () => {
         </AuthContext.Provider>
       );
 
-      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      expect(screen.getByText(/Request Access for/i)).toBeInTheDocument();
     });
 
     it('handles entry with missing aspects.contacts', () => {

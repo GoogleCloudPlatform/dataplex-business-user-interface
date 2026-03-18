@@ -328,6 +328,8 @@ const DataProducts = () => {
         `https://dataplex.googleapis.com/v1/projects/${import.meta.env.VITE_GOOGLE_PROJECT_ID}/locations/global:searchEntries`,
         {
           query: `${debouncedSearchTerm} AND (type="data_product")`,
+          orderBy: 'relevance',
+          semanticSearch: true,
         },
         {
           headers: {
@@ -375,7 +377,7 @@ const DataProducts = () => {
       pb: { xs: 1, sm: 2 },
       pt: 0,
       backgroundColor: '#F8FAFD',
-      height: { xs: 'calc(100vh - 56px)', sm: 'calc(100vh - 64px)' },
+      height: { xs: 'calc(100vh - 56px)', sm: 'calc(100vh - 72px)' },
       width: '100%',
       overflow: 'hidden'
     }}>
@@ -383,7 +385,7 @@ const DataProducts = () => {
         elevation={0}
         sx={{
           flex: 1,
-          height: { xs: 'calc(100vh - 64px)', sm: 'calc(100vh - 80px)' },
+          height: { xs: 'calc(100vh - 72px)', sm: 'calc(100vh - 88px)' },
           borderRadius: { xs: '16px', sm: '24px' },
           backgroundColor: '#fff',
           border: 'transparent',
@@ -520,85 +522,98 @@ const DataProducts = () => {
                         aria-label="view mode"
                         size="small"
                         sx={{
-                        width: 'clamp(4rem, 5vw, 5rem)', // fluid width
-                        height: 'clamp(1.2rem, 1.8vw, 1.5rem)', // fluid height
-                        borderRadius: '1rem',
-                        border: '1px solid #E2E8F0',
-                        backgroundColor: '#FFFFFF',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        flexShrink: 0,
-                        padding: 0,
-                        '& .MuiToggleButton-root': {
+                          width: '5rem',
+                          height: '1.5rem',
+                          borderRadius: '1rem',
+                          border: '1px solid #747775',
+                          backgroundColor: '#FFFFFF',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                          padding: 0,
+                          '& .MuiToggleButton-root': {
                             border: 'none',
-                            borderRadius: '1rem',
+                            borderRadius: 0,
                             padding: '0px',
                             fontSize: 0,
                             fontWeight: 500,
                             fontFamily: '"Google Sans Text", sans-serif',
                             lineHeight: 1,
                             minWidth: 'auto',
-                            height: 'clamp(1.2rem, 1.8vw, 1.5rem)',
+                            height: '1.5rem',
                             margin: 0,
                             backgroundColor: 'transparent',
-                            color: '#64748B',
+                            color: '#1F1F1F',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: '0.125rem',
                             transition: 'all 0.2s ease-in-out',
+                            borderRight: '1px solid #747775',
                             '&:first-of-type': {
-                            borderTopRightRadius: 0,
-                            borderBottomRightRadius: 0,
+                              borderTopLeftRadius: '1rem',
+                              borderBottomLeftRadius: '1rem',
                             },
                             '&:last-of-type': {
-                            borderTopLeftRadius: 0,
-                            borderBottomLeftRadius: 0,
+                              borderTopRightRadius: '1rem',
+                              borderBottomRightRadius: '1rem',
+                              borderRight: 'none',
                             },
                             '&.Mui-selected': {
-                            width: '3.125rem', // 50px when selected (fits check + icon)
-                            backgroundColor: '#E8F0FE',
-                            color: '#0B57D0',
-                            borderColor: 'transparent',
-                            padding: '0 0.25rem', // 4px horizontal padding when selected
-                            '& svg': {
+                              width: '3.125rem',
+                              backgroundColor: '#E8F0FE',
+                              color: '#0B57D0',
+                              borderRight: '1px solid #747775',
+                              padding: '0 0.25rem',
+                              '& svg': {
                                 fill: '#0B57D0'
-                            }
+                              }
+                            },
+                            '&.Mui-selected:last-of-type': {
+                              borderRight: 'none',
                             },
                             '&:not(.Mui-selected)': {
-                            width: '1.875rem', // 30px when not selected (icon only)
-                            backgroundColor: 'transparent',
-                            color: '#64748B',
-                            borderColor: 'transparent',
-                            padding: '0', // No padding when not selected
-                            '& svg': {
-                                fill: '#64748B'
-                            },
-                            '&:hover': {
-                                backgroundColor: '#F8FAFC',
-                                color: '#475569'
+                              width: '1.875rem',
+                              backgroundColor: 'transparent',
+                              color: '#1F1F1F',
+                              padding: '0',
+                              '& svg': {
+                                fill: '#1F1F1F'
+                              },
+                              '&:hover': {
+                                backgroundColor: '#F0F0F0',
+                                color: '#1F1F1F'
+                              }
                             }
-                            }
-                        }
+                          }
                         }}
                     >
-                        <ToggleButton value="table" aria-label="table view">
-                        {viewMode === 'table' && (
+                        <ToggleButton value="list" aria-label="card view">
+                          {viewMode === 'list' && (
                             <img src="/assets/svg/check.svg" alt="Check" style={{ width: '16px', height: '16px', marginRight: '2px' }} />
-                        )}
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M13.1368 13.1369V10.4486H2.86285V13.1369H13.1368ZM13.1368 9.42119V6.57872H2.86285V9.42119H13.1368ZM13.1368 5.55132V2.86297H2.86285V5.55132H13.1368ZM2.86285 14.1643C2.58887 14.1643 2.34915 14.0616 2.14367 13.8561C1.93819 13.6506 1.83545 13.4109 1.83545 13.1369V2.86297C1.83545 2.589 1.93819 2.34927 2.14367 2.14379C2.34915 1.93831 2.58887 1.83557 2.86285 1.83557H13.1368C13.4108 1.83557 13.6505 1.93831 13.856 2.14379C14.0615 2.34927 14.1642 2.589 14.1642 2.86297V13.1369C14.1642 13.4109 14.0615 13.6506 13.856 13.8561C13.6505 14.0616 13.4108 14.1643 13.1368 14.1643H2.86285Z" fill={viewMode === 'table' ? '#0B57D0' : '#64748B'}/>
-                            <rect x="5" y="2" width="1" height="12" fill={viewMode === 'table' ? '#0B57D0' : '#64748B'}/>
-                        </svg>
+                          )}
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <mask id="mask_dp_card" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+                              <rect width="16" height="16" fill="#D9D9D9"/>
+                            </mask>
+                            <g mask="url(#mask_dp_card)">
+                              <path d="M3.33333 7.33333C2.96667 7.33333 2.65278 7.20278 2.39167 6.94167C2.13056 6.68056 2 6.36667 2 6V3.33333C2 2.96667 2.13056 2.65278 2.39167 2.39167C2.65278 2.13056 2.96667 2 3.33333 2H12.6667C13.0333 2 13.3472 2.13056 13.6083 2.39167C13.8694 2.65278 14 2.96667 14 3.33333V6C14 6.36667 13.8694 6.68056 13.6083 6.94167C13.3472 7.20278 13.0333 7.33333 12.6667 7.33333H3.33333ZM3.33333 6H12.6667V3.33333H3.33333V6ZM3.33333 14C2.96667 14 2.65278 13.8694 2.39167 13.6083C2.13056 13.3472 2 13.0333 2 12.6667V10C2 9.63333 2.13056 9.31945 2.39167 9.05833C2.65278 8.79722 2.96667 8.66667 3.33333 8.66667H12.6667C13.0333 8.66667 13.3472 8.79722 13.6083 9.05833C13.8694 9.31945 14 9.63333 14 10V12.6667C14 13.0333 13.8694 13.3472 13.6083 13.6083C13.3472 13.8694 13.0333 14 12.6667 14H3.33333ZM3.33333 12.6667H12.6667V10H3.33333V12.6667Z" fill={viewMode === 'list' ? '#0B57D0' : '#1F1F1F'}/>
+                            </g>
+                          </svg>
                         </ToggleButton>
-                        <ToggleButton value="list" aria-label="list view">
-                        {viewMode === 'list' && (
+                        <ToggleButton value="table" aria-label="table view">
+                          {viewMode === 'table' && (
                             <img src="/assets/svg/check.svg" alt="Check" style={{ width: '16px', height: '16px', marginRight: '2px' }} />
-                        )}
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 13V11H14V13H2ZM2 9V7H14V9H2ZM2 5V3H14V5H2Z" fill={viewMode === 'list' ? '#0B57D0' : '#64748B'}/>
-                        </svg>
+                          )}
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <mask id="mask_dp_table" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+                              <rect width="16" height="16" fill="#D9D9D9"/>
+                            </mask>
+                            <g mask="url(#mask_dp_table)">
+                              <path d="M3.33333 14C2.96667 14 2.65278 13.8694 2.39167 13.6083C2.13056 13.3472 2 13.0333 2 12.6667V3.33333C2 2.96667 2.13056 2.65278 2.39167 2.39167C2.65278 2.13056 2.96667 2 3.33333 2H12.6667C13.0333 2 13.3472 2.13056 13.6083 2.39167C13.8694 2.65278 14 2.96667 14 3.33333V12.6667C14 13.0333 13.8694 13.3472 13.6083 13.6083C13.3472 13.8694 13.0333 14 12.6667 14H3.33333ZM7.33333 10H3.33333V12.6667H7.33333V10ZM8.66667 10V12.6667H12.6667V10H8.66667ZM7.33333 8.66667V6H3.33333V8.66667H7.33333ZM8.66667 8.66667H12.6667V6H8.66667V8.66667ZM3.33333 4.66667H12.6667V3.33333H3.33333V4.66667Z" fill={viewMode === 'table' ? '#0B57D0' : '#1F1F1F'}/>
+                            </g>
+                          </svg>
                         </ToggleButton>
                     </ToggleButtonGroup>
               </Box>

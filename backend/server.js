@@ -78,7 +78,7 @@ const PORT = process.env.PORT || 8080;
 // Define the rate limiting options
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    max: 1000, // limit each IP to 100 requests per windowMs
     message: 'Too many requests from this IP, please try again after 15 minutes',
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -119,7 +119,25 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Serve static files from the React build folder
-app.use(express.static(path.join(__dirname, 'dist')));
+const staticFilesPath = path.join(__dirname, 'dist'); 
+
+// Serve static files with custom headers
+app.use(express.static(staticFilesPath, {
+    index: 'index.html', // Ensure index.html is served for directory requests
+    setHeaders: (res, filePath) => {
+        // Check if the file path ends with index.html
+        if (filePath.endsWith('index.html')) {
+            // Apply cache-busting headers for index.html
+            res.setHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, no-store');
+            res.setHeader('Pragma', 'no-cache'); // For backward compatibility with HTTP/1.0
+            res.setHeader('Expires', '0'); // For backward compatibility
+        } else {
+          // For other static assets (which typically have cache-busting hashes in their filenames in React SPAs)
+          // We are setting a long max-age for long-term caching
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
+        }
+    }
+}));
 
 // --- File Path for Local Data ---
 const dataFilePath = path.join(__dirname, 'configData.json');
@@ -550,6 +568,38 @@ app.get('/api/v1/get-entry', async (req, res) => {
   } catch (error) {
     console.error('Error fetching entry', error);
     return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
+  }
+});
+
+/**
+ * GET /api/v1/check-entry-access
+ * A lightweight endpoint that checks if the user has access to a Dataplex entry.
+ * Uses EntryView.BASIC to minimize payload — returns only access status, not full entry data.
+ */
+app.get('/api/v1/check-entry-access', async (req, res) => {
+  try {
+    const entryName = req.query.entryName;
+    const accessToken = req.headers.authorization?.split(' ')[1];
+
+    const oauth2Client = new CustomGoogleAuth(accessToken);
+    const dataplexClientv1 = new CatalogServiceClient({
+      auth: oauth2Client,
+    });
+
+    if (!entryName) {
+      return res.status(400).json({ error: 'Entry name is required' });
+    }
+
+    const [entry] = await dataplexClientv1.getEntry({
+      name: entryName,
+      view: protos.google.cloud.dataplex.v1.EntryView.BASIC,
+    });
+
+    return res.json({ accessible: true, name: entry.name, entryType: entry.entryType });
+
+  } catch (error) {
+    console.error('Error checking entry access', error);
+    return checkErrorAndSendResponse(res, error, 'An error occurred while checking entry access.');
   }
 });
 
@@ -1239,26 +1289,6 @@ app.get('/api/v1/tag-templates', async (req, res) => {
   }
 });
 
-/**
- * POST /api/data
- * A protected endpoint to write data to a local data.json file.
- */
-// app.post('/api/v1/admin/configure', async (req, res) => {
-//   try {
-//     // The data to be written is the entire request body.
-//     const dataToWrite = req.body;
-//     // Convert the JSON object to a string with pretty printing (2-space indentation).
-//     const jsonString = JSON.stringify(dataToWrite, null, 2);
-//     // Write the string to the specified file path.
-//     await fs.writeFile(dataFilePath, jsonString, 'utf8');
-//     // Send a success response.
-//     res.status(200).json({ message: 'Data saved successfully.' });
-//   } catch (error) {
-//     console.error('Error writing data file:', error);
-//     return checkErrorAndSendResponse(res, error, 'Failed to save data.');
-//   }
-// });
-
 app.post('/api/v1/get-aspect-detail', async (req, res) => {
     const { name } = req.body;
 
@@ -1835,7 +1865,7 @@ app.post('/api/v1/get-dataset-entries', async (req, res) => {
 app.post('/api/v1/access-request', async (req, res) => {
   
   try {
-    const { assetName, message, requesterEmail, projectId, projectAdmin } = req.body;
+    const { assetName, message, requesterEmail, projectId, projectAdmin, isDataProductRequest, accessGroup } = req.body;
     
     // Validation
     if (!assetName || typeof assetName !== 'string' || assetName.trim() === '') {
@@ -1895,7 +1925,9 @@ app.post('/api/v1/access-request', async (req, res) => {
       message || '',
       requesterEmail,
       projectId,
-      projectAdmin || [] // Pass projectAdmin emails
+      projectAdmin || [], // Pass projectAdmin emails,
+      isDataProductRequest || false,
+      accessGroup || null
     );
     
     console.log('Email result:', emailResult);

@@ -5,6 +5,8 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sanitizeRedirectURL } from '../../../services/urlPreservationService';
 import { CircularProgress } from '@mui/material';
+import dataplexLogo from '/assets/svg/dataplex-universal-catalog-logo.svg';
+import googleLogo from '/assets/images/google-logo-figma-53c44d.png';
 
 const LoginV2: React.FC = () => {
   const { login } = useAuth();
@@ -40,7 +42,7 @@ const LoginV2: React.FC = () => {
     },
     onError: () => console.error('Google Login Failed'),
     flow: 'implicit',
-    scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
+    scope: 'https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
   });
 
   return (
@@ -49,7 +51,7 @@ const LoginV2: React.FC = () => {
         {/* Left Panel - Brand & messaging */}
         <div className="loginv2-left">
           <img
-            src="/assets/svg/dataplex-universal-catalog-logo.svg"
+            src={dataplexLogo}
             alt="Dataplex Universal Catalog"
             className="loginv2-logo"
           />
@@ -84,7 +86,7 @@ const LoginV2: React.FC = () => {
                   onClick={() => { googleLogin(); }}
                 >
                   <img
-                    src="/assets/images/google-logo-figma-53c44d.png"
+                    src={googleLogo}
                     alt="Google Icon"
                     className="loginv2-google-icon"
                   />

@@ -101,7 +101,11 @@ const DataProductsDetailView: React.FC<DataProductsDetailViewProps> = ({ onReque
   const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
   const id_token = user?.token || '';
 
-  const selectedDataProduct = JSON.parse(localStorage.getItem('selectedDataProduct') || '{}');
+
+  let selectedDataProduct = localStorage.getItem('selectedDataProduct') ? 
+  JSON.parse(localStorage.getItem('selectedDataProduct') || '{}') : {};
+
+  let accessGroups = selectedDataProduct ? (selectedDataProduct?.accessGroups || {}): {};
     const handleResourceClick = (id: string) => {
       dispatch(pushToHistory());
   
@@ -222,10 +226,6 @@ const tabProps = (index: number)  => {
   };
 
   const handleCloseNotification = () => {
-    setIsNotificationVisible(false);
-  };
-
-  const handleUndoNotification = () => {
     setIsNotificationVisible(false);
   };
 
@@ -512,13 +512,16 @@ const tabProps = (index: number)  => {
         onSubmitSuccess={handleSubmitSuccess}
         previewData={selectedDataProductDetails ?? null}
         isLookup={true}
+        isCalledFromDataProducts={true}
+        dataProductsDescription={selectedDataProductDetails?.entrySource?.description || ''}
+        assetCounts={selectedDataProduct.assetCount || 0}
+        accessGroups={Object.values(accessGroups) || []}
       />)}
 
       {/* Notification Bar */}
       <NotificationBar
         isVisible={isNotificationVisible}
         onClose={handleCloseNotification}
-        onUndo={handleUndoNotification}
         message={notificationMessage}
       />
       

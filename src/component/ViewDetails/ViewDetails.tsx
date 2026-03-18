@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { Box, Tab, Tabs, Tooltip, Skeleton } from '@mui/material'
 import { ArrowBack } from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import CustomTabPanel from '../TabPanel/CustomTabPanel'
 import PreviewAnnotation from '../Annotation/PreviewAnnotation'
@@ -102,10 +102,13 @@ const ViewDetails = () => {
   const sampleDataStatus = useSelector((state: any) => state.sampleData.status);
   const glossaryItems = useSelector((state: any) => state.glossaries.viewDetailsItems);
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const id_token = user?.token || '';
   const allScans = useSelector(selectAllScans);
   const allScansStatus = useSelector(selectAllScansStatus);
+  const initialTabName = (location.state as any)?.tabName as string | undefined;
+  const tabNameApplied = React.useRef(false);
   const [tabValue, setTabValue] = React.useState(0);
   const [sampleTableData, setSampleTableData] = React.useState<any>();
   const [filteredEntry, setFilteredEntry] = useState<any>(null);
@@ -469,6 +472,43 @@ useEffect(() => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.name]);
+
+  // Resolve a tab name (e.g. 'aspects', 'lineage') to a numeric index based on entry type
+  const resolveTabName = (tabName: string): number => {
+    const type = getEntryType(entry.name, '/');
+    const isBigQueryTable = type === 'Tables' && entry.entrySource?.system?.toLowerCase() === 'bigquery';
+    const gType = getGlossaryType(entry);
+
+    if (isBigQueryTable) {
+      const map: Record<string, number> = { overview: 0, aspects: 1, lineage: 2, dataProfile: 3, dataQuality: 4, insights: 5 };
+      return map[tabName] ?? 0;
+    }
+    if (type === 'Datasets') {
+      const map: Record<string, number> = { overview: 0, entryList: 1, aspects: 2 };
+      return map[tabName] ?? 0;
+    }
+    if (gType === 'glossary' || gType === 'category') {
+      const map: Record<string, number> = { overview: 0, categories: 1, terms: 2, aspects: 3 };
+      return map[tabName] ?? 0;
+    }
+    if (gType === 'term') {
+      const map: Record<string, number> = { overview: 0, linkedAssets: 1, synonyms: 2, aspects: 3 };
+      return map[tabName] ?? 0;
+    }
+    // Default
+    const map: Record<string, number> = { overview: 0, aspects: 1 };
+    return map[tabName] ?? 0;
+  };
+
+  // Apply tabName from route state when the new entry finishes loading
+  useEffect(() => {
+    if (!tabNameApplied.current && initialTabName && entryStatus === 'succeeded' && entry) {
+      setTabValue(resolveTabName(initialTabName));
+      tabNameApplied.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryStatus, initialTabName, entry]);
+
   // Lineage tab with full Lineage component
   const lineageTab = <Lineage entry={displayEntry}/>;
 

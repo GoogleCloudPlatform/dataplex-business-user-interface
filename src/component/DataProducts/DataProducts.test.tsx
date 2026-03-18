@@ -264,13 +264,13 @@ describe('DataProducts Components', () => {
       it('should show "no access groups" message when localStorage is empty', () => {
         localStorageMock.getItem.mockReturnValue(null);
         renderAccessGroup();
-        expect(screen.getByText('No access groups defined for this data product.')).toBeInTheDocument();
+        expect(screen.getByText('No access groups available for this data product.')).toBeInTheDocument();
       });
 
       it('should show "no access groups" message when accessGroups is empty object', () => {
         localStorageMock.getItem.mockReturnValue(JSON.stringify({ accessGroups: {} }));
         renderAccessGroup();
-        expect(screen.getByText('No access groups defined for this data product.')).toBeInTheDocument();
+        expect(screen.getByText('No access groups available for this data product.')).toBeInTheDocument();
       });
 
       it('should display access groups from localStorage', () => {
@@ -912,7 +912,7 @@ describe('DataProducts Components', () => {
         };
 
         expect(() => renderContract({ entry: entryWithoutRefreshCadence })).not.toThrow();
-        expect(screen.getByText('Contracts')).toBeInTheDocument();
+        expect(screen.getByText('No contracts available for this data product.')).toBeInTheDocument();
       });
 
       it('should handle empty aspects object', () => {
@@ -1233,7 +1233,7 @@ describe('DataProducts Components', () => {
 
         render(<AccessGroup entry={{ entryType: 'dataProducts/123' }} css={{}} />);
 
-        expect(screen.getByText('No access groups defined for this data product.')).toBeInTheDocument();
+        expect(screen.getByText('No access groups available for this data product.')).toBeInTheDocument();
       });
 
       it('should handle localStorage with null accessGroups', () => {
@@ -1241,7 +1241,7 @@ describe('DataProducts Components', () => {
 
         render(<AccessGroup entry={{ entryType: 'dataProducts/123' }} css={{}} />);
 
-        expect(screen.getByText('No access groups defined for this data product.')).toBeInTheDocument();
+        expect(screen.getByText('No access groups available for this data product.')).toBeInTheDocument();
       });
     });
   });
@@ -1622,7 +1622,7 @@ describe('DataProducts Components', () => {
         };
         renderDataProducts();
         expect(screen.getByLabelText('table view')).toBeInTheDocument();
-        expect(screen.getByLabelText('list view')).toBeInTheDocument();
+        expect(screen.getByLabelText('card view')).toBeInTheDocument();
       });
     });
 
@@ -1914,7 +1914,7 @@ describe('DataProducts Components', () => {
 
       it('should default to list view mode', () => {
         renderDataProducts();
-        const listToggle = screen.getByLabelText('list view');
+        const listToggle = screen.getByLabelText('card view');
         expect(listToggle).toHaveClass('Mui-selected');
       });
 

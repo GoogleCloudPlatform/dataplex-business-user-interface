@@ -8,6 +8,7 @@ export const URLS = {
     CHECK_IAM_ROLE: '/check-iam-role',
     SEARCH : '/search',
     GET_ENTRY: '/get-entry',
+    CHECK_ENTRY_ACCESS: '/check-entry-access',
     GET_ENTRY_BY_FQN: '/get-entry-by-fqn',
     GET_SAMPLE_DATA: '/get-sample-data',
     BATCH_ASPECTS: '/batch-aspects',

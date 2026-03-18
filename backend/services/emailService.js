@@ -35,7 +35,7 @@ const initializeGmailClient = async (accessToken) => {
 };
 
 // Email template for access request
-const createAccessRequestEmail = (assetName, message, requesterEmail, projectId) => {
+const createAccessRequestEmail = (assetName, message, requesterEmail, projectId, isDataProductRequest, accessGroup) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -194,6 +194,13 @@ const createAccessRequestEmail = (assetName, message, requesterEmail, projectId)
           </div>
         </div>
         
+        ${isDataProductRequest ? `
+          <div class="section">
+            <div class="section-title">Request for Data Products and Access group</div>
+           <div class="info-value">${accessGroup?.displayName || 'N/A'} - ${accessGroup?.accessGroupEmail || 'No Email provided.'}</div>
+          </div>
+        ` : ''}
+
         <div class="section">
           <div class="section-title">Request Message</div>
           <div class="message-section">
@@ -430,12 +437,12 @@ const createGmailMessage = (to, subject, htmlContent, fromEmail) => {
 };
 
 // Send access request email using Gmail API
-const sendAccessRequestEmail = async (accessToken, assetName, message, requesterEmail, projectId, projectAdmin = []) => {
+const sendAccessRequestEmail = async (accessToken, assetName, message, requesterEmail, projectId, projectAdmin = [], isDataProductRequest = false, accessGroup = '') => {
     try {
     
     await initializeGmailClient(accessToken);
 
-    const emailContent = createAccessRequestEmail(assetName, message, requesterEmail, projectId);
+    const emailContent = createAccessRequestEmail(assetName, message, requesterEmail, projectId, isDataProductRequest, accessGroup);
     const fromEmail = requesterEmail
     
     // Use projectAdmin emails if available, otherwise fall back to test email

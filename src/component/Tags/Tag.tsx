@@ -21,10 +21,11 @@ interface TagProps {
   //handleClick: any | (() => void); // Function to handle search, can be any function type
   text: string; // text to be displayed on the button
   css?: React.CSSProperties; // Optional CSS properties for the button
+  className?: string; // Optional className for styling
 }
 
-const Tag: React.FC<TagProps> = ({ text, css}) => {
-    return (<Typography className="capitalizeTag" component="span" style={
+const Tag: React.FC<TagProps> = ({ text, css, className}) => {
+    return (<Typography className={`capitalizeTag${className ? ` ${className}` : ''}`} component="span" style={
                 {
                     background:"#C2E7FF", 
                     // color:"#004A77", 

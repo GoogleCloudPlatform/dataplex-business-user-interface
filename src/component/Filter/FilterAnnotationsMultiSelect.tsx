@@ -4,10 +4,11 @@ import {
   Typography,
   Button,
   TextField,
-  Checkbox
+  Tooltip
 } from '@mui/material';
-import { Search, Close, Check } from '@mui/icons-material';
-import EditNoteIcon from '../../assets/svg/edit_note.svg';
+import { Search, Close, Check, Remove } from '@mui/icons-material';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import { useSelector } from 'react-redux';
 
 /**
  * @file FilterAnnotationsMultiSelect.tsx
@@ -24,18 +25,18 @@ import EditNoteIcon from '../../assets/svg/edit_note.svg';
  * "Clear All" button.
  *
  * The component's visibility is controlled by the `isOpen` prop. It can be closed
- * by clicking the 'OK' button, the 'X' icon, or by clicking outside the
- * component's boundaries.
+ * by clicking the 'Apply' button, the 'X' icon, or by clicking outside the
+ * component's boundaries. The `onChange` callback is only invoked when 'Apply'
+ * is clicked — toggling checkboxes updates local state only.
  *
  * @param {FilterAnnotationsMultiSelectProps} props - The props for the component.
  * @param {string[]} [props.options=[]] - The complete list of available string
  * options to display in the filter.
  * @param {string[]} [props.value=[]] - The array of currently selected option strings.
  * @param {(value: string[]) => void} props.onChange - Callback function invoked with
- * the new array of selected values whenever a selection is toggled, cleared, or
- * "Select All" is used.
+ * the new array of selected values when the user clicks 'Apply'.
  * @param {() => void} props.onClose - Callback function invoked when the user
- * clicks 'OK', the 'Close' icon, or outside the component.
+ * clicks 'Apply', the 'Close' icon, or outside the component.
  * @param {boolean} props.isOpen - Controls whether the component is visible.
  * @param {string} [props.filterType='Annotations'] - (Optional) The string to
  * display as the title in the component's header.
@@ -54,6 +55,7 @@ interface FilterAnnotationsMultiSelectProps {
   isOpen: boolean;
   filterType?: string;
   position?: { top: number; left: number } | null;
+  onEditNote?: (optionName: string, iconTop: number, modalRight: number) => void;
 }
 
 const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> = ({
@@ -63,42 +65,61 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
   onClose,
   isOpen,
   filterType = 'Annotations',
-  position = null
+  position = null,
+  onEditNote
 }) => {
+  const mode = useSelector((state: any) => state.user.mode) as string;
   const [searchTerm, setSearchTerm] = useState('');
+  const [localValue, setLocalValue] = useState<string[]>(value);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sync local state when prop value changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
   const filteredOptions = useMemo(() => {
-    return options.filter((option: string) => 
+    return options.filter((option: string) =>
       option.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [options, searchTerm]);
 
   const handleToggleOption = (option: string) => {
-    const newValue = value.includes(option)
-      ? value.filter(item => item !== option)
-      : [...value, option];
-    onChange(newValue);
+    setLocalValue(prev =>
+      prev.includes(option)
+        ? prev.filter(item => item !== option)
+        : [...prev, option]
+    );
   };
 
   const handleClearAll = () => {
-    onChange([]);
+    setLocalValue([]);
   };
 
   const handleSelectAll = () => {
-    if (value.length === filteredOptions.length) {
-      // If all are selected, deselect all
-      onChange([]);
+    if (localValue.length === filteredOptions.length) {
+      setLocalValue([]);
     } else {
-      // Select all filtered options
-      onChange([...filteredOptions]);
+      setLocalValue([...filteredOptions]);
     }
+  };
+
+  const handleApply = () => {
+    onChange(localValue);
+    onClose();
   };
 
   // Handle click outside to close
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        // Don't close if clicking inside the sub-annotations panel
+        const subPanel = document.querySelector('[data-sub-annotations-panel]');
+        if (subPanel && subPanel.contains(target)) return;
+        // Don't close if clicking inside a MUI popover/menu (rendered in portal)
+        const popover = (target as Element).closest?.('.MuiPopover-root, .MuiModal-root');
+        if (popover) return;
         onClose();
       }
     };
@@ -114,6 +135,9 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
 
   if (!isOpen) return null;
 
+  const isAllSelected = filteredOptions.length > 0 && localValue.length === filteredOptions.length;
+  const isIndeterminate = localValue.length > 0 && localValue.length < filteredOptions.length;
+
   return (
     <Box
       ref={containerRef}
@@ -122,9 +146,11 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
         top: position ? `${position.top}px` : '6.25rem',
         left: position ? `${position.left}px` : '13.75rem',
         zIndex: 1300,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: mode === 'dark' ? '#282a2c' : '#FFFFFF',
         borderRadius: '1rem',
-        boxShadow: '0px 1px 3px 0px rgba(60, 64, 67, 0.3), 0px 4px 8px 3px rgba(60, 64, 67, 0.15)',
+        boxShadow: mode === 'dark'
+          ? '0px 1px 3px 0px rgba(0, 0, 0, 0.5), 0px 4px 8px 3px rgba(0, 0, 0, 0.3)'
+          : '0px 1px 3px 0px rgba(60, 64, 67, 0.3), 0px 4px 8px 3px rgba(60, 64, 67, 0.15)',
         width: '44rem',
         height: '21.3125rem',
         overflow: 'hidden',
@@ -140,7 +166,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '1rem',
-          borderBottom: '1px solid #DADCE0',
+          borderBottom: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
           flex: '0 0 auto'
         }}
       >
@@ -149,7 +175,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
             fontWeight: 500,
             fontSize: '1rem',
             lineHeight: 1.5,
-            color: '#1F1F1F',
+            color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
             flex: '0 1 auto'
           }}
         >
@@ -160,22 +186,19 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
           sx={{
             minWidth: 'auto',
             padding: 0,
-            color: '#1F1F1F',
-            width: '1.5rem',
-            height: '1.5rem',
+            color: mode === 'dark' ? '#9aa0a6' : '#1F1F1F',
+            width: '2rem',
+            height: '2rem',
+            borderRadius: '50%',
             flex: '0 0 auto',
             '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
             }
           }}
         >
-          <Close sx={{ fontSize: '0.875rem' }} />
+          <Close sx={{ fontSize: '1.25rem' }} />
         </Button>
       </Box>
-
-
-
-
 
       {/* Main Content - Two Panels */}
       <Box
@@ -189,7 +212,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
         <Box
           sx={{
             flex: '1 1 auto',
-            borderRight: '1px solid #DADCE0',
+            borderRight: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
             display: 'flex',
             flexDirection: 'column'
           }}
@@ -200,29 +223,69 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.3125rem 0.75rem 0.3125rem 1.125rem',
-              borderBottom: '1px solid #DADCE0',
+              padding: '0 0.75rem 0 1.125rem',
+              height: '2.5rem',
+              borderBottom: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
               flexShrink: 0,
               flex: '0 0 auto'
             }}
           >
-            <Checkbox
-              checked={filteredOptions.length > 0 && value.length === filteredOptions.length}
-              indeterminate={value.length > 0 && value.length < filteredOptions.length}
-              onChange={handleSelectAll}
-              sx={{
-                color: '#575757',
-                '&.Mui-checked': {
-                  color: '#0E4DCA',
-                },
-                '&.MuiCheckbox-indeterminate': {
-                  color: '#0E4DCA',
-                },
-                padding: '0px',
-                marginRight: '8px'
-              }}
-            />
-            <Search sx={{ color: '#1F1F1F', fontSize: '16px' }} />
+            <Tooltip title="Select all" arrow>
+              {isAllSelected ? (
+                <Box
+                  data-testid="select-all-checkbox"
+                  sx={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '4px',
+                    backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    marginRight: '8px',
+                    flexShrink: 0
+                  }}
+                  onClick={handleSelectAll}
+                >
+                  <Check sx={{ fontSize: '14px', color: mode === 'dark' ? '#1e1f20' : '#FFFFFF' }} />
+                </Box>
+              ) : isIndeterminate ? (
+                <Box
+                  data-testid="select-all-checkbox"
+                  sx={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '4px',
+                    backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    marginRight: '8px',
+                    flexShrink: 0
+                  }}
+                  onClick={handleSelectAll}
+                >
+                  <Remove sx={{ fontSize: '14px', color: mode === 'dark' ? '#1e1f20' : '#FFFFFF' }} />
+                </Box>
+              ) : (
+                <Box
+                  data-testid="select-all-checkbox"
+                  sx={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '4px',
+                    border: `2px solid ${mode === 'dark' ? '#9aa0a6' : '#575757'}`,
+                    cursor: 'pointer',
+                    marginRight: '8px',
+                    flexShrink: 0
+                  }}
+                  onClick={handleSelectAll}
+                />
+              )}
+            </Tooltip>
+            <Search sx={{ color: mode === 'dark' ? '#9aa0a6' : '#1F1F1F', fontSize: '16px' }} />
             <TextField
               placeholder={`Search for ${filterType.toLowerCase()}`}
               value={searchTerm}
@@ -232,7 +295,8 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
               sx={{
                 '& .MuiInput-root': {
                   fontSize: '0.75rem',
-                  color: '#575757',
+                  color: mode === 'dark' ? '#9aa0a6' : '#575757',
+                  fontFamily: '"Google Sans Text", sans-serif',
                   '&:before': { borderBottom: 'none' },
                   '&:after': { borderBottom: 'none' },
                   '&:hover:not(.Mui-disabled):before': { borderBottom: 'none' },
@@ -240,7 +304,8 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                 '& .MuiInput-input': {
                   padding: 0,
                   fontSize: '0.75rem',
-                  color: '#575757',
+                  color: mode === 'dark' ? '#e3e3e3' : '#575757',
+                  fontFamily: '"Google Sans Text", sans-serif',
                   fontWeight: 400,
                   lineHeight: 1.33,
                   letterSpacing: '0.83px',
@@ -266,12 +331,12 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                 background: 'transparent',
               },
               '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(0, 0, 0, 0.38)',
+                background: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.38)',
                 borderRadius: '31px',
                 opacity: 0.5,
               },
               '&::-webkit-scrollbar-thumb:hover': {
-                background: 'rgba(0, 0, 0, 0.5)',
+                background: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
               },
             }}
           >
@@ -288,13 +353,13 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                 }}
                 onClick={() => handleToggleOption(option)}
               >
-                {value.includes(option) ? (
+                {localValue.includes(option) ? (
                   <Box
                     sx={{
                       width: '20px',
                       height: '20px',
                       borderRadius: '4px',
-                      backgroundColor: '#0E4DCA',
+                      backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -305,7 +370,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                       handleToggleOption(option);
                     }}
                   >
-                    <Check sx={{ fontSize: '14px', color: '#FFFFFF' }} />
+                    <Check sx={{ fontSize: '14px', color: mode === 'dark' ? '#1e1f20' : '#FFFFFF' }} />
                   </Box>
                 ) : (
                   <Box
@@ -313,7 +378,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                       width: '20px',
                       height: '20px',
                       borderRadius: '4px',
-                      border: '2px solid #575757',
+                      border: `2px solid ${mode === 'dark' ? '#9aa0a6' : '#575757'}`,
                       cursor: 'pointer'
                     }}
                     onClick={(e) => {
@@ -328,20 +393,19 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                     fontSize: '12px',
                     lineHeight: '1.3333333333333333em',
                     letterSpacing: '0.8333333457509676%',
-                    color: '#1F1F1F',
+                    color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                     flex: 1,
                   }}
                 >
                   {option}
                 </Typography>
-                <img 
-                  src={EditNoteIcon} 
-                  alt="Edit Note" 
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    cursor: 'pointer',
-                    flexShrink: 0
+                <EditNoteOutlinedIcon
+                  sx={{ fontSize: '20px', color: mode === 'dark' ? '#9aa0a6' : '#575757', cursor: 'pointer', flexShrink: 0 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const iconRect = e.currentTarget.getBoundingClientRect();
+                    const modalRect = containerRef.current?.getBoundingClientRect();
+                    onEditNote?.(option, iconRect.top, modalRect?.right ?? iconRect.right);
                   }}
                 />
               </Box>
@@ -352,7 +416,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                   fontWeight: 400,
                   fontSize: '12px',
                   lineHeight: '1.3333333333333333em',
-                  color: '#575757',
+                  color: mode === 'dark' ? '#9aa0a6' : '#575757',
                   padding: '16px',
                   textAlign: 'center',
                   fontStyle: 'italic',
@@ -378,8 +442,9 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '9px 16px',
-              borderBottom: '1px solid #DADCE0',
+              padding: '0 16px',
+              height: '2.5rem',
+              borderBottom: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
               flexShrink: 0
             }}
           >
@@ -388,23 +453,27 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                 fontWeight: 400,
                 fontSize: '12px',
                 lineHeight: '1.3333333333333333em',
-                color: '#1F1F1F'
+                color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F'
               }}
             >
-              {value.length} Selected
+              {localValue.length} Selected
             </Typography>
             <Button
               onClick={handleClearAll}
+              disabled={localValue.length === 0}
               sx={{
                 fontWeight: 500,
                 fontSize: '12px',
                 lineHeight: '1.3333333333333333em',
-                color: '#0E4DCA',
+                color: localValue.length > 0 ? (mode === 'dark' ? '#8ab4f8' : '#0E4DCA') : (mode === 'dark' ? '#5f6368' : '#9AA0A6'),
                 textTransform: 'none',
                 padding: '0',
                 minWidth: 'auto',
                 '&:hover': {
                   backgroundColor: 'transparent',
+                },
+                '&:disabled': {
+                  color: mode === 'dark' ? '#5f6368' : '#9AA0A6',
                 },
               }}
             >
@@ -428,16 +497,16 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                 background: 'transparent',
               },
               '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(0, 0, 0, 0.38)',
+                background: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.38)',
                 borderRadius: '31px',
                 opacity: 0.5,
               },
               '&::-webkit-scrollbar-thumb:hover': {
-                background: 'rgba(0, 0, 0, 0.5)',
+                background: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
               },
             }}
           >
-            {value.map((selectedOption) => (
+            {localValue.map((selectedOption) => (
               <Box
                 key={selectedOption}
                 sx={{
@@ -453,7 +522,7 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                     width: '20px',
                     height: '20px',
                     borderRadius: '4px',
-                    backgroundColor: '#0E4DCA',
+                    backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -464,38 +533,28 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
                     handleToggleOption(selectedOption);
                   }}
                 >
-                  <Check sx={{ fontSize: '14px', color: '#FFFFFF' }} />
+                  <Check sx={{ fontSize: '14px', color: mode === 'dark' ? '#1e1f20' : '#FFFFFF' }} />
                 </Box>
                 <Typography
                   sx={{
                     fontWeight: 400,
                     fontSize: '12px',
                     lineHeight: '1.3333333333333333em',
-                    color: '#1F1F1F',
+                    color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                     flex: 1,
                   }}
                 >
                   {selectedOption}
                 </Typography>
-                <img 
-                  src={EditNoteIcon} 
-                  alt="Edit Note" 
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    cursor: 'pointer',
-                    flexShrink: 0
-                  }}
-                />
               </Box>
             ))}
-            {value.length === 0 && (
+            {localValue.length === 0 && (
               <Typography
                 sx={{
                   fontWeight: 400,
                   fontSize: '12px',
                   lineHeight: '1.3333333333333333em',
-                  color: '#575757',
+                  color: mode === 'dark' ? '#9aa0a6' : '#575757',
                   padding: '16px',
                   textAlign: 'center',
                   fontStyle: 'italic',
@@ -508,34 +567,36 @@ const FilterAnnotationsMultiSelect: React.FC<FilterAnnotationsMultiSelectProps> 
         </Box>
       </Box>
 
-      {/* Footer with OK Button */}
+      {/* Footer with Apply Button */}
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
           padding: '8px',
-          borderTop: '1px solid #DADCE0',
+          borderTop: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
           flex: '0 0 auto'
         }}
       >
         <Button
-          onClick={onClose}
+          onClick={handleApply}
           sx={{
-            backgroundColor: '#0E4DCA',
-            color: '#FFFFFF',
-            fontSize: '12px',
-            fontWeight: 500,
+            backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
+            color: mode === 'dark' ? '#1e1f20' : '#FFFFFF',
+            fontSize: '0.875rem',
+            fontWeight: 600,
             textTransform: 'none',
-            padding: '6px 16px',
+            padding: '0.5rem 1.5rem',
             minWidth: 'auto',
-            borderRadius: '4px',
+            borderRadius: '1.5rem',
+            boxShadow: 'none',
             '&:hover': {
-              backgroundColor: '#0B4BA8',
+              backgroundColor: mode === 'dark' ? '#6b9ef5' : '#0B4BA8',
+              boxShadow: 'none',
             },
           }}
         >
-          OK
+          Apply
         </Button>
       </Box>
     </Box>

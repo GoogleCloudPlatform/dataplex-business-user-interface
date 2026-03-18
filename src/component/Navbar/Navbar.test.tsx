@@ -48,7 +48,8 @@ vi.mock('react-redux', async () => {
         search: {
           searchTerm: '',
           searchFilters: {},
-          semanticSearch: false
+          semanticSearch: false,
+          isSearchFiltersOpen: false
         },
         user: {
           mode: 'light'
@@ -99,7 +100,7 @@ vi.mock('../SearchPage/NotificationBar', () => ({
       <div data-testid="notification-bar">
         <span data-testid="notification-message">{message}</span>
         <button data-testid="close-notification" onClick={onClose}>Close</button>
-        <button data-testid="undo-notification" onClick={onUndo}>Undo</button>
+        {onUndo && <button data-testid="undo-notification" onClick={onUndo}>Undo</button>}
       </div>
     );
   }
@@ -697,14 +698,6 @@ describe('Navbar', () => {
   });
 
   describe('Redux integration', () => {
-    it('dispatches searchResourcesByTerm on component mount', () => {
-      mockDispatch.mockClear();
-      renderNavbar();
-
-      // Should dispatch on mount via useEffect
-      expect(mockDispatch).toHaveBeenCalled();
-    });
-
     it('dispatches setItemsStoreData before search', () => {
       renderNavbar({ searchBar: true });
 

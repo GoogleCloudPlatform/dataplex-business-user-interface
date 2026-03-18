@@ -54,6 +54,25 @@ export const fetchLineageEntry = createAsyncThunk('entry/fetchLineageEntry', asy
   }
 });
 
+export const checkEntryAccess = createAsyncThunk(
+  'entry/checkEntryAccess',
+  async (requestData: { entryName: string; id_token: string }, { rejectWithValue }) => {
+    if (!requestData) return rejectWithValue('No request data provided');
+    try {
+      axios.defaults.headers.common['Authorization'] = requestData.id_token
+        ? `Bearer ${requestData.id_token}` : '';
+      const response = await axios.get(
+        URLS.API_URL + URLS.CHECK_ENTRY_ACCESS + `?entryName=${requestData.entryName}`
+      );
+      return { entryName: requestData.entryName, data: response.data };
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        return rejectWithValue({ entryName: requestData.entryName, error: error.response?.data || error.message });
+      }
+      return rejectWithValue({ entryName: requestData.entryName, error: 'An unknown error occurred' });
+    }
+  }
+);
 
 type EntryState = {
   items: unknown; // Replace 'unknown' with your actual resource type
@@ -64,6 +83,7 @@ type EntryState = {
   lineageEntryError: string | undefined | unknown | null;
   lineageToEntryCopy: boolean;
   history: unknown[]; // Stack to track previous entries
+  accessCheckCache: Record<string, { status: 'loading' | 'succeeded' | 'failed'; error?: unknown }>;
 };
 
 const initialState: EntryState = {
@@ -74,7 +94,8 @@ const initialState: EntryState = {
   lineageEntrystatus: 'idle',
   lineageEntryError: null,
   lineageToEntryCopy:false,
-  history: []
+  history: [],
+  accessCheckCache: {},
 };
 
 // createSlice generates actions and reducers for a slice of the Redux state.
@@ -104,6 +125,9 @@ export const entrySlice = createSlice({
     },
     clearHistory: (state) => {
       state.history = [];
+    },
+    resetAccessCheck: (state) => {
+      state.accessCheckCache = {};
     },
   },
   // The `extraReducers` field lets the slice handle actions defined elsewhere,
@@ -145,9 +169,22 @@ export const entrySlice = createSlice({
           state.error = action.payload;
           state.lineageToEntryCopy = false;
         }
+      })
+      .addCase(checkEntryAccess.pending, (state, action) => {
+        state.accessCheckCache[action.meta.arg.entryName] = { status: 'loading' };
+      })
+      .addCase(checkEntryAccess.fulfilled, (state, action) => {
+        state.accessCheckCache[action.payload.entryName] = { status: 'succeeded' };
+      })
+      .addCase(checkEntryAccess.rejected, (state, action) => {
+        const entryName = (action.payload as any)?.entryName || action.meta.arg.entryName;
+        state.accessCheckCache[entryName] = {
+          status: 'failed',
+          error: (action.payload as any)?.error || action.error,
+        };
       });
   },
 });
 
-export const { setEntry, pushToHistory, popFromHistory, clearHistory } = entrySlice.actions;
+export const { setEntry, pushToHistory, popFromHistory, clearHistory, resetAccessCheck } = entrySlice.actions;
 export default entrySlice.reducer;

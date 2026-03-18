@@ -24,6 +24,9 @@ vi.mock("react-redux", () => ({
         searchTerm: mockSearchTerm,
         semanticSearch: mockSemanticSearch,
       },
+      user: {
+        mode: 'light',
+      },
     };
     return selector(state);
   },
@@ -198,6 +201,7 @@ describe("SearchBar", () => {
       const input = screen.getByRole("combobox");
       fireEvent.change(input, { target: { value: "test" } });
 
+      // Input change dispatches to Redux
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "search/setSearchTerm",
         payload: { searchTerm: "test" },
@@ -595,7 +599,7 @@ describe("SearchBar", () => {
         vi.advanceTimersByTime(100);
       });
 
-      // The dispatch should be called for input change
+      // Input change dispatches to Redux
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "search/setSearchTerm",
         payload: { searchTerm: "BigQuery" },
@@ -1488,10 +1492,10 @@ describe("SearchBar", () => {
           vi.advanceTimersByTime(50);
         });
 
-        // Delete button should appear
-        const deleteButton = screen.queryByText("Delete");
-        if (deleteButton) {
-          expect(deleteButton).toBeInTheDocument();
+        // Delete buttons should appear (one per recent search item)
+        const deleteButtons = screen.queryAllByText("Delete");
+        if (deleteButtons.length > 0) {
+          expect(deleteButtons[0]).toBeInTheDocument();
         }
 
         // Mouse leave to hide Delete button
@@ -1536,10 +1540,10 @@ describe("SearchBar", () => {
           vi.advanceTimersByTime(50);
         });
 
-        // Click Delete button if visible
-        const deleteButton = screen.queryByText("Delete");
-        if (deleteButton) {
-          fireEvent.click(deleteButton);
+        // Click Delete button if visible (use queryAllByText since multiple exist)
+        const deleteButtons = screen.queryAllByText("Delete");
+        if (deleteButtons.length > 0) {
+          fireEvent.click(deleteButtons[0]);
 
           await act(async () => {
             vi.advanceTimersByTime(100);
@@ -1581,10 +1585,11 @@ describe("SearchBar", () => {
           vi.advanceTimersByTime(50);
         });
 
-        const deleteButton = screen.queryByText("Delete");
-        if (deleteButton) {
+        // Use queryAllByText since multiple Delete buttons exist (one per recent search)
+        const deleteButtons = screen.queryAllByText("Delete");
+        if (deleteButtons.length > 0) {
           // Click should stop propagation (not trigger handleRecentSearchSelect)
-          fireEvent.click(deleteButton);
+          fireEvent.click(deleteButtons[0]);
 
           // handleSearchSubmit should NOT be called (because propagation was stopped)
           // Only the delete action should happen
@@ -1761,6 +1766,239 @@ describe("SearchBar", () => {
 
       // Component renders correctly
       expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // searchSubmitted Dispatch Tests
+  // ==========================================================================
+
+  describe("searchSubmitted Dispatch", () => {
+    it("dispatches searchSubmitted on Enter key submission", async () => {
+      mockSearchTerm = "test search";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "search/setSearchSubmitted",
+        payload: true,
+      });
+    });
+
+    it("does not dispatch searchSubmitted when search term is too short", async () => {
+      mockSearchTerm = "ab";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      const submittedCalls = mockDispatch.mock.calls.filter(
+        (call) =>
+          call[0].type === "search/setSearchSubmitted" &&
+          call[0].payload === true
+      );
+      expect(submittedCalls.length).toBe(0);
+    });
+
+    it("dispatches searchSubmitted when selecting an autocomplete option", async () => {
+      mockSearchTerm = "BigQuery";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.focus(input);
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const listbox = screen.queryByRole("listbox");
+      if (listbox) {
+        const options = screen.getAllByRole("option");
+        if (options.length > 0) {
+          fireEvent.click(options[0]);
+
+          await act(async () => {
+            vi.advanceTimersByTime(100);
+          });
+
+          expect(mockDispatch).toHaveBeenCalledWith({
+            type: "search/setSearchSubmitted",
+            payload: true,
+          });
+        }
+      }
+    });
+
+    it("dispatches searchSubmitted when selecting a recent search", async () => {
+      const recentSearches = [
+        { id: 1704067200000, term: "valid search term", timestamp: 1704067200000 },
+      ];
+      const storageKey = `recentSearches_${mockUser.email}`;
+      mockLocalStorage[storageKey] = JSON.stringify(recentSearches);
+      mockSearchTerm = "";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.focus(input);
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const listbox = await screen.findByRole("listbox");
+      expect(listbox).toBeInTheDocument();
+
+      const options = screen.getAllByRole("option");
+      if (options.length > 0) {
+        fireEvent.click(options[0]);
+
+        await act(async () => {
+          vi.advanceTimersByTime(100);
+        });
+
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: "search/setSearchSubmitted",
+          payload: true,
+        });
+      }
+    });
+
+    it("does not dispatch searchSubmitted for short recent search terms", async () => {
+      const shortSearches = [
+        { id: 1704067200000, term: "ab", timestamp: 1704067200000 },
+      ];
+      const storageKey = `recentSearches_${mockUser.email}`;
+      mockLocalStorage[storageKey] = JSON.stringify(shortSearches);
+      mockSearchTerm = "";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.focus(input);
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const listbox = await screen.findByRole("listbox");
+      expect(listbox).toBeInTheDocument();
+
+      const options = screen.getAllByRole("option");
+      if (options.length > 0) {
+        fireEvent.click(options[0]);
+
+        await act(async () => {
+          vi.advanceTimersByTime(100);
+        });
+
+        const submittedCalls = mockDispatch.mock.calls.filter(
+          (call) =>
+            call[0].type === "search/setSearchSubmitted" &&
+            call[0].payload === true
+        );
+        expect(submittedCalls.length).toBe(0);
+      }
+    });
+  });
+
+  // ==========================================================================
+  // highlightedOptionRef Clearing Tests
+  // ==========================================================================
+
+  describe("highlightedOptionRef Clearing", () => {
+    it("dispatches setSearchTerm on input change to override stale highlighted ref", async () => {
+      // The key behavior: when user types, handleInputChange:
+      // 1. Dispatches setSearchTerm with the new value to Redux
+      // 2. Clears highlightedOptionRef so handleKeyDown uses searchTerm from Redux
+      mockSearchTerm = "cluster";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={[{ name: "Cluster" }]}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+
+      // Simulate typing new input — triggers handleInputChange which:
+      // - Dispatches setSearchTerm with new value
+      // - Sets highlightedOptionRef.current = null
+      fireEvent.change(input, { target: { value: "new term" } });
+
+      // Verify handleInputChange dispatched setSearchTerm with the typed value
+      // This is the mechanism that prevents stale term searches:
+      // Redux gets updated, and the cleared ref ensures handleKeyDown uses it
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "search/setSearchTerm",
+        payload: { searchTerm: "new term" },
+      });
+    });
+
+    it("uses highlighted option when available and Enter is pressed", async () => {
+      mockSearchTerm = "Big";
+
+      render(
+        <SearchBar
+          handleSearchSubmit={mockHandleSearchSubmit}
+          dataSearch={defaultDataSearch}
+        />
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.focus(input);
+
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Simulate keyboard navigation to highlight an option
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+
+      await act(async () => {
+        vi.advanceTimersByTime(50);
+      });
+
+      // Press Enter — should use highlighted option if available
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      // The dispatch should have been called (either with highlighted option or searchTerm)
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "search/setSearchTerm",
+        })
+      );
     });
   });
 });

@@ -101,6 +101,7 @@ const getInitialState = () => ({
   lineageEntryError: null,
   lineageToEntryCopy: false,
   history: [] as unknown[],
+  accessCheckCache: {} as Record<string, { status: 'loading' | 'succeeded' | 'failed'; error?: unknown }>,
 });
 
 // ==========================================================================

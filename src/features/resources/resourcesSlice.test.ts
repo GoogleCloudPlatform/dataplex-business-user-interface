@@ -419,22 +419,24 @@ describe('resourcesSlice', () => {
     });
 
     describe('Async Thunk Execution', () => {
-      it('should return empty array when term is empty', async () => {
+      it('should make API call when term is empty', async () => {
+        mockedAxiosPost.mockRejectedValueOnce(new Error('Request failed'));
         const result = await (store.dispatch as ThunkDispatch<RootState, unknown, AnyAction>)(
           searchResourcesByTerm({ id_token: 'token', term: '' })
         );
 
-        expect(result.payload).toEqual([]);
-        expect(mockedAxiosPost).not.toHaveBeenCalled();
+        expect(result.type).toBe(searchResourcesByTerm.rejected.type);
+        expect(mockedAxiosPost).toHaveBeenCalled();
       });
 
-      it('should return empty array when term is missing', async () => {
+      it('should make API call when term is missing', async () => {
+        mockedAxiosPost.mockRejectedValueOnce(new Error('Request failed'));
         const result = await (store.dispatch as ThunkDispatch<RootState, unknown, AnyAction>)(
           searchResourcesByTerm({ id_token: 'token' })
         );
 
-        expect(result.payload).toEqual([]);
-        expect(mockedAxiosPost).not.toHaveBeenCalled();
+        expect(result.type).toBe(searchResourcesByTerm.rejected.type);
+        expect(mockedAxiosPost).toHaveBeenCalled();
       });
 
       it('should set Authorization header with token', async () => {

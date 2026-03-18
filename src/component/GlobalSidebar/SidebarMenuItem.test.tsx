@@ -3,13 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SidebarMenuItem from './SidebarMenuItem';
 
-// Mock icon components for testing
-const MockIcon = () => <svg data-testid="mock-icon" />;
-const MockIconWithText = () => <span data-testid="icon-with-text">Icon</span>;
-
 describe('SidebarMenuItem', () => {
   const defaultProps = {
-    icon: <MockIcon />,
+    icon: 'home',
     label: 'Test Label',
   };
 
@@ -32,7 +28,8 @@ describe('SidebarMenuItem', () => {
     it('renders the icon', () => {
       render(<SidebarMenuItem {...defaultProps} />);
 
-      expect(screen.getByTestId('mock-icon')).toBeInTheDocument();
+      const iconSpan = document.querySelector('.sidebar-icon');
+      expect(iconSpan).toHaveTextContent('home');
     });
 
     it('renders the label', () => {
@@ -46,7 +43,7 @@ describe('SidebarMenuItem', () => {
 
       const iconContainer = document.querySelector('.menu-icon-container');
       expect(iconContainer).toBeInTheDocument();
-      expect(iconContainer).toContainElement(screen.getByTestId('mock-icon'));
+      expect(iconContainer).toHaveTextContent('home');
     });
 
     it('renders label inside menu-label span', () => {
@@ -58,10 +55,11 @@ describe('SidebarMenuItem', () => {
     });
 
     it('renders with different icon types', () => {
-      render(<SidebarMenuItem icon={<MockIconWithText />} label="With Text Icon" />);
+      render(<SidebarMenuItem icon="star" label="With Star Icon" />);
 
-      expect(screen.getByTestId('icon-with-text')).toBeInTheDocument();
-      expect(screen.getByText('With Text Icon')).toBeInTheDocument();
+      const iconSpan = document.querySelector('.sidebar-icon');
+      expect(iconSpan).toHaveTextContent('star');
+      expect(screen.getByText('With Star Icon')).toBeInTheDocument();
     });
 
     it('renders with string icon', () => {
@@ -72,18 +70,12 @@ describe('SidebarMenuItem', () => {
       expect(iconContainer).toHaveTextContent('★');
     });
 
-    it('renders with complex JSX icon', () => {
-      const complexIcon = (
-        <div data-testid="complex-icon">
-          <span>Part 1</span>
-          <span>Part 2</span>
-        </div>
-      );
-      render(<SidebarMenuItem icon={complexIcon} label="Complex Icon" />);
+    it('renders with material symbol icon name', () => {
+      render(<SidebarMenuItem icon="settings" label="Settings Icon" />);
 
-      expect(screen.getByTestId('complex-icon')).toBeInTheDocument();
-      expect(screen.getByText('Part 1')).toBeInTheDocument();
-      expect(screen.getByText('Part 2')).toBeInTheDocument();
+      const iconSpan = document.querySelector('.sidebar-icon');
+      expect(iconSpan).toHaveTextContent('settings');
+      expect(screen.getByText('Settings Icon')).toBeInTheDocument();
     });
   });
 
@@ -442,7 +434,7 @@ describe('SidebarMenuItem', () => {
       const mockOnClick = vi.fn();
       render(
         <SidebarMenuItem
-          icon={<MockIcon />}
+          icon="home"
           label="All True"
           isActive={true}
           disabled={true}
@@ -468,7 +460,7 @@ describe('SidebarMenuItem', () => {
       const mockOnClick = vi.fn();
       render(
         <SidebarMenuItem
-          icon={<MockIcon />}
+          icon="home"
           label="All False"
           isActive={false}
           disabled={false}
@@ -493,13 +485,13 @@ describe('SidebarMenuItem', () => {
 
   describe('Default Props', () => {
     it('isActive defaults to false', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Test" />);
+      render(<SidebarMenuItem icon="home" label="Test" />);
 
       expect(screen.getByRole('button')).not.toHaveClass('active');
     });
 
     it('disabled defaults to false', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Test" />);
+      render(<SidebarMenuItem icon="home" label="Test" />);
 
       const button = screen.getByRole('button');
       expect(button).not.toHaveClass('disabled');
@@ -508,7 +500,7 @@ describe('SidebarMenuItem', () => {
     });
 
     it('multiLine defaults to false', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Test" />);
+      render(<SidebarMenuItem icon="home" label="Test" />);
 
       const button = screen.getByRole('button');
       expect(button).not.toHaveClass('two-line');
@@ -516,7 +508,7 @@ describe('SidebarMenuItem', () => {
     });
 
     it('onClick defaults to undefined (no error on click)', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Test" />);
+      render(<SidebarMenuItem icon="home" label="Test" />);
 
       expect(() => fireEvent.click(screen.getByRole('button'))).not.toThrow();
     });
@@ -524,38 +516,38 @@ describe('SidebarMenuItem', () => {
 
   describe('Label Variations', () => {
     it('renders short label', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="A" />);
+      render(<SidebarMenuItem icon="home" label="A" />);
 
       expect(screen.getByText('A')).toBeInTheDocument();
     });
 
     it('renders long label', () => {
       const longLabel = 'This is a very long label that might wrap to multiple lines';
-      render(<SidebarMenuItem icon={<MockIcon />} label={longLabel} />);
+      render(<SidebarMenuItem icon="home" label={longLabel} />);
 
       expect(screen.getByText(longLabel)).toBeInTheDocument();
     });
 
     it('renders label with special characters', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Test & Label <special>" />);
+      render(<SidebarMenuItem icon="home" label="Test & Label <special>" />);
 
       expect(screen.getByText('Test & Label <special>')).toBeInTheDocument();
     });
 
     it('renders label with numbers', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="Item 123" />);
+      render(<SidebarMenuItem icon="home" label="Item 123" />);
 
       expect(screen.getByText('Item 123')).toBeInTheDocument();
     });
 
     it('renders label with unicode', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="测试 Тест" />);
+      render(<SidebarMenuItem icon="home" label="测试 Тест" />);
 
       expect(screen.getByText('测试 Тест')).toBeInTheDocument();
     });
 
     it('renders label with emoji', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="🏠 Home" />);
+      render(<SidebarMenuItem icon="home" label="🏠 Home" />);
 
       expect(screen.getByText('🏠 Home')).toBeInTheDocument();
     });
@@ -726,14 +718,14 @@ describe('SidebarMenuItem', () => {
     });
 
     it('updates when icon changes', () => {
-      const { rerender } = render(<SidebarMenuItem {...defaultProps} icon={<span data-testid="icon-1">1</span>} />);
+      const { rerender } = render(<SidebarMenuItem {...defaultProps} icon="home" />);
 
-      expect(screen.getByTestId('icon-1')).toBeInTheDocument();
+      const iconSpan = document.querySelector('.sidebar-icon');
+      expect(iconSpan).toHaveTextContent('home');
 
-      rerender(<SidebarMenuItem {...defaultProps} icon={<span data-testid="icon-2">2</span>} />);
+      rerender(<SidebarMenuItem {...defaultProps} icon="star" />);
 
-      expect(screen.getByTestId('icon-2')).toBeInTheDocument();
-      expect(screen.queryByTestId('icon-1')).not.toBeInTheDocument();
+      expect(iconSpan).toHaveTextContent('star');
     });
 
     it('updates onClick handler on re-render', () => {
@@ -756,7 +748,7 @@ describe('SidebarMenuItem', () => {
 
   describe('Edge Cases', () => {
     it('handles empty label', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="" />);
+      render(<SidebarMenuItem icon="home" label="" />);
 
       const labelSpan = document.querySelector('.menu-label');
       expect(labelSpan).toBeInTheDocument();
@@ -764,7 +756,7 @@ describe('SidebarMenuItem', () => {
     });
 
     it('handles whitespace-only label', () => {
-      render(<SidebarMenuItem icon={<MockIcon />} label="   " />);
+      render(<SidebarMenuItem icon="home" label="   " />);
 
       const labelSpan = document.querySelector('.menu-label');
       expect(labelSpan).toBeInTheDocument();
@@ -772,12 +764,14 @@ describe('SidebarMenuItem', () => {
       expect(labelSpan?.textContent).toBe('   ');
     });
 
-    it('handles null icon child gracefully', () => {
-      render(<SidebarMenuItem icon={null} label="Null Icon" />);
+    it('handles empty icon string gracefully', () => {
+      render(<SidebarMenuItem icon="" label="Null Icon" />);
 
       const iconContainer = document.querySelector('.menu-icon-container');
       expect(iconContainer).toBeInTheDocument();
-      expect(iconContainer).toBeEmptyDOMElement();
+      const iconSpan = iconContainer?.querySelector('.sidebar-icon');
+      expect(iconSpan).toBeInTheDocument();
+      expect(iconSpan).toBeEmptyDOMElement();
     });
 
     it('handles rapid prop changes', () => {
