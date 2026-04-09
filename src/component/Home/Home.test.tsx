@@ -66,12 +66,28 @@ vi.mock('../../auth/AuthProvider', () => ({
   useAuth: () => mockAuthContext
 }));
 
+// Mock NoAccessContext
+const mockTriggerNoAccess = vi.fn();
+vi.mock('../../contexts/NoAccessContext', () => ({
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: mockTriggerNoAccess,
+    dismissNoAccess: vi.fn(),
+  }),
+}));
+
 // Mock constants
 vi.mock('../../constants/urls', () => ({
   URLS: {
     API_URL: 'http://localhost:3000/api',
-    APP_CONFIG: '/app-config'
+    APP_CONFIG: '/app-config',
+    CHECK_IAM_ROLE: '/check-iam-role',
   }
+}));
+
+vi.mock('../../constants/auth', () => ({
+  REQUIRED_IAM_ROLE: 'roles/dataplex.viewer',
 }));
 
 // Mock SearchBar component
@@ -177,9 +193,13 @@ describe('Home', () => {
 
     // Setup axios mock
     vi.mocked(axios.get).mockClear();
+    vi.mocked(axios.post).mockClear();
+    // Mock IAM role check to succeed by default
+    vi.mocked(axios.post).mockResolvedValue({ data: { hasRole: true } });
     if (!axios.defaults) {
       (axios as any).defaults = { headers: { common: {} } };
     }
+    localStorage.removeItem('scopeCheckFailed');
   });
 
   const renderHome = (authContext = createMockAuthContext(mockUserWithAppConfig)) => {

@@ -16,8 +16,7 @@ import ViewIcon from '../assets/svg/view_icon.svg';
 import FilesetIcon from '../assets/svg/fileset_icon.svg';
 import FolderIcon from '../assets/svg/folder_icon.svg';
 import FunctionIcon from '../assets/svg/function_icon.svg';
-import GlossaryIcon from '../assets/svg/glossary_icon.svg';
-import GlossaryCategoryIcon from '../assets/svg/glossary_category_icon.svg';
+
 import ListingIcon from '../assets/svg/listing_icon.svg';
 import LookIcon from '../assets/svg/look_icon.svg';
 import ModelIcon from '../assets/svg/model_icon.svg';
@@ -41,6 +40,8 @@ export const getAssetIcon = (assetName: string) => {
     case 'Dashboard element':
       return DashboardElementIcon;
     case 'Data exchange':
+      return DataExchangeIcon;
+    case 'Exchange':
       return DataExchangeIcon;
     case 'Data source connection':
       return ConnectionIcon;
@@ -66,13 +67,7 @@ export const getAssetIcon = (assetName: string) => {
       return FolderIcon;
     case 'Function':
       return FunctionIcon;
-    case 'Glossary':
-      return GlossaryIcon;
-    case 'Glossary Category':
-      return GlossaryCategoryIcon;
-    case 'Glossary Term':
-      return GlossaryIcon;
-    case 'Listing':
+case 'Listing':
       return ListingIcon;
     case 'Look':
       return LookIcon;
@@ -132,11 +127,11 @@ export const getFormattedDateTimeParts = (timestamp: any) => {
     year: "numeric",
   }).format(myDate);
 
-  const time = new Intl.DateTimeFormat('en-US', { 
+  const time = new Intl.DateTimeFormat('en-US', {
     hour: "numeric",
     minute: "2-digit",
-    second: "2-digit", 
-    hour12: true 
+    second: "2-digit",
+    hour12: true
   }).format(myDate);
 
   return { date, time }; 
@@ -164,11 +159,11 @@ export const getFormattedDateTimePartsByDateTime = (dateTime: any) => {
     year: "numeric",
   }).format(myDate);
 
-  const time = new Intl.DateTimeFormat('en-US', { 
+  const time = new Intl.DateTimeFormat('en-US', {
     hour: "numeric",
     minute: "2-digit",
-    second: "2-digit", 
-    hour12: true 
+    second: "2-digit",
+    hour12: true
   }).format(myDate);
 
   return { date, time }; 
@@ -234,8 +229,10 @@ export const hasValidAnnotationData = (aspectData: any): boolean => {
     if (item && typeof item === 'object' && 'kind' in item) {
        return (item.kind === 'stringValue' && item.stringValue) ||
               (item.kind === 'numberValue' && item.numberValue !== undefined) ||
-              (item.kind === 'boolValue') || 
-              (item.kind === "listValue" && item.listValue?.values?.length > 0);
+              (item.kind === 'boolValue') ||
+              (item.kind === "listValue" && item.listValue?.values?.length > 0) ||
+              (item.kind === 'structValue' && item.structValue?.fields &&
+               Object.keys(item.structValue.fields).length > 0);
     }
 
     return item !== null && item !== undefined && typeof item !== 'object';
@@ -263,4 +260,31 @@ const signatures:any = {
 
 export const getMimeType = (base64:string)=>{
     for(const sign in signatures)if(base64.startsWith(sign))  return signatures[sign];
+};
+
+export const normalizeSystemName = (system: string | undefined | null): string => {
+  if (!system) return '-';
+  const lower = system.toLowerCase();
+  if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog';
+  if (lower === 'bigquery') return 'BigQuery';
+  return system;
+};
+
+export const extractProjectNumberFromEntryName = (entryName: string | undefined): string => {
+  if (!entryName) return '';
+  const segments = entryName.split('/');
+  if (segments.length >= 2 && segments[0] === 'projects') {
+    return segments[1];
+  }
+  return '';
+};
+
+export const resolveProjectDisplayName = (
+  projectNumber: string,
+  projectsList: Array<{ projectId: string; name: string; displayName?: string }>
+): string => {
+  if (!projectNumber || !projectsList?.length) return '';
+  const match = projectsList.find((p: any) => p.name === `projects/${projectNumber}`);
+  if (!match) return '';
+  return match.projectId || match.displayName || '';
 };

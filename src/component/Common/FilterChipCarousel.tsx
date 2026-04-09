@@ -3,6 +3,7 @@ import { Box, Tooltip } from '@mui/material';
 import { useSelector } from 'react-redux';
 import FilterTag from '../Tags/FilterTag';
 import { getAssetIcon } from '../../utils/resourceUtils';
+import { isGlossaryAssetType, getGlossaryMuiIcon, assetNameToGlossaryType } from '../../constants/glossaryIcons';
 import './FilterChipCarousel.css';
 
 interface FilterChipCarouselProps {
@@ -122,7 +123,10 @@ const FilterChipCarousel: React.FC<FilterChipCarouselProps> = ({
                   handleClick={() => onTypeAliasClick(item.name)}
                   handleClose={() => onTypeAliasClick(item.name)}
                   showCloseButton={isSelected}
-                  icon={getAssetIcon(item.name)}
+                  icon={isGlossaryAssetType(item.name)
+                    ? getGlossaryMuiIcon(assetNameToGlossaryType(item.name), { size: '20px', color: '#4285F4' })
+                    : getAssetIcon(item.name)}
+                  iconSize="20px"
                   css={{
                     margin: '0px',
                     textTransform: 'capitalize',

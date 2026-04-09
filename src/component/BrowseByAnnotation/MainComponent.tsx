@@ -6,21 +6,24 @@ import {
   Tab,
   Paper,
   Skeleton,
+  Tooltip,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted } from '@mui/icons-material';
+import IconButton from '@mui/material/IconButton';
 import { useNavigate } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../app/store';
 import { browseResourcesByAspects, setItems, setItemsStatus } from '../../features/resources/resourcesSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import ResourcePreview from '../Common/ResourcePreview';
 import DetailPageOverview from '../DetailPageOverview/DetailPageOverview';
-import DetailPageOverviewSkeleton from '../DetailPageOverview/DetailPageOverviewSkeleton';
+import AnnotationPageSkeleton from './AnnotationPageSkeleton';
 import SubTypesTab from './SubTypesTab';
 import SubTypesTabSkeleton from './SubTypesTabSkeleton';
 import SubTypeHeaderSkeleton from './SubTypeHeaderSkeleton';
 import AspectLinkedAssets from './AspectLinkedAssets';
 import AnnotationsIconBlue from '../../assets/svg/annotations-icon-blue.svg';
 import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
+import ThemedIconContainer from '../Common/ThemedIconContainer';
 
 /**
  * @file MainComponent.tsx
@@ -51,6 +54,9 @@ interface MainComponentProps {
   onSortOrderToggle: () => void;
   loadingAspectName?: string | null;
   subTypesWithCache: Record<string, boolean>;
+  isSidebarOpen?: boolean;
+  onSidebarToggle?: (open: boolean) => void;
+  isSmallScreen?: boolean;
 }
 
 const MainComponent: React.FC<MainComponentProps> = ({
@@ -67,11 +73,15 @@ const MainComponent: React.FC<MainComponentProps> = ({
   onSortOrderToggle,
   loadingAspectName = null,
   subTypesWithCache,
+  isSidebarOpen = true,
+  onSidebarToggle,
+  isSmallScreen = false,
 }) => {
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const id_token = useSelector((state:any) => state.user.token);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   // ResourceViewer state
   const resources = useSelector((state: any) => state.resources.items);
@@ -79,6 +89,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
   const [previewData, setPreviewData] = useState<any | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
   const [linkedAssetsSearchTerm, setLinkedAssetsSearchTerm] = useState<string>('');
+  const [subItemDescExpanded, setSubItemDescExpanded] = useState(false);
 
   // Access Redux cache
   const aspectBrowseCache = useSelector((state: RootState) => state.resources.aspectBrowseCache);
@@ -110,6 +121,17 @@ const MainComponent: React.FC<MainComponentProps> = ({
       }
     }
   }, [selectedCard, selectedSubItem, dispatch, id_token, aspectBrowseCache, subTypesWithCache]);
+
+  // Reset description expanded state when selected card changes
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [selectedCard?.name]);
+
+  // Reset sub-item description expanded state when sub-item changes
+  useEffect(() => {
+    setSubItemDescExpanded(false);
+  }, [selectedSubItem?.title]);
+
 
   const handleBackClick = () => {
     if (selectedSubItem) {
@@ -157,62 +179,104 @@ const MainComponent: React.FC<MainComponentProps> = ({
   };
 
   // Custom header for ResourceViewer (when viewing sub-item resources)
+  const subItemDescription = selectedSubItem?.description || '';
   const resourceViewerHeader =
     resourcesStatus === 'loading' ? (
       <SubTypeHeaderSkeleton />
     ) : (
-      <Box
-        sx={{
-          height: '64px',
-          position: 'relative',
-          flexShrink: 0,
-          mx: '-5px',
-          px: '5px',
-        }}
-      >
+      <Box sx={{ flexShrink: 0 }}>
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
+            gap: '20px',
+            padding: '20px 20px 0px',
           }}
         >
-          <ArrowBack
+          <IconButton
+            sx={{ p: '4px', mr: 0.5, width: '40px', height: '40px', borderRadius: '50%', color: '#0B57D0', transition: 'background-color 0.2s', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}
             onClick={handleBackClick}
-            sx={{ color: '#5f6368', cursor: 'pointer' }}
-            fontSize="small"
-          />
-          <Box
-            sx={{
-              width: 24,
-              height: 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
           >
+            <ArrowBack style={{ fontSize: "24px" }} />
+          </IconButton>
+          <ThemedIconContainer iconColor="#F9AB00">
             <img
               src={AnnotationSubitemIcon}
               alt=""
-              style={{ width: '18px', height: '18px' }}
+              style={{ width: '24px', height: '24px' }}
             />
-          </Box>
-          <Typography
-            variant="h6"
-            sx={{
-              fontFamily: '"Google Sans", sans-serif',
-              fontWeight: 500,
-              fontSize: '18px',
-              lineHeight: '24px',
-              color: '#1F1F1F',
-            }}
-          >
-            {selectedSubItem?.displayName || selectedSubItem?.title}
-          </Typography>
+          </ThemedIconContainer>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <Tooltip title={selectedSubItem?.displayName || selectedSubItem?.title || ''} arrow placement="top">
+                <label style={{
+                  fontFamily: '"Google Sans", sans-serif',
+                  color: '#1F1F1F',
+                  fontSize: '28px',
+                  fontWeight: '400',
+                  lineHeight: '36px',
+                  maxWidth: '500px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {selectedSubItem?.displayName || selectedSubItem?.title}
+                </label>
+              </Tooltip>
+            </div>
+          </div>
         </Box>
+        <div style={{ padding: '16px 20px 0px', maxWidth: '800px' }}>
+          {subItemDescription ? (
+            <>
+              <div style={{
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: '14px',
+                lineHeight: '20px',
+                color: '#575757',
+                fontWeight: 400,
+                maxHeight: subItemDescExpanded ? 'none' : '60px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}>
+                {subItemDescription}
+              </div>
+              {subItemDescription.length > 200 && (
+                <button
+                  onClick={() => setSubItemDescExpanded(!subItemDescExpanded)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 0px',
+                    color: '#0B57D0',
+                    fontFamily: '"Google Sans", sans-serif',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    lineHeight: '20px',
+                  }}
+                >
+                  {subItemDescExpanded ? <KeyboardArrowUp sx={{ fontSize: '20px' }} /> : <KeyboardArrowDown sx={{ fontSize: '20px' }} />}
+                  {subItemDescExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
+          ) : (
+            <div style={{
+              fontFamily: '"Google Sans", sans-serif',
+              fontSize: '14px',
+              lineHeight: '20px',
+              color: '#575757',
+              fontWeight: 400,
+              fontStyle: 'italic',
+            }}>
+              No description provided.
+            </div>
+          )}
+        </div>
       </Box>
     );
 
@@ -224,6 +288,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
           display: 'flex',
           height: 'calc(100vh - 80px)',
           flex: 1,
+          backgroundColor: '#fff',
         }}
       >
         <Paper
@@ -231,25 +296,94 @@ const MainComponent: React.FC<MainComponentProps> = ({
           sx={{
             flex: 1,
             height: '100%',
-            borderRadius: '24px',
+            borderRadius: '0px',
             backgroundColor: '#fff',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
           }}
         >
+          {/* Sections Toggle Button */}
+          <Box sx={{ padding: '12px 20px 0px' }}>
+            <span
+              style={{
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: '8px 13px',
+                gap: '8px',
+                height: '32px',
+                border: isSidebarOpen ? 'none' : '1px solid #0E4DCA',
+                borderRadius: '59px',
+                background: isSidebarOpen ? '#0E4DCA' : 'none',
+                color: isSidebarOpen ? '#EDF2FC' : '#0E4DCA',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newState = !isSidebarOpen;
+                onSidebarToggle?.(newState);
+                if (isSmallScreen && newState) {
+                  setPreviewData(null);
+                  setIsPreviewOpen(false);
+                }
+              }}
+            >
+              {isSidebarOpen ? <Close style={{ width: '16px', height: '16px', flexShrink: 0 }} /> : <FormatListBulleted style={{ width: '16px', height: '16px', flexShrink: 0 }} />}
+              <span style={{
+                fontFamily: '"Google Sans", sans-serif',
+                fontWeight: 500,
+                fontSize: '12px',
+                lineHeight: '16px',
+                letterSpacing: '0.1px',
+                whiteSpace: 'nowrap',
+              }}>Sections</span>
+            </span>
+          </Box>
+
           {/* Header */}
           {resourceViewerHeader}
 
           {/* Linked Assets Tab */}
           <Box
             sx={{
-              borderBottom: '1px solid #DADCE0',
-              px: '20px',
+              paddingLeft: "1.75rem",
+              position: "relative",
+              "& .MuiTabs-root": {
+                minHeight: "48px",
+              },
+              "& .MuiTab-root": {
+                fontFamily: '"Product Sans Regular", sans-serif',
+                fontSize: "14px",
+                color: "#575757",
+                textTransform: "none",
+                minHeight: "48px",
+                padding: "12px 20px 16px",
+                "&.Mui-selected": {
+                  color: "#0E4DCA",
+                },
+              },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "transparent",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  left: "20px",
+                  right: "20px",
+                  bottom: "-2px",
+                  height: "5px",
+                  backgroundColor: "white",
+                  borderTop: "3px solid #0E4DCA",
+                  borderRadius: "2.5px 2.5px 0 0",
+                },
+              },
             }}
           >
             {resourcesStatus === 'loading' ? (
-              <Box sx={{ minHeight: '44px', height: '44px', display: 'flex', alignItems: 'flex-end', pb: '8px' }}>
+              <Box sx={{ minHeight: '48px', height: '48px', display: 'flex', alignItems: 'flex-end', pb: '8px' }}>
                 <Skeleton
                   variant="text"
                   width={100}
@@ -260,38 +394,16 @@ const MainComponent: React.FC<MainComponentProps> = ({
             ) : (
               <Tabs
                 value={0}
-                sx={{
-                  minHeight: '44px',
-                  height: '44px',
-                  '& .MuiTabs-indicator': {
-                    backgroundColor: '#0E4DCA',
-                    height: '3px',
-                    borderTopLeftRadius: '2.5px',
-                    borderTopRightRadius: '2.5px',
-                    bottom: 0,
-                  },
+                aria-label="linked assets tabs"
+                TabIndicatorProps={{
+                  children: <span className="indicator" />,
                 }}
               >
-                <Tab
-                  label="Linked Assets"
-                  disableRipple
-                  sx={{
-                    textTransform: 'none',
-                    fontFamily: '"Google Sans Text", sans-serif',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    lineHeight: '20px',
-                    minWidth: 'auto',
-                    padding: '8px 0 0 0',
-                    color: '#575757',
-                    '&.Mui-selected': { color: '#0E4DCA' },
-                    alignItems: 'flex-start',
-                    justifyContent: 'flex-start',
-                  }}
-                />
+                <Tab label="Linked Assets" />
               </Tabs>
             )}
           </Box>
+          <Box sx={{ mx: "20px", borderBottom: "1px solid #DADCE0" }} />
 
           {/* Linked Assets Content */}
           <Box sx={{ flex: 1, p: '20px', overflow: 'hidden' }}>
@@ -300,11 +412,17 @@ const MainComponent: React.FC<MainComponentProps> = ({
               searchTerm={linkedAssetsSearchTerm}
               onSearchTermChange={setLinkedAssetsSearchTerm}
               idToken={id_token}
+              isPreviewOpen={isPreviewOpen}
               onAssetPreviewChange={(data) => {
                 setPreviewData(data);
                 setIsPreviewOpen(!!data);
+                if (isSmallScreen && data) {
+                  onSidebarToggle?.(false);
+                }
               }}
               resourcesStatus={resourcesStatus}
+              isSidebarOpen={isSidebarOpen}
+              onSidebarToggle={onSidebarToggle}
             />
           </Box>
         </Paper>
@@ -315,16 +433,17 @@ const MainComponent: React.FC<MainComponentProps> = ({
           sx={{
             width: isPreviewOpen ? 'clamp(300px, 22vw, 360px)' : '0px',
             minWidth: isPreviewOpen ? 'clamp(300px, 22vw, 360px)' : '0px',
-            height: 'calc(100vh - 80px)',
-            borderRadius: '24px',
+            height: 'calc(100vh - 100px)',
+            borderRadius: '0px',
             backgroundColor: '#fff',
             border: 'transparent',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'visible',
+            overflow: 'hidden',
             flexShrink: 0,
             transition: 'width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out, margin-left 0.3s ease-in-out',
-            marginLeft: isPreviewOpen ? '2%' : 0,
+            marginLeft: isPreviewOpen ? '2px' : 0,
+            marginRight: isPreviewOpen ? '16px' : 0,
             opacity: isPreviewOpen ? 1 : 0,
             borderWidth: isPreviewOpen ? undefined : 0,
           }}
@@ -355,7 +474,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
         sx={{
           flex: 1,
           height: 'calc(100vh - 80px)',
-          borderRadius: '24px',
+          borderRadius: '0px',
           backgroundColor: '#fff',
           border: 'transparent',
           display: 'flex',
@@ -378,127 +497,204 @@ const MainComponent: React.FC<MainComponentProps> = ({
       elevation={0}
       sx={{
         flex: 1,
-        height: 'calc(100vh - 80px)',
-        borderRadius: '24px',
+        height: 'calc(100vh - 72px)',
+        borderRadius: '0px',
         backgroundColor: '#fff',
-        border: 'transparent',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         position: 'relative',
       }}
     >
-      {/* Header with Title and Tabs */}
+      {loadingAspectName === selectedCard?.name ? (
+        <AnnotationPageSkeleton />
+      ) : (
+      <>
+      {/* Header with Title, Description, Stats, and Tabs */}
       <Box
         sx={{
-          height: "102px",
-          borderBottom: "1px solid #DADCE0",
-          position: "relative",
           flexShrink: 0,
         }}
       >
+        {/* Sections Toggle Button */}
+        <Box sx={{ padding: '12px 20px 0px' }}>
+          <span
+            style={{
+              boxSizing: 'border-box',
+              display: 'inline-flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: '8px 13px',
+              gap: '8px',
+              height: '32px',
+              border: isSidebarOpen ? 'none' : '1px solid #0E4DCA',
+              borderRadius: '59px',
+              background: isSidebarOpen ? '#0E4DCA' : 'none',
+              color: isSidebarOpen ? '#EDF2FC' : '#0E4DCA',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const newState = !isSidebarOpen;
+              onSidebarToggle?.(newState);
+            }}
+          >
+            {isSidebarOpen ? <Close style={{ width: '16px', height: '16px', flexShrink: 0 }} /> : <FormatListBulleted style={{ width: '16px', height: '16px', flexShrink: 0 }} />}
+            <span style={{
+              fontFamily: '"Google Sans", sans-serif',
+              fontWeight: 500,
+              fontSize: '12px',
+              lineHeight: '16px',
+              letterSpacing: '0.1px',
+              whiteSpace: 'nowrap',
+            }}>Sections</span>
+          </span>
+        </Box>
+
         {/* Title Row */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1,
-            position: "absolute",
-            top: "20px",
-            left: "20px",
+            gap: "20px",
+            padding: "20px 20px 0px",
           }}
         >
-          <img
-            src={AnnotationsIconBlue}
-            alt=""
-            style={{ width: '24px', height: '24px' }}
-          />
-          <Typography
-            variant="h5"
-            sx={{
-              fontFamily: '"Google Sans", sans-serif',
-              fontWeight: 500,
-              fontSize: "18px",
-              color: "#1F1F1F",
-            }}
-          >
-            {selectedCard?.title}
-          </Typography>
+          <ThemedIconContainer iconColor="#1A73E8">
+            <img src={AnnotationsIconBlue} alt="" style={{ width: '24px', height: '24px' }} />
+          </ThemedIconContainer>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+              <Tooltip title={selectedCard?.title || ''} arrow placement="top">
+                <label style={{
+                  fontFamily: '"Google Sans", sans-serif',
+                  color: "#1F1F1F", fontSize: "28px",
+                  fontWeight: "400", lineHeight: "36px",
+                  maxWidth: "500px", overflow: "hidden",
+                  textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {selectedCard?.title}
+                </label>
+              </Tooltip>
+            </div>
+          </div>
         </Box>
 
+        {/* Description Section */}
+        <div style={{ padding: "16px 20px 0px", maxWidth: "800px" }}>
+          {selectedCard?.description ? (
+            <>
+              <div style={{
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: "14px",
+                lineHeight: "20px",
+                color: "#575757",
+                fontWeight: 400,
+                maxHeight: descriptionExpanded ? "none" : "60px",
+                overflow: "hidden",
+                position: "relative",
+              }}>
+                {selectedCard.description}
+              </div>
+              {selectedCard.description.length > 200 && (
+                <button
+                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 0px",
+                    color: "#0B57D0",
+                    fontFamily: '"Google Sans", sans-serif',
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    lineHeight: "20px",
+                  }}
+                >
+                  {descriptionExpanded ? <KeyboardArrowUp sx={{ fontSize: "20px" }} /> : <KeyboardArrowDown sx={{ fontSize: "20px" }} />}
+                  {descriptionExpanded ? 'Show less' : 'Show more'}
+                </button>
+              )}
+            </>
+          ) : (
+            <div style={{
+              fontFamily: '"Google Sans", sans-serif',
+              fontSize: "14px",
+              lineHeight: "20px",
+              color: "#575757",
+              fontWeight: 400,
+              fontStyle: "italic",
+            }}>
+              No description provided for this aspect.
+            </div>
+          )}
+        </div>
+
         {/* Tabs */}
-        <Tabs
-          value={tabValue}
-          onChange={onTabChange}
+        <Box
           sx={{
-            position: "absolute",
-            bottom: 0,
-            left: "20px",
-            minHeight: "44px",
-            height: "44px",
-            "& .MuiTabs-indicator": {
-              backgroundColor: "#0E4DCA",
-              height: "3px",
-              borderTopLeftRadius: "2.5px",
-              borderTopRightRadius: "2.5px",
-              bottom: 0,
+            paddingLeft: "1.75rem",
+            position: "relative",
+            "& .MuiTabs-root": {
+              minHeight: "48px",
             },
-            "& .MuiTabs-flexContainer": {
-              gap: "40px",
+            "& .MuiTab-root": {
+              fontFamily: '"Product Sans Regular", sans-serif',
+              fontSize: "14px",
+              color: "#575757",
+              textTransform: "none",
+              minHeight: "48px",
+              padding: "12px 20px 16px",
+              "&.Mui-selected": {
+                color: "#0E4DCA",
+              },
+            },
+            "& .MuiTabs-indicator": {
+              backgroundColor: "transparent",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                left: "20px",
+                right: "20px",
+                bottom: "-2px",
+                height: "5px",
+                backgroundColor: "white",
+                borderTop: "3px solid #0E4DCA",
+                borderRadius: "2.5px 2.5px 0 0",
+              },
             },
           }}
         >
-          <Tab
-            label="Overview"
-            disableRipple
-            sx={{
-              textTransform: "none",
-              fontFamily: '"Google Sans Text", sans-serif',
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              lineHeight: "20px",
-              minWidth: "auto",
-              padding: "8px 0 0 0",
-              color: "#575757",
-              "&.Mui-selected": { color: "#0E4DCA" },
-              alignItems: "flex-start",
-              justifyContent: "flex-start",
+          <Tabs
+            value={tabValue}
+            onChange={onTabChange}
+            aria-label="annotation tabs"
+            TabIndicatorProps={{
+              children: <span className="indicator" />,
             }}
-          />
-          <Tab
-            label="Sub Types"
-            disableRipple
-            sx={{
-              textTransform: "none",
-              fontFamily: '"Google Sans Text", sans-serif',
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              lineHeight: "20px",
-              minWidth: "auto",
-              padding: "8px 0 0 0",
-              color: "#575757",
-              "&.Mui-selected": { color: "#0E4DCA" },
-              alignItems: "flex-start",
-              justifyContent: "flex-start",
-            }}
-          />
-        </Tabs>
+          >
+            <Tab label="Overview" />
+            <Tab label="Sub Types" />
+          </Tabs>
+        </Box>
+        <Box sx={{ mx: "20px", borderBottom: "1px solid #DADCE0" }} />
       </Box>
 
       {/* Tab Content */}
-      <Box sx={{ p: "20px", overflowY: "hidden", flex: 1 }}>
+      <Box sx={{ p: "0px 20px 20px 20px", pt: tabValue !== 0 ? "20px" : "0px", overflowY: "hidden", flex: 1 }}>
         {/* Overview Tab */}
         {tabValue === 0 && selectedCard && (
-          loadingAspectName === selectedCard?.name ? (
-            <DetailPageOverviewSkeleton />
-          ) : (
-            <Box sx={{ height: "100%", overflowY: "auto", minHeight: 0 }}>
-              <DetailPageOverview
-                entry={transformAnnotationToEntry(selectedCard)}
-                css={{ width: "100%" }}
-              />
-            </Box>
-          )
+          <Box sx={{ height: "100%", overflowY: "auto", minHeight: 0 }}>
+            <DetailPageOverview
+              entry={transformAnnotationToEntry(selectedCard)}
+              css={{ width: "100%" }}
+            />
+          </Box>
         )}
 
         {/* Sub Types Tab */}
@@ -520,6 +716,8 @@ const MainComponent: React.FC<MainComponentProps> = ({
           )
         )}
       </Box>
+      </>
+      )}
     </Paper>
   );
 };

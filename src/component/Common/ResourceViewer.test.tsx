@@ -39,6 +39,17 @@ vi.mock('../../auth/AuthProvider', () => ({
   })
 }));
 
+// Mock NoAccessContext
+const mockTriggerNoAccess = vi.fn();
+vi.mock('../../contexts/NoAccessContext', () => ({
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: mockTriggerNoAccess,
+    dismissNoAccess: vi.fn(),
+  }),
+}));
+
 // Mock child components
 vi.mock('../SearchEntriesCard/SearchEntriesCard', () => ({
   default: function MockSearchEntriesCard({ entry, css, isSelected, onDoubleClick }: any) {
@@ -374,13 +385,23 @@ describe('ResourceViewer', () => {
   });
 
   it('handles failed resources status by logging out and navigating', () => {
-    renderResourceViewer({ 
+    renderResourceViewer({
       resourcesStatus: 'failed',
       error: 'Failed to fetch resources'
     });
 
     expect(mockLogout).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
+
+  it('handles failed resources status with 403 by showing no-access modal', () => {
+    renderResourceViewer({
+      resourcesStatus: 'failed',
+      error: { error: { code: 403, status: 'PERMISSION_DENIED' } }
+    });
+
+    expect(mockTriggerNoAccess).toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
   it('handles custom header rendering', () => {

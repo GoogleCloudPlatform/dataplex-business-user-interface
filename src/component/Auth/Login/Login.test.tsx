@@ -85,8 +85,8 @@ describe('Login', () => {
       expect(logo).toHaveAttribute('src', '/assets/svg/catalog-studio-logo-figma-585de1.svg');
 
       // Check for text elements
-      expect(screen.getByText('Dataplex')).toBeInTheDocument();
-      expect(screen.getByText('Universal Catalog')).toBeInTheDocument();
+      expect(screen.getByText('Knowledge')).toBeInTheDocument();
+      expect(screen.getByText('Catalog')).toBeInTheDocument();
 
       // Check for login button
       const loginButton = screen.getByRole('button');
@@ -130,14 +130,14 @@ describe('Login', () => {
       expect(loginButtonTxt).toBeInTheDocument();
     });
 
-    it('should render Dataplex text with correct color styling', () => {
+    it('should render Knowledge Catalog text with correct color styling', () => {
       render(<Login />);
 
-      const dataplexText = screen.getByText('Dataplex');
-      expect(dataplexText).toHaveStyle({ color: 'rgb(14, 77, 202)' }); // #0E4DCA
+      const knowledgeText = screen.getByText('Knowledge');
+      expect(knowledgeText).toHaveStyle({ color: 'rgb(14, 77, 202)' }); // #0E4DCA
 
-      const universalCatalogText = screen.getByText('Universal Catalog');
-      expect(universalCatalogText).toHaveStyle({ color: 'rgb(14, 77, 202)' });
+      const catalogText = screen.getByText('Catalog');
+      expect(catalogText).toHaveStyle({ color: 'rgb(14, 77, 202)' });
     });
   });
 

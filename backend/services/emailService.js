@@ -218,7 +218,7 @@ const createAccessRequestEmail = (assetName, message, requesterEmail, projectId,
         </div>
         
         <div class="footer">
-          <p>This is an automated notification from Dataplex Universal Catalog.</p>
+          <p>This is an automated notification from Knowledge Catalog.</p>
           <p>You can manage access permissions directly in the 
             <a href="https://console.cloud.google.com/iam-admin/iam?project=${projectId}" class="console-link" style="color:#fff !important" target="_blank">
               Google Cloud Console
@@ -400,7 +400,7 @@ const createFeedbackEmail = ( message, requesterEmail, projectId) => {
         </div>
         
         <div class="footer">
-          <p>This is an automated notification from Dataplex Universal Catalog.</p>
+          <p>This is an automated notification from Knowledge Catalog.</p>
           <p>You can manage access permissions directly in the 
             <a href="https://console.cloud.google.com/iam-admin/iam?project=${projectId}" class="console-link" target="_blank">
               Google Cloud Console

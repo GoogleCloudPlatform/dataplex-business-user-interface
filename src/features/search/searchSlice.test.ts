@@ -17,6 +17,7 @@ type SearchState = {
   searchFilters: any[];
   semanticSearch?: boolean;
   isSearchFiltersOpen: boolean;
+  isSideNavOpen: boolean;
   searchSubmitted: boolean;
 };
 
@@ -443,6 +444,7 @@ describe('searchSlice', () => {
         searchFilters: [],
         semanticSearch: false,
         isSearchFiltersOpen: true,
+        isSideNavOpen: true,
         searchSubmitted: false,
       };
 
@@ -460,6 +462,7 @@ describe('searchSlice', () => {
         searchFilters: [],
         semanticSearch: false,
         isSearchFiltersOpen: true,
+        isSideNavOpen: true,
         searchSubmitted: false,
       };
 
@@ -477,6 +480,7 @@ describe('searchSlice', () => {
         searchFilters: [],
         semanticSearch: false,
         isSearchFiltersOpen: true,
+        isSideNavOpen: true,
         searchSubmitted: false,
       };
 
@@ -494,6 +498,7 @@ describe('searchSlice', () => {
         searchFilters: [],
         semanticSearch: false,
         isSearchFiltersOpen: true,
+        isSideNavOpen: true,
         searchSubmitted: false,
       };
 
@@ -511,6 +516,7 @@ describe('searchSlice', () => {
         searchFilters: [],
         semanticSearch: false,
         isSearchFiltersOpen: true,
+        isSideNavOpen: true,
         searchSubmitted: false,
       };
 

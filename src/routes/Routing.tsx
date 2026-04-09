@@ -159,14 +159,7 @@ const Routing = () => {
           <ProtectedRoute>
             <SessionExpirationWrapper>
               <Layout searchBar={true}>
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '95vh',
-                    backgroundColor: '#F8FAFD',
-                  }}>
-                  <BrowseByAnnotation />
-                </div>
+                <BrowseByAnnotation />
               </Layout>
             </SessionExpirationWrapper>
           </ProtectedRoute>
@@ -245,7 +238,7 @@ const Routing = () => {
                 <div style={{ padding: '20px', width:"1000px", margin:"100px auto 0",  }}>
                     <div className="logo-container">
                       <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="CS Studio Logo" className="navbar-logo-img" />
-                      <label style={{fontSize:"24px", fontWeight:800, color:"#0E4DCA"}}>Dataplex</label>
+                      <label style={{fontSize:"24px", fontWeight:800, color:"#0E4DCA"}}>Knowledge Catalog</label>
                       <label style={{fontSize:"24px", fontWeight:600, color:"#0E4DCA", margin:"0px 3px 0px"}}>|</label>
                       <label style={{fontSize:"22px", fontWeight:600, color:"#0E4DCA", margin:"0px 3px 0px"}}>Buisness Interface</label>
                     </div>
@@ -259,7 +252,7 @@ const Routing = () => {
                           </div>
                         </div>
                         <div style={{ flex: '1 1 0', width: '50%'  }}>
-                          <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Dataplex Business Inteface Support</div>
+                          <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Knowledge Catalog Business Interface Support</div>
                           <div style={{ textDecoration:"underline", color: "#0E4DCA", fontSize: "1rem", fontWeight: "600", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                             dataplex-interface-feedback@google.com
                           </div>

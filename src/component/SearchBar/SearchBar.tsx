@@ -311,7 +311,7 @@ const SearchBar: React.FC<SearchProps> = ({handleSearchSubmit, dataSearch, varia
                 padding: '0rem 0.5rem 0rem 1rem',
                 width: '100%',
                 maxWidth: variant === 'navbar' ? '400px' : 'clamp(600px, 57vw, 1080px)',
-                marginLeft: variant === 'navbar' ? (location.pathname === '/browse-by-annotation' ? '2rem' : '1rem') : (location.pathname === '/browse-by-annotation' ? '1rem' : '0'),
+                marginLeft: variant === 'navbar' ? '1rem' : '0',
                 marginRight: variant === 'navbar' ? '0.5rem' : '0',
                 position: 'relative',
                 zIndex: isAccessPanelOpen ? 999 : 1100,

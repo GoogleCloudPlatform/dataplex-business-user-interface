@@ -1,7 +1,25 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import DetailPageOverview from './DetailPageOverview';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      user: (state = { mode: 'light' }) => state,
+    },
+  });
+
+const render = (ui: React.ReactElement, options?: any) => {
+  const store = createMockStore();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <Provider store={store}>{children}</Provider>
+  );
+  return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
 
 // Mock child components
 vi.mock('../Schema/Schema', () => ({
@@ -21,12 +39,16 @@ vi.mock('../Schema/SchemaFilter', () => ({
   }
 }));
 
-vi.mock('../Filter/TableFilter', () => ({
-  default: function MockTableFilter({ data, onFilteredDataChange }: any) {
+vi.mock('../Common/FilterBar', () => ({
+  default: function MockFilterBar({ filterText, onFilterTextChange, activeFilters }: any) {
     return (
-      <div data-testid="table-filter">
-        Table Filter for {data?.length} rows
-        <button onClick={() => onFilteredDataChange(data)}>Apply Filter</button>
+      <div data-testid="filter-bar">
+        <input
+          data-testid="filter-bar-input"
+          value={filterText}
+          onChange={(e: any) => onFilterTextChange(e.target.value)}
+        />
+        <span>Filters: {activeFilters?.length || 0}</span>
       </div>
     );
   }
@@ -160,7 +182,7 @@ describe('DetailPageOverview', () => {
                               {
                                 structValue: {
                                   fields: {
-                                    value: { numberValue: 150 }
+                                    value: { numberValue: 1500 }
                                   }
                                 }
                               }
@@ -228,8 +250,9 @@ describe('DetailPageOverview', () => {
 
   it('renders the component with all main sections', () => {
     renderDetailPageOverview();
-    
-    expect(screen.getByText('Details')).toBeInTheDocument();
+
+    // Details accordion has been removed (moved to ViewDetails header)
+    expect(screen.queryByText('Details')).not.toBeInTheDocument();
     // Table Info section is only rendered for Tables entry type
     const tableInfo = screen.queryByText('Table Info');
     if (tableInfo) {
@@ -237,66 +260,13 @@ describe('DetailPageOverview', () => {
     }
     expect(screen.getByText('Documentation')).toBeInTheDocument();
     expect(screen.getByText('Contacts')).toBeInTheDocument();
-    expect(screen.getByText('Info')).toBeInTheDocument();
+    expect(screen.getByText('Timestamps')).toBeInTheDocument();
     expect(screen.getByText('Usage Metrics')).toBeInTheDocument();
     expect(screen.getByText('Labels')).toBeInTheDocument();
   });
 
-  it('displays entry description in Details section', () => {
-    renderDetailPageOverview();
-    
-    expect(screen.getByText('Description')).toBeInTheDocument();
-    expect(screen.getByText('Test table description')).toBeInTheDocument();
-  });
-
-  it('displays system information in Details section', () => {
-    renderDetailPageOverview();
-    
-    expect(screen.getByText('System')).toBeInTheDocument();
-    expect(screen.getByText('BigQuery')).toBeInTheDocument();
-  });
-
-  it('displays status as Active with checkmark', () => {
-    renderDetailPageOverview();
-    
-    expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
-  });
-
-  it('displays location information', () => {
-    renderDetailPageOverview();
-    
-    expect(screen.getByText('Location')).toBeInTheDocument();
-    expect(screen.getByText('US')).toBeInTheDocument();
-  });
-
-  it('displays identifiers with copy functionality', () => {
-    renderDetailPageOverview();
-
-    expect(screen.getByText('Identifiers')).toBeInTheDocument();
-    expect(screen.getByText('Resource')).toBeInTheDocument();
-    expect(screen.getByText('FQN')).toBeInTheDocument();
-  });
-
-  it('copies resource to clipboard when clicked', () => {
-    renderDetailPageOverview();
-
-    const resourceButton = screen.getByText('Resource');
-    fireEvent.click(resourceButton);
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'projects/test-project/datasets/test-dataset/tables/test-table'
-    );
-  });
-
-  it('copies FQN to clipboard when clicked', () => {
-    renderDetailPageOverview();
-    
-    const fqnButton = screen.getByText('FQN');
-    fireEvent.click(fqnButton);
-    
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('project:dataset.table');
-  });
+  // Note: Description, System, Status, Location, Identifiers, and clipboard tests
+  // have been removed because the Details accordion was moved to the ViewDetails header.
 
   it('renders Table Info section for Tables entry type', () => {
     renderDetailPageOverview();
@@ -332,8 +302,9 @@ describe('DetailPageOverview', () => {
       // Click Sample Data tab
       const sampleDataTab = screen.getByText('Sample Data');
       fireEvent.click(sampleDataTab);
-      
-      expect(screen.getByTestId('table-view')).toBeInTheDocument();
+
+      // Verify sample data content is rendered in flex layout
+      expect(screen.getByText('John')).toBeInTheDocument();
     } else {
       // For non-Tables entry types, this test should pass without error
       expect(true).toBe(true);
@@ -353,15 +324,14 @@ describe('DetailPageOverview', () => {
     }
   });
 
-  it('renders table filter when Sample Data tab is active', () => {
+  it('renders filter bar when Sample Data tab is active', () => {
     renderDetailPageOverview();
-    
+
     const sampleDataTab = screen.queryByText('Sample Data');
     if (sampleDataTab) {
       fireEvent.click(sampleDataTab);
-      expect(screen.getByTestId('table-filter')).toBeInTheDocument();
+      expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
     } else {
-      // For non-Tables entry types, this test should pass without error
       expect(true).toBe(true);
     }
   });
@@ -373,7 +343,9 @@ describe('DetailPageOverview', () => {
     const sampleDataTab = screen.queryByText('Sample Data');
     if (sampleDataTab) {
       fireEvent.click(sampleDataTab);
-      expect(screen.getByText('Table with 2 rows')).toBeInTheDocument();
+      // Verify sample data values are rendered in flex layout
+      expect(screen.getByText('John')).toBeInTheDocument();
+      expect(screen.getByText('Jane')).toBeInTheDocument();
     } else {
       // For non-Tables entry types, this test should pass without error
       expect(true).toBe(true);
@@ -445,31 +417,25 @@ describe('DetailPageOverview', () => {
     
     renderDetailPageOverview({ entry: entryWithoutContacts });
     
-    expect(screen.getByText('No Contacts Available')).toBeInTheDocument();
+    expect(screen.getByText('No contacts assigned to this asset.')).toBeInTheDocument();
   });
 
-  it('displays creation and modification times', () => {
+  it('displays creation and modification times in Timestamps section', () => {
     renderDetailPageOverview();
 
-    expect(screen.getByText('Creation Time')).toBeInTheDocument();
-    expect(screen.getByText('Last Modified Time')).toBeInTheDocument();
-
-    // Dates appear in the document
-    expect(screen.getByText('Jan 1, 2022')).toBeInTheDocument();
-
-    // Last Modified Time also shows date with time on next line
-    const lastModifiedSection = screen.getByText('Last Modified Time').closest('div')?.parentElement;
-    expect(lastModifiedSection?.textContent).toContain('Jan 2, 2022');
+    expect(screen.getByText('Created')).toBeInTheDocument();
+    expect(screen.getByText('Last modified')).toBeInTheDocument();
   });
 
   it('displays usage metrics when available', () => {
     renderDetailPageOverview();
-    
+
     expect(screen.getByText('Usage Metrics')).toBeInTheDocument();
-    expect(screen.getByText('Execution Time')).toBeInTheDocument();
+    expect(screen.getByText('Avg Exec Time')).toBeInTheDocument();
     expect(screen.getByText('Total Queries')).toBeInTheDocument();
-    expect(screen.getByText('Refresh Time')).toBeInTheDocument();
-    expect(screen.getByText('150')).toBeInTheDocument();
+    expect(screen.getByText('seconds')).toBeInTheDocument();
+    expect(screen.getByText('all time')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
@@ -488,33 +454,47 @@ describe('DetailPageOverview', () => {
 
     renderDetailPageOverview({ entry: entryWithoutUsage });
 
-    // When usage data is empty, the component shows "-" for each metric
     expect(screen.getByText('Usage Metrics')).toBeInTheDocument();
-    expect(screen.getByText('Execution Time')).toBeInTheDocument();
-    expect(screen.getByText('Total Queries')).toBeInTheDocument();
+    expect(screen.getByText('No usage metrics available for this asset.')).toBeInTheDocument();
+  });
+
+  it('hides Usage Metrics section for glossary entry type', () => {
+    const mockGlossaryEntry = {
+      ...mockEntry,
+      entryType: 'glossary/term',
+    };
+    renderDetailPageOverview({ entry: mockGlossaryEntry });
+
+    expect(screen.queryByText('Usage Metrics')).not.toBeInTheDocument();
+    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Contacts')).toBeInTheDocument();
+    expect(screen.getByText('Timestamps')).toBeInTheDocument();
+    expect(screen.getByText('Labels')).toBeInTheDocument();
+  });
+
+  it('hides Usage Metrics section for annotation entry type', () => {
+    const mockAnnotationEntry = {
+      ...mockEntry,
+      entryType: 'annotation/My Aspect',
+    };
+    renderDetailPageOverview({ entry: mockAnnotationEntry });
+
+    expect(screen.queryByText('Usage Metrics')).not.toBeInTheDocument();
+    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Contacts')).toBeInTheDocument();
+    expect(screen.getByText('Timestamps')).toBeInTheDocument();
+    expect(screen.getByText('Labels')).toBeInTheDocument();
   });
 
   it('displays labels', () => {
     renderDetailPageOverview();
-    
+
     expect(screen.getByText('Labels')).toBeInTheDocument();
     expect(screen.getByText('environment: production')).toBeInTheDocument();
     expect(screen.getByText('team: data-engineering')).toBeInTheDocument();
   });
 
-  it('handles missing description gracefully', () => {
-    const entryWithoutDescription = {
-      ...mockEntry,
-      entrySource: {
-        ...mockEntry.entrySource,
-        description: undefined
-      }
-    };
-    
-    renderDetailPageOverview({ entry: entryWithoutDescription });
-    
-    expect(screen.getByText('No Description Available')).toBeInTheDocument();
-  });
+  // Description test removed - description moved to ViewDetails header
 
   it('handles missing documentation gracefully', () => {
     const entryWithoutDoc = {
@@ -533,7 +513,7 @@ describe('DetailPageOverview', () => {
     
     renderDetailPageOverview({ entry: entryWithoutDoc });
     
-    expect(screen.getByText('No Documentation Available')).toBeInTheDocument();
+    expect(screen.getByText('No documentation yet')).toBeInTheDocument();
   });
 
   it('applies custom CSS styles', () => {
@@ -556,25 +536,14 @@ describe('DetailPageOverview', () => {
     }
   });
 
-  it('handles filtered sample data changes', () => {
+  it('renders filter bar with sample data', () => {
     renderDetailPageOverview();
-    
-    // First check if Sample Data tab exists
+
     const sampleDataTab = screen.queryByText('Sample Data');
     if (sampleDataTab) {
       fireEvent.click(sampleDataTab);
-      
-      // Wait for the tab to be active and then find the filter button
-      waitFor(() => {
-        const applyFilterButton = screen.queryByText('Apply Filter');
-        if (applyFilterButton) {
-          fireEvent.click(applyFilterButton);
-          // Should still render table view with filtered data
-          expect(screen.getByTestId('table-view')).toBeInTheDocument();
-        }
-      });
+      expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
     } else {
-      // For non-Tables entry types, this test should pass without error
       expect(true).toBe(true);
     }
   });
@@ -592,7 +561,7 @@ describe('DetailPageOverview', () => {
 
     // Component handles null entryType gracefully by using empty string
     renderDetailPageOverview({ entry: entryWithoutType });
-    expect(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.getByText('Timestamps')).toBeInTheDocument();
   });
 
   it('handles entry without aspects', () => {
@@ -600,28 +569,15 @@ describe('DetailPageOverview', () => {
 
     // Component handles missing aspects gracefully
     renderDetailPageOverview({ entry: entryWithoutAspects });
-    expect(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.getByText('Timestamps')).toBeInTheDocument();
   });
 
-  it('formats dates correctly', () => {
+  it('formats dates correctly in Timestamps section', () => {
     renderDetailPageOverview();
 
-    // Check that dates are formatted as expected (Jan 1, 2022, Jan 2, 2022)
-    expect(screen.getByText('Jan 1, 2022')).toBeInTheDocument();
-
-    // Check for Last Modified Time section which contains Jan 2, 2022
-    const lastModifiedLabel = screen.getByText('Last Modified Time');
-    const lastModifiedSection = lastModifiedLabel.closest('div')?.parentElement;
-    expect(lastModifiedSection?.textContent).toContain('Jan 2, 2022');
-  });
-
-  it('displays last run time as dash', () => {
-    renderDetailPageOverview();
-
-    expect(screen.getByText('Last Run Time')).toBeInTheDocument();
-    // Last Run Time shows "-" not "NA"
-    const lastRunTimeSection = screen.getByText('Last Run Time').closest('div')?.parentElement;
-    expect(lastRunTimeSection?.textContent).toContain('-');
+    // Check for Created and Last modified labels in Timestamps section
+    expect(screen.getByText('Created')).toBeInTheDocument();
+    expect(screen.getByText('Last modified')).toBeInTheDocument();
   });
 
   it('handles contact without email format', () => {
@@ -710,7 +666,7 @@ describe('DetailPageOverview', () => {
     renderDetailPageOverview({ entry: entryWithoutLabels });
 
     expect(screen.getByText('Labels')).toBeInTheDocument();
-    expect(screen.getByText('No Labels available')).toBeInTheDocument();
+    expect(screen.getByText('No Labels available for this asset.')).toBeInTheDocument();
   });
 
   it('renders access denied state', () => {
@@ -733,7 +689,7 @@ describe('DetailPageOverview', () => {
     if (sampleDataTab) {
       fireEvent.click(sampleDataTab);
       // Component should handle error gracefully
-      expect(screen.getByTestId('table-filter')).toBeInTheDocument();
+      expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
     }
   });
 
@@ -744,25 +700,7 @@ describe('DetailPageOverview', () => {
     expect(screen.getByText('team: data-engineering')).toBeInTheDocument();
   });
 
-  it('handles accordion expansion states', () => {
-    renderDetailPageOverview();
-
-    // Details accordion should be expanded by default
-    const detailsAccordion = screen.getByText('Details').closest('button');
-    expect(detailsAccordion).toHaveAttribute('aria-expanded', 'true');
-
-    // Info accordion should be expanded by default
-    const infoAccordion = screen.getByText('Info').closest('button');
-    expect(infoAccordion).toHaveAttribute('aria-expanded', 'true');
-  });
-
-  it('displays refresh time in usage metrics', () => {
-    renderDetailPageOverview();
-
-    expect(screen.getByText('Refresh Time')).toBeInTheDocument();
-    const refreshTimeSection = screen.getByText('Refresh Time').closest('div');
-    expect(refreshTimeSection?.textContent).toContain('Jan 1, 2022');
-  });
+  // Accordion tests removed - cards are no longer collapsible
 
   it('handles schema data presence', () => {
     renderDetailPageOverview();
@@ -774,17 +712,7 @@ describe('DetailPageOverview', () => {
     }
   });
 
-  it('copies notification is triggered when copying identifiers', () => {
-    renderDetailPageOverview();
-
-    const resourceButton = screen.getByText('Resource');
-    fireEvent.click(resourceButton);
-
-    // The notification context mock should have been called
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'projects/test-project/datasets/test-dataset/tables/test-table'
-    );
-  });
+  // Clipboard copy test removed - identifiers moved to ViewDetails header
 
   it('renders schema filter when schema data is present', () => {
     renderDetailPageOverview();

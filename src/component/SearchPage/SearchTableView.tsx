@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Tooltip } from '@mui/material';
 import { Lock } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import Tag from '../Tags/Tag';
+import { useColumnResize } from '../../hooks/useColumnResize';
+import ResizeHandle from '../Schema/ResizeHandle';
 
 /**
  * @file SearchTableView.tsx
@@ -76,6 +78,33 @@ const OverflowTooltip: React.FC<{ text: string; children: React.ReactElement<{ o
   );
 };
 
+const OverflowTag: React.FC<{ text: string; className?: string; css?: React.CSSProperties }> = ({ text, className, css }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const spanRef = useRef<HTMLSpanElement>(null);
+
+  const handleMouseEnter = () => {
+    const el = spanRef.current?.querySelector('span') as HTMLElement;
+    if (el) setShowTooltip(el.scrollWidth > el.clientWidth);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  return (
+    <Tooltip title={showTooltip ? text : ''} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -8] } }] } }}>
+      <span
+        ref={spanRef}
+        style={{ maxWidth: '100%', overflow: 'hidden' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Tag text={text} className={className} css={{ ...css, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'block' }} />
+      </span>
+    </Tooltip>
+  );
+};
+
 const SearchTableView: React.FC<SearchTableViewProps> = ({
   resources,
   onRowClick,
@@ -86,11 +115,30 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
   selectedEntryName
 }) => {
   const mode = useSelector((state: any) => state.user.mode) as string;
+  const isDark = mode === 'dark';
   const borderRight = previewOpen ? '0px' : '10px';
   const gradientRight = previewOpen ? '0px' : '10px';
   // const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [sortColumn, setSortColumn] = useState<'name' | 'date' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'name' | 'date' | 'location' | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const COLUMN_CONFIGS = React.useMemo(() => [
+    { key: 'name', initialWidth: 250, minWidth: 120 },
+    { key: 'description', initialWidth: 300, minWidth: 120 },
+    { key: 'type', initialWidth: 170, minWidth: 100 },
+    { key: 'location', initialWidth: 130, minWidth: 80 },
+    { key: 'lastModified', initialWidth: 150, minWidth: 100 },
+  ], []);
+
+  const { columnWidths, activeIndex, handleMouseDown } = useColumnResize({
+    columns: COLUMN_CONFIGS,
+    mode: 'coupled',
+  });
+
+  const columnPercents = React.useMemo(() => {
+    const total = columnWidths.reduce((s, w) => s + w, 0);
+    return columnWidths.map(w => `${((w / total) * 100).toFixed(2)}%`);
+  }, [columnWidths]);
 
   const handleRowClick = (entry: any) => {
     onRowClick(entry);
@@ -119,6 +167,15 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
         const aName = (a?.dataplexEntry?.name || '').split('/').pop() || '';
         const bName = (b?.dataplexEntry?.name || '').split('/').pop() || '';
         return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+      });
+      return sortOrder === 'asc' ? sorted : sorted.reverse();
+    }
+
+    if (sortColumn === 'location') {
+      const sorted = [...resources].sort((a: any, b: any) => {
+        const aLoc = a?.dataplexEntry?.entrySource?.location || '';
+        const bLoc = b?.dataplexEntry?.entrySource?.location || '';
+        return aLoc.localeCompare(bLoc, undefined, { sensitivity: 'base' });
       });
       return sortOrder === 'asc' ? sorted : sorted.reverse();
     }
@@ -158,6 +215,31 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
     }
   };
 
+  const handleToggleLocationSort = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (sortColumn === 'location') {
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else {
+        setSortColumn(null);
+        setSortOrder('asc');
+      }
+    } else {
+      setSortColumn('location');
+      setSortOrder('asc');
+    }
+  };
+
+  const getLocationSortTooltip = (): string => {
+    if (sortColumn === 'location' && sortOrder === 'asc') {
+      return 'Sort Z to A';
+    }
+    if (sortColumn === 'location' && sortOrder === 'desc') {
+      return '';
+    }
+    return 'Sort A to Z';
+  };
+
   const getNameSortTooltip = (): string => {
     if (sortColumn === 'name' && sortOrder === 'asc') {
       return 'Sort Z to A';
@@ -182,7 +264,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
     <TableContainer
       component={Paper}
       sx={{
-        backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
+        backgroundColor: isDark ? '#131314' : '#FFFFFF',
         borderRadius: '8px',
         boxShadow: 'none',
         maxHeight: 'calc(100vh - 200px)',
@@ -192,6 +274,11 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
       }}
     >
       <Table sx={{ width: '100%', tableLayout: 'fixed' }} aria-label="search results table">
+        <colgroup>
+          {columnPercents.map((w, i) => (
+            <col key={i} style={{ width: w }} />
+          ))}
+        </colgroup>
         <TableHead>
           <TableRow
             sx={{
@@ -220,9 +307,9 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
               sx={{
                 fontSize: '12px',
                 fontWeight: '500',
-                color: mode === 'dark' ? '#dedfe0' : '#444746',
+                color: isDark ? '#dedfe0' : '#444746',
                 fontFamily: '"Google Sans", sans-serif',
-                width: '25%',
+                position: 'relative',
               }}
             >
               <Tooltip title={getNameSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
@@ -239,7 +326,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                     margin: '-4px -8px',
                     transition: 'background-color 0.2s ease',
                     '&:hover': {
-                      backgroundColor: mode === 'dark' ? '#3c4043' : '#F8F9FA',
+                      backgroundColor: isDark ? '#3c4043' : '#F8F9FA',
                     },
                   }}
                 >
@@ -257,12 +344,17 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                     }}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="24" height="24" rx="12" fill={mode === 'dark' ? '#004a77' : '#C2E7FF'}/>
-                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={mode === 'dark' ? '#8ab4f8' : '#004A77'}/>
+                      <rect width="24" height="24" rx="12" fill={isDark ? '#004a77' : '#C2E7FF'}/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={isDark ? '#8ab4f8' : '#004A77'}/>
                     </svg>
                   </Box>
                 </Box>
               </Tooltip>
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(0, e); }}
+                isActive={activeIndex === 0}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Description */}
@@ -271,11 +363,16 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                 fontFamily: '"Google Sans", sans-serif',
                 fontSize: '12px',
                 fontWeight: '500',
-                color: mode === 'dark' ? '#dedfe0' : '#444746',
-                width: '30%',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
               Description
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(1, e); }}
+                isActive={activeIndex === 1}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Type */}
@@ -284,11 +381,16 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                 fontFamily: '"Google Sans", sans-serif',
                 fontSize: '12px',
                 fontWeight: '500',
-                color: mode === 'dark' ? '#dedfe0' : '#444746',
-                width: '17%',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
               Type
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(2, e); }}
+                isActive={activeIndex === 2}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Location */}
@@ -297,11 +399,53 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                 fontFamily: '"Google Sans", sans-serif',
                 fontSize: '12px',
                 fontWeight: '500',
-                color: mode === 'dark' ? '#dedfe0' : '#444746',
-                width: '13%',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
-              Location
+              <Tooltip title={getLocationSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
+                <Box
+                  role="button"
+                  onClick={handleToggleLocationSort}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    margin: '-4px -8px',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: isDark ? '#3c4043' : '#F8F9FA',
+                    },
+                  }}
+                >
+                  <span>Location</span>
+                  <Box
+                    component="span"
+                    className="sort-btn"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      opacity: sortColumn === 'location' ? 1 : 0,
+                      transform: (sortColumn === 'location' && sortOrder === 'desc') ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out, opacity 0.2s ease',
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill={isDark ? '#004a77' : '#C2E7FF'}/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={isDark ? '#8ab4f8' : '#004A77'}/>
+                    </svg>
+                  </Box>
+                </Box>
+              </Tooltip>
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(3, e); }}
+                isActive={activeIndex === 3}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Last Modified */}
@@ -310,8 +454,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                 fontFamily: '"Google Sans", sans-serif',
                 fontSize: '12px',
                 fontWeight: '500',
-                color: mode === 'dark' ? '#dedfe0' : '#444746',
-                width: '15%',
+                color: isDark ? '#dedfe0' : '#444746',
               }}
             >
               <Tooltip title={getDateSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
@@ -420,7 +563,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                         sx={{
                           flex: 1,
                           fontFamily: '"Google Sans", sans-serif',
-                          fontSize: '18px',
+                          fontSize: '14px',
                           fontWeight: 400,
                           color: mode === 'dark' ? '#dedfe0' : '#1F1F1F',
                           cursor: 'pointer',
@@ -470,10 +613,15 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                     padding: '10px 20px'
                   }}
                 >
-                  <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <Tag
+                  <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflow: 'hidden' }}>
+                    <OverflowTag
                       text={(() => {
-                        return entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.charAt(0).toUpperCase() + entry.entrySource?.system.slice(1).toLowerCase();
+                        const sys = entry.entrySource?.system;
+                        if (!sys) return 'Custom';
+                        const lower = sys.toLowerCase();
+                        if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog';
+                        if (lower === 'bigquery') return 'BigQuery';
+                        return sys.charAt(0).toUpperCase() + sys.slice(1).toLowerCase();
                       })()}
                       className="asset-tag"
                       css={{
@@ -491,7 +639,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                         transition: 'none',
                       }}
                     />
-                    <Tag
+                    <OverflowTag
                       text={getEntryType(entry.name, '/')}
                       className="asset-tag"
                       css={{

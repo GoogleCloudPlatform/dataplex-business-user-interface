@@ -965,6 +965,10 @@ interface GlossariesState {
   error: string | null;
   filterError: string | null;
   accessDeniedItemId: string | null; // Track which item returned 403
+  // UI state preserved across navigation
+  selectedId: string;
+  expandedIds: string[];
+  tabValue: number;
 }
 
 const initialState: GlossariesState = {
@@ -979,6 +983,9 @@ const initialState: GlossariesState = {
   error: null,
   filterError: null,
   accessDeniedItemId: null,
+  selectedId: "",
+  expandedIds: [],
+  tabValue: 0,
 };
 
 export const glossariesSlice = createSlice({
@@ -1017,6 +1024,20 @@ export const glossariesSlice = createSlice({
       if (filter) {
         filter.connector = action.payload.connector;
       }
+    },
+    setGlossarySelectedId: (state, action: { payload: string }) => {
+      state.selectedId = action.payload;
+    },
+    setGlossaryExpandedIds: (state, action: { payload: string[] }) => {
+      state.expandedIds = action.payload;
+    },
+    setGlossaryTabValue: (state, action: { payload: number }) => {
+      state.tabValue = action.payload;
+    },
+    resetGlossaryUIState: (state) => {
+      state.selectedId = "";
+      state.expandedIds = [];
+      state.tabValue = 0;
     },
   },
   extraReducers: (builder) => {
@@ -1292,5 +1313,9 @@ export const {
   addFilter,
   removeFilter,
   updateFilterConnector,
+  setGlossarySelectedId,
+  setGlossaryExpandedIds,
+  setGlossaryTabValue,
+  resetGlossaryUIState,
 } = glossariesSlice.actions;
 export default glossariesSlice.reducer;

@@ -2,7 +2,7 @@ import './Home.css'
 import SearchBar from '../SearchBar/SearchBar'
 import { CircularProgress, Grid } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../auth/AuthProvider'
 import axios from 'axios'
 import { URLS } from '../../constants/urls'
@@ -11,6 +11,8 @@ import type { AppDispatch } from '../../app/store'
 import { useNotification } from '../../contexts/NotificationContext'
 import { getProjects } from '../../features/projects/projectsSlice'
 import { sanitizeFirstName } from '../../utils/sanitizeName'
+import { useNoAccess } from '../../contexts/NoAccessContext'
+import { REQUIRED_IAM_ROLE } from '../../constants/auth'
 
 /**
  * @file Home.tsx
@@ -41,10 +43,49 @@ import { sanitizeFirstName } from '../../utils/sanitizeName'
 const Home = () => {
   const { user, logout, updateUser } = useAuth();
   const { showError } = useNotification();
+  const { triggerNoAccess } = useNoAccess();
   const navigate = useNavigate();
   const [loader, setLoader] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
+  const accessCheckedRef = useRef(false);
+
+  // Check OAuth scopes (set at login) and IAM role after login
+  useEffect(() => {
+    if (!user?.token || !user?.email || accessCheckedRef.current) return;
+    accessCheckedRef.current = true;
+
+    // 1. Check if login flagged missing OAuth scopes
+    const scopeCheckFailed = localStorage.getItem('scopeCheckFailed');
+    if (scopeCheckFailed) {
+      const missingScopes = JSON.parse(scopeCheckFailed);
+      localStorage.removeItem('scopeCheckFailed');
+      triggerNoAccess({
+        message: `Your Google account did not grant the required permissions: ${missingScopes.map((s: string) => s.split('/').pop()).join(', ')}. Please sign in again and grant all requested permissions.`,
+      });
+      return;
+    }
+
+    // 2. Check IAM role via backend endpoint
+    axios.post(URLS.API_URL + URLS.CHECK_IAM_ROLE, {
+      email: user.email,
+      role: REQUIRED_IAM_ROLE,
+    }).then((res) => {
+      if (!res.data.hasRole) {
+        triggerNoAccess({
+          message: `Your account (${user.email}) does not have the required '${REQUIRED_IAM_ROLE}' role on this project. Please contact your administrator to get the appropriate permissions.`,
+        });
+      }
+    }).catch((err) => {
+      console.error('[Home] IAM role check failed:', err);
+      // If the check itself fails with 403, the user likely lacks cloud-platform scope
+      if (err.response?.status === 403) {
+        triggerNoAccess({
+          message: 'Unable to verify your permissions. You may not have sufficient access to this project. Please contact your administrator.',
+        });
+      }
+    });
+  }, [user?.token, user?.email, triggerNoAccess]);
 
   useEffect(() => {
     setLoader(true);

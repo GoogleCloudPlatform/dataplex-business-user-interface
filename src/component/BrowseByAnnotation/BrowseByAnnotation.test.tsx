@@ -23,6 +23,14 @@ vi.mock('react-redux', () => ({
     const mockState = {
       resources: {
         aspectBrowseCache: {},
+        browseSelectedItemName: null,
+        browseSelectedSubItem: null,
+        browseTabValue: 0,
+        browseDynamicAnnotationsData: [],
+        browseSubTypesWithCache: {},
+      },
+      search: {
+        isSideNavOpen: true,
       },
     };
     return selector(mockState);
@@ -39,6 +47,11 @@ vi.mock('../../features/resources/resourcesSlice', () => ({
     type: 'resources/setAspectBrowseCache',
     payload: params,
   })),
+  setBrowseSelectedItemName: vi.fn((val) => ({ type: 'resources/setBrowseSelectedItemName', payload: val })),
+  setBrowseSelectedSubItem: vi.fn((val) => ({ type: 'resources/setBrowseSelectedSubItem', payload: val })),
+  setBrowseTabValue: vi.fn((val) => ({ type: 'resources/setBrowseTabValue', payload: val })),
+  setBrowseDynamicAnnotationsData: vi.fn((val) => ({ type: 'resources/setBrowseDynamicAnnotationsData', payload: val })),
+  setBrowseSubTypesWithCache: vi.fn((val) => ({ type: 'resources/setBrowseSubTypesWithCache', payload: val })),
 }));
 
 // Mock getAspectDetail action
@@ -226,6 +239,7 @@ vi.mock('@mui/material', () => ({
       {children}
     </span>
   ),
+  useMediaQuery: () => false,
 }));
 
 // Mock data
@@ -675,8 +689,15 @@ describe('BrowseByAnnotation', () => {
       // Click same item again - countsFetched should be true, so no new fetch
       await user.click(screen.getByTestId('item-click-btn'));
 
-      // Should not fetch again since countsFetched is true
-      expect(mockDispatch).not.toHaveBeenCalled();
+      // Should not dispatch any fetch actions (browseResourcesByAspects, getAspectDetail, fetchEntry)
+      // Only state-sync dispatches (setBrowseSelectedItemName, etc.) are expected
+      const fetchDispatches = mockDispatch.mock.calls.filter(
+        (call: any) => {
+          const type = call[0]?.type || '';
+          return type.includes('browseResourcesByAspects') || type.includes('getAspectDetail') || type.includes('fetchEntry');
+        }
+      );
+      expect(fetchDispatches).toHaveLength(0);
     });
 
     it('should update dynamicAnnotationsData with fetched counts and aspect details', async () => {

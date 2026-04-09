@@ -1,4 +1,4 @@
-# Dataplex Universal Catalog Business Interface - 1.3.2
+# Knowledge Catalog Business Interface - 1.3.2
 
 An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Dataplex** Universal Catalog (formerly Data Catalog).
 ## Key objectives of the application include:
@@ -169,9 +169,7 @@ Now to use browse by aspects we have to set the aspectType here in the below for
       "domainname",
     ],
 
-  },
-  "assets": {},
-  "products": []
+  }
 }
 ```
 
@@ -182,7 +180,7 @@ Folllow these steps to get the values for configuration:
 3. Here you can see the project number.
 4. Copy the project number and replace it in the name.
   `projects/1069*****1809/locations/{replace-location-here}/entryGroups/@dataplex/entries/{replace-aspect-id-here}_aspectType`
-5. Now go to **Dataplex Universal Catalog**.
+5. Now go to **Knowledge Catalog**.
 6. Search for the name of the aspect and open the detail view.
 7. In here you can find the aspect type id, location and we already have the project number from the previous steps using that our name would be.
   `projects/1069*****1809/locations/us-central1/entryGroups/@dataplex/entries/aspecttype3_aspectType`.
@@ -222,7 +220,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 ```
 
 #### Step 7: Deploy to Cloud Run
-Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the **OAuth credentials** you created in earlier steps.
+Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] with the **OAuth credentials** you created in earlier steps.
 
 Deploy the container image you just built to **Cloud Run** using the below command after replacing the mentioned values.
 After successful deployment it will return a url to access the application.
@@ -320,10 +318,11 @@ gcloud run deploy [SERVICE_NAME] \
 
 
 ## Release Note : 1.3.2
-This is a sub minor release with features, identified bug/fixes and some user interface changes.
+This is a minor release with features, identified bug/fixes and some user interface changes.
 Feature Enhancements:
 
-  - UI/UX changes in search result page.
+  - Rebranding of Dataplex Universal Catalog to Knowledge Catalog.
+  - UI/UX changes in search result, View Detail and browse by aspects page.
   - Multiple Other smaller UI/UX changes.
   - Data product request flow form modified.
   - Increased and modified unit test coverages for the new and modified modules.

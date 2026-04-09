@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,9 @@ import { ExpandMore } from '@mui/icons-material';
 import AnnotationsIconBlue from '../../assets/svg/annotations-icon-blue.svg';
 import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
+import { useSelector } from 'react-redux';
+import FilterBar, { FilterBarChips } from '../Common/FilterBar';
+import type { ActiveFilter } from '../Common/FilterBar';
 
 /**
  * @file SideNav.tsx
@@ -42,6 +45,15 @@ import ShimmerLoader from '../Shimmer/ShimmerLoader';
  * @returns {JSX.Element} The rendered React component for the side navigation bar.
  */
 
+const DATE_PROPERTIES = ['Created on', 'Created before', 'Created after'];
+
+const isValidDate = (value: string): boolean => {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(value)) return false;
+  const date = new Date(value);
+  return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
+
 interface SideNavProps {
   selectedItem: any;
   onItemClick: (item: any) => void;
@@ -49,6 +61,9 @@ interface SideNavProps {
   onSubItemClick: (subItem: any) => void;
   annotationsData: any[];
   loadingAspectName?: string | null;
+  filters: ActiveFilter[];
+  onFiltersChange: (filters: ActiveFilter[]) => void;
+  isOpen?: boolean;
 }
 
 const SideNav: React.FC<SideNavProps> = ({
@@ -58,9 +73,14 @@ const SideNav: React.FC<SideNavProps> = ({
   onSubItemClick,
   annotationsData,
   loadingAspectName = null,
+  filters,
+  onFiltersChange,
+  isOpen = true,
 }) => {
-
+  const mode = useSelector((state: any) => state.user.mode);
   const [expandedItem, setExpandedItem] = React.useState<number | false>(0); // Auto-expand first item
+  const [filterText, setFilterText] = useState('');
+  const [dateError, setDateError] = useState('');
 
   const handleAspectClick = (annotation: any, index: number) => {
     // Toggle expansion
@@ -76,41 +96,111 @@ const SideNav: React.FC<SideNavProps> = ({
     onSubItemClick(subItem);
   };
 
+  const handleFiltersChange = (newFilters: ActiveFilter[]) => {
+    // Validate date fields on newly added filters
+    if (newFilters.length > filters.length) {
+      const newFilter = newFilters[newFilters.length - 1];
+      if (DATE_PROPERTIES.includes(newFilter.property) && !isValidDate(newFilter.values[0])) {
+        setDateError('Invalid date. Please use YYYY-MM-DD format.');
+        return;
+      }
+    }
+    setDateError('');
+    onFiltersChange(newFilters);
+  };
+
+  const handleRemoveChip = (filter: ActiveFilter) => {
+    if (filter.id) {
+      onFiltersChange(filters.filter(f => f.id !== filter.id));
+    } else {
+      onFiltersChange(filters.filter(f => f.property !== filter.property || f.id));
+    }
+  };
+
   return (
     <Paper
       elevation={0}
       sx={{
-        width: '18%',
-        minWidth: '240px',
-        height: 'calc(100vh - 80px)',
-        borderRadius: '24px',
-        backgroundColor: '#fff',
-        border: 'transparent',
-        mr: '2%',
+        position: 'fixed',
+        left: isOpen ? '96px' : '-252px',
+        top: 0,
+        width: '252px',
+        height: '100vh',
+        backgroundColor: mode === 'dark' ? '#282a2c' : '#F8FAFD',
         display: 'flex',
         flexDirection: 'column',
-        flexShrink: 0,
         overflow: 'hidden',
-        py: '20px',
-        gap: '8px',
+        overflowY: 'auto',
+        scrollbarWidth: 'none',
+        borderRadius: 0,
+        zIndex: 1100,
+        transition: 'left 0.3s ease-in-out',
       }}
     >
-      <Typography
-        variant="h6"
-        sx={{
-          fontFamily: 'Google Sans Text',
-          fontSize: '16px',
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        width: "100%",
+        position: "sticky",
+        top: 0,
+        zIndex: 1,
+        backgroundColor: mode === 'dark' ? '#282a2c' : '#F8FAFD',
+        padding: "24px 20px 0 20px",
+        boxSizing: "border-box",
+      }}>
+        <Typography sx={{
           fontWeight: 500,
-          lineHeight: '24px',
-          color: '#000000',
-          mb: 2,
-          px: 2.5,
-        }}
-      >
-        Aspects
-      </Typography>
+          fontSize: "16px",
+          lineHeight: "24px",
+          color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+          fontFamily: '"Google Sans", sans-serif',
+        }}>Aspects</Typography>
+      </div>
 
-      <List component="div" disablePadding sx={{ overflowY: 'auto', flex: 1, pt: 0, px: 0 }}>
+      <Box sx={{ pt: '12px', pb: '4px', px: '20px' }}>
+        <FilterBar
+          filterText={filterText}
+          onFilterTextChange={setFilterText}
+          propertyNames={[
+            { name: 'Name contains', mode: 'text' as const },
+            { name: 'Name prefix', mode: 'text' as const },
+            { name: 'Location', mode: 'text' as const },
+            { name: 'Created on', mode: 'text' as const, hint: 'YYYY-MM-DD' },
+            { name: 'Created before', mode: 'text' as const, hint: 'YYYY-MM-DD' },
+            { name: 'Created after', mode: 'text' as const, hint: 'YYYY-MM-DD' },
+          ]}
+          activeFilters={filters}
+          onActiveFiltersChange={handleFiltersChange}
+          defaultProperty="Name contains"
+          placeholder="Filter Aspects"
+          marginLeft="0px"
+          isPreview
+          hideChips
+          showTextInFilterMenu
+        />
+        {dateError && (
+          <Typography
+            sx={{
+              fontFamily: "'Google Sans', sans-serif",
+              fontSize: '11px',
+              color: '#D93025',
+              paddingLeft: '12px',
+              marginTop: '4px',
+            }}
+          >
+            {dateError}
+          </Typography>
+        )}
+        <FilterBarChips
+          activeFilters={filters}
+          onRemoveFilter={handleRemoveChip}
+          onRemoveOrConnector={(filter) => onFiltersChange(filters.map(f => f.id === filter.id ? { ...f, isOr: false } : f))}
+          marginLeft="0px"
+        />
+      </Box>
+
+      <List component="div" disablePadding sx={{ overflowY: 'auto', flex: 1, pt: '4px', px: 0, scrollbarWidth: 'none' }}>
         {annotationsData.map((annotation: any, index: number) => {
           const isExpanded = expandedItem === index;
           const isSelected = selectedItem?.name === annotation.name;
@@ -122,7 +212,7 @@ const SideNav: React.FC<SideNavProps> = ({
                 selected={isSelected && !selectedSubItem}
                 onClick={() => handleAspectClick(annotation, index)}
                 sx={{
-                  ml: '15px',
+                  ml: '20px',
                   mr: '20px',
                   pl: '8px',
                   pr: '12px',

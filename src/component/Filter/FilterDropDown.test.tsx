@@ -1083,7 +1083,7 @@ describe('FilterDropdown', () => {
         expect(screen.getByAltText('Cloud Spanner')).toBeInTheDocument();
         expect(screen.getByAltText('Cloud SQL')).toBeInTheDocument();
         expect(screen.getByAltText('Dataform')).toBeInTheDocument();
-        expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+        expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
         expect(screen.getByAltText('Dataproc Metastore')).toBeInTheDocument();
         expect(screen.getByAltText('Vertex AI')).toBeInTheDocument();
         expect(screen.getByAltText('Others')).toBeInTheDocument();
@@ -1457,8 +1457,8 @@ describe('FilterDropdown', () => {
       const productsAccordion = screen.getByText('Products').closest('[role="button"]');
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
-        // Dataplex and Dataplex Universal Catalog both use DataplexIcon
-        expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+        // Dataplex and Knowledge Catalog both use DataplexIcon
+        expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
       }
     });
 
@@ -1576,19 +1576,19 @@ describe('FilterDropdown', () => {
       }
     });
 
-    it('handles selecting Dataplex Universal Catalog product', () => {
+    it('handles selecting Knowledge Catalog product', () => {
       renderFilterDropdown();
 
       const productsAccordion = screen.getByText('Products').closest('[role="button"]');
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
 
-        const dataplexCheckbox = screen.getByLabelText('Dataplex Universal Catalog');
+        const dataplexCheckbox = screen.getByLabelText('Knowledge Catalog');
         fireEvent.click(dataplexCheckbox);
 
         expect(mockOnFilterChange).toHaveBeenCalledWith([
           expect.objectContaining({
-            name: 'Dataplex Universal Catalog',
+            name: 'Knowledge Catalog',
             type: 'system'
           })
         ]);
@@ -2151,7 +2151,7 @@ describe('FilterDropdown', () => {
         // Verify all products are visible and icons exist
         const productNames = [
           'Analytics Hub', 'BigQuery', 'Cloud BigTable', 'Cloud Pub/Sub',
-          'Cloud Spanner', 'Cloud SQL', 'Dataform', 'Dataplex Universal Catalog',
+          'Cloud Spanner', 'Cloud SQL', 'Dataform', 'Knowledge Catalog',
           'Dataproc Metastore', 'Vertex AI', 'Others'
         ];
 

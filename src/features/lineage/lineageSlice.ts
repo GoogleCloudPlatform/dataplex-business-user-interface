@@ -27,6 +27,12 @@ export const fetchLineageSearchLinks = createAsyncThunk('lineage/fetchLineageSea
 
   } catch (error) {
     if (error instanceof AxiosError) {
+      if (error.response?.status === 403) {
+        return rejectWithValue({
+          type: 'PERMISSION_DENIED',
+          message: "You don't have access to this resource",
+        });
+      }
       return rejectWithValue(error.response?.data || error.message);
     }
     return rejectWithValue('An unknown error occurred');

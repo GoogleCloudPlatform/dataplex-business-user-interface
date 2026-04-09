@@ -16,17 +16,23 @@
 }
 
 /* Icon color: #5F6367 for unselected chips */
-.carousel-scroll-container .MuiButton-root img {
+.carousel-scroll-container .MuiButton-root img,
+.carousel-scroll-container .MuiButton-root .MuiSvgIcon-root,
+.carousel-scroll-container .MuiButton-root .material-symbols-outlined {
   filter: brightness(0) saturate(100%) invert(37%) sepia(6%) saturate(500%) hue-rotate(175deg) brightness(93%) contrast(89%);
 }
 
 /* Selected chip icons: blue #0E4DCA */
-.carousel-scroll-container .carousel-chip-selected img {
+.carousel-scroll-container .carousel-chip-selected img,
+.carousel-scroll-container .carousel-chip-selected .MuiSvgIcon-root,
+.carousel-scroll-container .carousel-chip-selected .material-symbols-outlined {
   filter: brightness(0) saturate(100%) invert(22%) sepia(92%) saturate(3000%) hue-rotate(225deg) brightness(85%) contrast(105%);
 }
 
 /* Dark mode selected chip icons: #8ab4f8 */
-.carousel-scroll-container .carousel-chip-selected.dark-selected img {
+.carousel-scroll-container .carousel-chip-selected.dark-selected img,
+.carousel-scroll-container .carousel-chip-selected.dark-selected .MuiSvgIcon-root,
+.carousel-scroll-container .carousel-chip-selected.dark-selected .material-symbols-outlined {
   filter: brightness(0) saturate(100%) invert(68%) sepia(30%) saturate(1000%) hue-rotate(190deg) brightness(105%) contrast(95%);
 }
 

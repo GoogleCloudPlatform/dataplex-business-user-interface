@@ -60,8 +60,8 @@ vi.mock('../../../services/urlPreservationService', () => ({
 vi.mock('./LoginV2.css', () => ({}));
 
 // Mock asset imports
-vi.mock('/assets/svg/dataplex-universal-catalog-logo.svg', () => ({
-  default: '/assets/svg/dataplex-universal-catalog-logo.svg',
+vi.mock('/assets/svg/knowledge-catalog-logo.svg', () => ({
+  default: '/assets/svg/knowledge-catalog-logo.svg',
 }));
 vi.mock('/assets/images/google-logo-figma-53c44d.png', () => ({
   default: '/assets/images/google-logo-figma-53c44d.png',
@@ -83,7 +83,7 @@ describe('LoginV2', () => {
       render(<LoginV2 />);
 
       // Check for logo
-      const logo = screen.getByAltText('Dataplex Universal Catalog');
+      const logo = screen.getByAltText('Knowledge Catalog');
       expect(logo).toBeInTheDocument();
 
       // Check for text elements

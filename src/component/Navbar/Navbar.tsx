@@ -12,6 +12,7 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import './Navbar.css'
 import { Menu as MenuIcon } from '@mui/icons-material';
+import FeedbackOutlinedIcon from '@mui/icons-material/FeedbackOutlined';
 import SearchBar from '../SearchBar/SearchBar';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
@@ -68,8 +69,11 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
   const dispatch = useDispatch<AppDispatch>();
   const mode = useSelector((state: any) => state.user.mode);
   const isSearchFiltersOpen = useSelector((state: any) => state.search.isSearchFiltersOpen);
+  const isSideNavOpen = useSelector((state: any) => state.search.isSideNavOpen);
   const isOnSearchPage = location.pathname === '/search';
-  const shouldShiftNavbar = isOnSearchPage && isSearchFiltersOpen;
+  const isOnAspectsPage = location.pathname === '/browse-by-annotation';
+  const isOnGlossariesPage = location.pathname === '/glossaries';
+  const shouldShiftNavbar = (isOnSearchPage && isSearchFiltersOpen) || ((isOnAspectsPage || isOnGlossariesPage) && isSideNavOpen);
   const iconColor = mode === 'dark' ? '#9aa0a6' : '#5F6367';
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
@@ -208,15 +212,15 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
           <Box onClick={handleLogoClick} sx={{
             display: { xs: 'none', md: 'flex' },
             flex: "0 0 auto",
-            width: "130px",
-            height: "40px",
+            width: "140px",
+            height: "39px",
             cursor: "pointer",
             marginLeft: '-10px',
           }}>
             <img
-              src="/assets/svg/dataplex-universal-catalog-logo.svg"
-              alt="Dataplex Universal Catalog"
-              style={{ width: '130px', height: '40px' }}
+              src="/assets/svg/knowledge-catalog-logo.svg"
+              alt="Knowledge Catalog"
+              style={{ width: '140px', height: '39px' }}
             />
           </Box>
           
@@ -300,8 +304,8 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
               </MenuItem> */}
               <MenuItem onClick={handleOpenFeedback}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: "0.5rem" }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '24px', color: mode === 'dark' ? '#c4c7c5' : '#444746' }}>help</span>
-                  <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>Help</Typography>
+                  <FeedbackOutlinedIcon sx={{ fontSize: '24px', color: mode === 'dark' ? '#c4c7c5' : '#444746' }} />
+                  <Typography sx={{ fontSize: "0.875rem", fontWeight: 500 }}>Feedback</Typography>
                 </Box>
               </MenuItem>
             </Menu>
@@ -317,8 +321,8 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
           }}>
             <div className="logo-container" style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
               <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start', cursor: "pointer",}}>
-                <label style={{fontSize:"19px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Dataplex</label>
-                <label style={{fontSize:"12px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Universal Catalog</label>
+                <label style={{fontSize:"19px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Knowledge</label>
+                <label style={{fontSize:"12px", fontWeight:700, color: mode === 'dark' ? '#c4c7c5' : "#0B57D0", lineHeight: 1, cursor: "pointer",}}>Catalog</label>
               </div>
             </div>
           </Box>
@@ -353,14 +357,14 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   }} />
                 </IconButton>
               </Tooltip> */}
-              <Tooltip title="Guide">
+              <Tooltip title="Guide" slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -10] } }] } }}>
                 <IconButton sx={{
                     p: 0,
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
                     transition: 'background-color 0.2s',
-                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
+                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#e1e1e1' },
                   }}
                   onClick={()=>{navigate('/guide')}}
                 >
@@ -379,18 +383,18 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                   }} />
                 </IconButton>
               </Tooltip> */}
-              <Tooltip title="Help">
+              <Tooltip title="Feedback" slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -10] } }] } }}>
                 <IconButton sx={{
                     p: 0,
                     width: '40px',
                     height: '40px',
                     borderRadius: '50%',
                     transition: 'background-color 0.2s',
-                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
+                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#e1e1e1' },
                   }}
                   onClick={handleOpenFeedback}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: '24px', color: mode === 'dark' ? '#c4c7c5' : '#444746' }}>help</span>
+                  <FeedbackOutlinedIcon sx={{ fontSize: '24px', color: mode === 'dark' ? '#c4c7c5' : '#444746' }} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -403,9 +407,12 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                     backgroundColor: mode === 'dark' ? '#3C4043' : '#56595C',
                   },
                 },
+                popper: {
+                  modifiers: [{ name: 'offset', options: { offset: [0, -10] } }],
+                },
               }}
               title={
-              <Box sx={{ textAlign: 'left', fontFamily: '"Roboto", sans-serif' }}>
+              <Box sx={{ textAlign: 'left', fontFamily: '"Roboto", arial, sans-serif' }}>
                 <Typography sx={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: 'inherit', color: '#FFFFFF' }}>Google Account</Typography>
                 <Typography sx={{ fontSize: '0.75rem', fontFamily: 'inherit', color: mode === 'dark' ? '#9AA0A6' : '#BFC4C7' }}>{name}</Typography>
                 <Typography sx={{ fontSize: '0.75rem', fontFamily: 'inherit', color: mode === 'dark' ? '#9AA0A6' : '#BFC4C7' }}>{email}</Typography>
@@ -415,7 +422,7 @@ const Navbar: React.FC<NavBarProps> = ({ searchBar = false, searchNavigate = tru
                 p: '4px',
                 borderRadius: '50%',
                 transition: 'background-color 0.2s',
-                '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
+                '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#e1e1e1' },
               }} aria-label="Open settings">
                 <Avatar
                   alt={name ?? ""}

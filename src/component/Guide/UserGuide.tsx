@@ -170,7 +170,7 @@ const UserGuide: React.FC = () => {
                 target="_blank"
                 rel="noopener"
                 sx={{ color: '#26428b', textDecoration: 'underline' }}
-              >Dataplex Universal Catalog</Link>.
+              >Knowledge Catalog</Link>.
         </Typography>
         <Typography variant="h6" gutterBottom component="div" sx={{ mt: 2 }}>
           Key Benefits

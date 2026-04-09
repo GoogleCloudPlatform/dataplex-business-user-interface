@@ -512,7 +512,7 @@ useEffect(() => {
                     color: '#333',
                     lineHeight: '18px'
                   }}>
-                    {entry.entrySource?.system}
+                    {(() => { const sys = entry.entrySource?.system; if (!sys) return ''; const lower = sys.toLowerCase(); if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog'; return sys; })()}
                   </Typography>
                 </Grid>
                 <Grid size={6} sx={{ 
@@ -743,11 +743,8 @@ useEffect(() => {
 
         {/* Aspects Tab Content */}
         {activeTab === 1 && (
-          <Box sx={{ 
-            border: '1px solid #e0e0e0',
-            borderRadius: '8px',
+          <Box sx={{
             background: '#ffffff',
-            overflow: 'hidden'
           }}>
             {/* Aspects Filter - Override margin for side panel */}
             <Box sx={{
@@ -766,19 +763,14 @@ useEffect(() => {
             <Box sx={{
               background: '#ffffff'
             }}>
-              <PreviewAnnotation 
-                entry={filteredAnnotationEntry || entry} 
-                css={{ 
-                  border: 'none', 
+              <PreviewAnnotation
+                entry={filteredAnnotationEntry || entry}
+                css={{
+                  border: 'none',
                   margin: 0,
                   background: 'transparent',
                   borderRadius: '0px',
-                  borderTopLeftRadius: '0px',
-                  borderTopRightRadius: '0px',
-                  borderBottomLeftRadius: '8px',
-                  borderBottomRightRadius: '8px',
-                  borderTop: '1px solid #E0E0E0'
-                }} 
+                }}
                 expandedItems={expandedAnnotations}
                 setExpandedItems={setExpandedAnnotations}
               />
@@ -796,8 +788,9 @@ useEffect(() => {
             <SchemaFilter
               entry={entry}
               onFilteredEntryChange={setFilteredSchemaEntry}
+              isPreview={true}
             />
-            <Schema entry={filteredSchemaEntry || entry} sx={{ width: "100%", borderTopLeftRadius: '0px', borderTopRightRadius: '0px' }} />
+            <Schema entry={filteredSchemaEntry || entry} isPreview={true} sx={{ width: "100%", borderTopLeftRadius: '0px', borderTopRightRadius: '0px' }} />
           </Box>
         )}
       </Box>

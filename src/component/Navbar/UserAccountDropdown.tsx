@@ -67,7 +67,7 @@ const UserAccountDropdown: React.FC<UserAccountDropdownProps> = ({
     onError: () => console.error('Switch account failed'),
     flow: 'implicit',
     prompt: 'select_account',
-    scope: 'https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
+    scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
   });
 
   const handleSignOut = () => {

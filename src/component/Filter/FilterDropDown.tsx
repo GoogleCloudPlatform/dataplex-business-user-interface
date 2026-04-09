@@ -40,6 +40,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
 import { getProjects } from '../../features/projects/projectsSlice';
 import { getAssetIcon } from '../../utils/resourceUtils';
+import DatabaseSchemaBlueIcon from '../../assets/svg/database_schema_icon_blue.svg';
+import { isGlossaryAssetType, getGlossaryMuiIcon, assetNameToGlossaryType } from '../../constants/glossaryIcons';
 
 /**
  * @file FilterDropdown.tsx
@@ -114,7 +116,7 @@ const getProductIcon = (productName: string) => {
       return DataformIcon;
     case 'Dataplex':
       return DataplexIcon;
-    case 'Dataplex Universal Catalog':
+    case 'Knowledge Catalog':
       return DataplexIcon;
     case 'Dataproc Metastore':
       return DataprocIcon;
@@ -312,7 +314,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
         "type": "system"
       },
       {
-        "name": "Dataplex Universal Catalog",
+        "name": "Knowledge Catalog",
         "type": "system"
       },
       {
@@ -443,9 +445,14 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
         asset.name.toLowerCase() === searchTerm.toLowerCase()
       );
 
-      // Check for matching product (system)
+      // Check for matching product (system), including aliases for renamed products
+      const PRODUCT_SEARCH_ALIASES: Record<string, string> = {
+        "dataplex universal catalog": "Knowledge Catalog",
+      };
       const matchingProduct = products.items.find((product: any) =>
         product.name.toLowerCase() === searchTerm.toLowerCase()
+      ) || products.items.find((product: any) =>
+        PRODUCT_SEARCH_ALIASES[searchTerm.toLowerCase()] === product.name
       );
 
       if (matchingAsset) {
@@ -508,7 +515,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     'Aspects': false,
     'Assets': false,
-    'Products': isGlossary,
+    'Products': false,
     'Projects': false
   });
 
@@ -517,14 +524,9 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
 const handleCheckboxChange = (filter: any) => {
     const isSelected = selectedFilters.some(item => item.name === filter.name && item.type === filter.type);
 
-    // If search term is empty, clear stale auto-selected typeAliases before applying the toggle
-    const baseFilters = (!searchTerm || searchTerm.trim() === '')
-      ? selectedFilters.filter((f: any) => f.type !== 'typeAliases')
-      : selectedFilters;
-
     const updatedFilters = isSelected
-      ? baseFilters.filter((f) => !(f.name === filter.name && f.type === filter.type))
-      : [...baseFilters, filter];
+      ? selectedFilters.filter((f) => !(f.name === filter.name && f.type === filter.type))
+      : [...selectedFilters, filter];
 
     setSelectedFilters(updatedFilters);
     onFilterChange(updatedFilters);
@@ -752,7 +754,7 @@ const handleCheckboxChange = (filter: any) => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        padding: '0px 16px 24px 20px',
+        padding: isGlossary ? '0px' : '0px 16px 24px 20px',
         gap: '20px',
       }}>
         {/* Header: Filters / Clear / X */}
@@ -761,11 +763,11 @@ const handleCheckboxChange = (filter: any) => {
             justifyContent: "space-between",
             alignItems: "center",
             width: "100%",
-            position: "sticky",
+            position: isGlossary ? "relative" : "sticky",
             top: 0,
             zIndex: 1,
-            backgroundColor: mode === 'dark' ? '#282a2c' : '#F8FAFD',
-            padding: "24px 0 0 0",
+            backgroundColor: isGlossary ? "transparent" : (mode === 'dark' ? '#282a2c' : '#F8FAFD'),
+            padding: isGlossary ? "0px" : "24px 0 0 0",
         }}>
             <Typography sx={{fontWeight: 500, fontSize: "16px", lineHeight: "24px", color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', fontFamily: '"Google Sans", sans-serif'}}>Filters</Typography>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '24px' }}>
@@ -795,10 +797,8 @@ const handleCheckboxChange = (filter: any) => {
                   onClick={onClose}
                   size="small"
                   sx={{
-                    padding: '0px',
+                    padding: '8px',
                     color: mode === 'dark' ? '#9aa0a6' : '#575757',
-                    width: '16px',
-                    height: '16px',
                     '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
                   }}
                 >
@@ -948,9 +948,15 @@ const handleCheckboxChange = (filter: any) => {
                                 style={{ width: '16px', height: '16px', flexShrink: 0 }}
                               />
                             )}
-                            {filter.title === 'Assets' && getAssetIcon(item.name) && (
+                            {filter.title === 'Assets' && isGlossaryAssetType(item.name) && (
+                              getGlossaryMuiIcon(assetNameToGlossaryType(item.name), {
+                                size: '16px',
+                                color: '#4285F4',
+                              })
+                            )}
+                            {filter.title === 'Assets' && !isGlossaryAssetType(item.name) && getAssetIcon(item.name) && (
                               <img
-                                src={getAssetIcon(item.name)!}
+                                src={item.name === 'Database schema' ? DatabaseSchemaBlueIcon : getAssetIcon(item.name)!}
                                 alt={item.name}
                                 style={{ width: '16px', height: '16px', flexShrink: 0 }}
                               />

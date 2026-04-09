@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AnnotationFilter from './AnnotationFilter';
 
@@ -83,9 +83,6 @@ describe('AnnotationFilter', () => {
     });
 
     it('should return null when entry has only system aspects', () => {
-      // System aspects have keys matching the pattern ${number}.global.{aspectName}
-      // With entryType 'projects/table/...', number = 'table'
-      // These are filtered out from annotation list, leaving no annotations to display
       const entry = {
         entryType: 'projects/table/locations/us/entryTypes/dataset',
         aspects: {
@@ -132,8 +129,8 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      expect(screen.getByText('Filter')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('Search aspect names...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /expand all/i })).toBeInTheDocument();
     });
 
     it('should apply custom sx prop styles', () => {
@@ -150,7 +147,7 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      expect(screen.getByText('Filter')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
     });
 
     it('should call onFilteredEntryChange on initial render', () => {
@@ -183,7 +180,7 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search aspect names...');
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
       await user.type(searchInput, 'quality');
 
       await waitFor(() => {
@@ -193,7 +190,6 @@ describe('AnnotationFilter', () => {
 
     it('should show clear button when text is entered', async () => {
       const entry = createMockEntry(mockAspectData);
-      const user = userEvent.setup();
 
       render(
         <AnnotationFilter
@@ -204,13 +200,17 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search aspect names...');
-      await user.type(searchInput, 'test');
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      // Use fireEvent.change to set text without triggering menu via click
+      fireEvent.change(searchInput, { target: { value: 'test' } });
 
-      // Clear button should be visible
-      const clearButtons = screen.getAllByRole('button');
-      const clearButton = clearButtons.find(btn => btn.querySelector('[data-testid="CloseIcon"]'));
-      expect(clearButton).toBeTruthy();
+      await waitFor(() => {
+        // Clear button (CloseIcon) should be visible in the input
+        const clearButton = screen.getAllByRole('button').find(btn =>
+          btn.querySelector('[data-testid="CloseIcon"]')
+        );
+        expect(clearButton).toBeTruthy();
+      });
     });
 
     it('should clear text when clear button is clicked', async () => {
@@ -226,14 +226,18 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search aspect names...') as HTMLInputElement;
-      await user.type(searchInput, 'test');
+      const searchInput = screen.getByPlaceholderText('Enter property name or value') as HTMLInputElement;
+      // Use fireEvent.change to set text without triggering menu via click
+      fireEvent.change(searchInput, { target: { value: 'test' } });
 
-      expect(searchInput.value).toBe('test');
+      await waitFor(() => {
+        expect(searchInput.value).toBe('test');
+      });
 
       // Find and click the clear button
-      const clearButtons = screen.getAllByRole('button');
-      const clearButton = clearButtons.find(btn => btn.querySelector('[data-testid="CloseIcon"]'));
+      const clearButton = screen.getAllByRole('button').find(btn =>
+        btn.querySelector('[data-testid="CloseIcon"]')
+      );
       if (clearButton) {
         await user.click(clearButton);
       }
@@ -256,7 +260,7 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText('Search aspect names...');
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
       await user.type(searchInput, 'QUALITY');
 
       await waitFor(() => {
@@ -279,7 +283,6 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Find the expand/collapse button (UnfoldMore icon button)
       const expandButton = screen.getByRole('button', { name: /expand all/i });
       await user.click(expandButton);
 
@@ -336,7 +339,7 @@ describe('AnnotationFilter', () => {
     });
   });
 
-  describe('dropdown filter menu', () => {
+  describe('filter menu and text property flow', () => {
     it('should open filter menu when filter icon is clicked', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
@@ -350,16 +353,17 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
+      // Click input to open the filter dropdown
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
 
+      // Menu should show the "Name" text-mode property
       await waitFor(() => {
-        expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
-        expect(screen.getByText('Name')).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /Name/i })).toBeInTheDocument();
       });
     });
 
-    it('should open filter menu when Filter text is clicked', async () => {
+    it('should set text property prefix when Name is selected from menu', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -372,42 +376,22 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      const filterText = screen.getByText('Filter');
-      await user.click(filterText);
+      // Open menu by clicking input
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
 
-      await waitFor(() => {
-        expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
-      });
-    });
-
-    it('should show annotation values when property is selected', async () => {
-      const entry = createMockEntry(mockAspectData);
-      const user = userEvent.setup();
-
-      render(
-        <AnnotationFilter
-          entry={entry}
-          onFilteredEntryChange={mockOnFilteredEntryChange}
-          onCollapseAll={mockOnCollapseAll}
-          onExpandAll={mockOnExpandAll}
-        />
-      );
-
-      // Open filter menu
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-
-      // Select "Name" property
-      const nameOption = screen.getByText('Name');
+      // Click "Name" text-mode property
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
       await user.click(nameOption);
 
+      // Should show "Name:" prefix and update placeholder
       await waitFor(() => {
-        expect(screen.getByText('← Back to Properties')).toBeInTheDocument();
-        expect(screen.getByText('Filter by: Name')).toBeInTheDocument();
+        expect(screen.getByText('Name:')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Enter Name value...')).toBeInTheDocument();
       });
     });
 
-    it('should go back to properties when back button is clicked', async () => {
+    it('should create filter chip when typing value and pressing Enter', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -420,20 +404,22 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Open menu and select "Name" property
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
 
-      // Click back button
-      await user.click(screen.getByText('← Back to Properties'));
+      // Type a value and press Enter
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
+      // A filter chip should appear with the value
       await waitFor(() => {
-        expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+        expect(screen.getByText('quality')).toBeInTheDocument();
       });
     });
 
-    it('should toggle annotation value selection', async () => {
+    it('should close menu when pressing Escape', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -446,59 +432,47 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
-
-      // Select a value (quality should be in the list)
-      await waitFor(() => {
-        const qualityOption = screen.getByText('quality');
-        expect(qualityOption).toBeInTheDocument();
-      });
-
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        await user.click(qualityMenuItem);
-      }
-
-      // Verify checkbox is checked
-      await waitFor(() => {
-        const checkboxes = screen.getAllByRole('checkbox');
-        const qualityCheckbox = checkboxes.find(cb => {
-          const menuItem = cb.closest('[role="menuitem"]');
-          return menuItem?.textContent?.includes('quality');
-        });
-        expect(qualityCheckbox).toBeChecked();
-      });
-    });
-
-    it('should close menu when clicking outside', async () => {
-      const entry = createMockEntry(mockAspectData);
-      const user = userEvent.setup();
-
-      render(
-        <AnnotationFilter
-          entry={entry}
-          onFilteredEntryChange={mockOnFilteredEntryChange}
-          onCollapseAll={mockOnCollapseAll}
-          onExpandAll={mockOnExpandAll}
-        />
-      );
-
-      // Open filter menu
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
+      // Open menu
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
 
       await waitFor(() => {
-        expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: /Name/i })).toBeInTheDocument();
       });
 
-      // Press escape to close
+      // Press Escape to close
       await user.keyboard('{Escape}');
 
       await waitFor(() => {
-        expect(screen.queryByText('Select Property to Filter')).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /Name/i })).not.toBeInTheDocument();
+      });
+    });
+
+    it('should create chip using default text property when typing and pressing Enter directly', async () => {
+      const entry = createMockEntry(mockAspectData);
+      const user = userEvent.setup();
+
+      render(
+        <AnnotationFilter
+          entry={entry}
+          onFilteredEntryChange={mockOnFilteredEntryChange}
+          onCollapseAll={mockOnCollapseAll}
+          onExpandAll={mockOnExpandAll}
+        />
+      );
+
+      // Click input to open menu, select "Name" to set text property
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+
+      // Type value and press Enter (uses "Name" text property)
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'sensitivity{Enter}');
+
+      // A chip should be created
+      await waitFor(() => {
+        expect(screen.getByText('sensitivity')).toBeInTheDocument();
       });
     });
   });
@@ -517,27 +491,19 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Open menu and select Name property
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
 
-      // Select a value
-      await waitFor(() => {
-        expect(screen.getByText('quality')).toBeInTheDocument();
-      });
+      // Type value and press Enter to create chip
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        await user.click(qualityMenuItem);
-      }
-
-      // Close menu
-      await user.keyboard('{Escape}');
-
-      // Verify chip is displayed
+      // Verify chip is displayed with property label
       await waitFor(() => {
         expect(screen.getByText('Name:')).toBeInTheDocument();
+        expect(screen.getByText('quality')).toBeInTheDocument();
       });
     });
 
@@ -554,43 +520,36 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Apply a filter
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Create a filter chip
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
+      // Wait for chip to appear
       await waitFor(() => {
         expect(screen.getByText('quality')).toBeInTheDocument();
       });
 
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        await user.click(qualityMenuItem);
-      }
-
-      await user.keyboard('{Escape}');
-
-      // Wait for chip to appear
-      await waitFor(() => {
-        expect(screen.getByText('Name:')).toBeInTheDocument();
-      });
-
-      // Find and click the chip's close button
+      // Find the chip's close button (small IconButton with CloseIcon inside the chip area)
       const chipCloseButtons = screen.getAllByRole('button').filter(btn => {
-        const parent = btn.closest('[style*="border-radius: 16px"]') || btn.closest('div');
-        return parent?.textContent?.includes('Name:');
+        const svg = btn.querySelector('[data-testid="CloseIcon"]');
+        // Chip close buttons are small (14x14) with blue background
+        return svg && btn.closest('[class*="MuiBox-root"]');
       });
 
+      // Click the last close button (the one in the chip, not the input clear button)
       if (chipCloseButtons.length > 0) {
         await user.click(chipCloseButtons[chipCloseButtons.length - 1]);
       }
 
       await waitFor(() => {
-        expect(screen.queryByText('Name:')).not.toBeInTheDocument();
+        expect(screen.queryByText('quality')).not.toBeInTheDocument();
       });
     });
 
-    it('should display multiple filter values in chip', async () => {
+    it('should show Clear All button when filters are active', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -603,32 +562,49 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Create a filter chip
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
-      // Select multiple values
+      // Clear All button should be visible
       await waitFor(() => {
-        expect(screen.getByText('quality')).toBeInTheDocument();
+        expect(screen.getByText('Clear All')).toBeInTheDocument();
+      });
+    });
+
+    it('should remove all filters when Clear All is clicked', async () => {
+      const entry = createMockEntry(mockAspectData);
+      const user = userEvent.setup();
+
+      render(
+        <AnnotationFilter
+          entry={entry}
+          onFilteredEntryChange={mockOnFilteredEntryChange}
+          onCollapseAll={mockOnCollapseAll}
+          onExpandAll={mockOnExpandAll}
+        />
+      );
+
+      // Create a filter chip
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByText('Clear All')).toBeInTheDocument();
       });
 
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        await user.click(qualityMenuItem);
-      }
+      // Click Clear All
+      await user.click(screen.getByText('Clear All'));
 
-      const sensitivityMenuItem = screen.getByText('sensitivity').closest('[role="menuitem"]');
-      if (sensitivityMenuItem) {
-        await user.click(sensitivityMenuItem);
-      }
-
-      await user.keyboard('{Escape}');
-
-      // Chip should show both values
       await waitFor(() => {
-        expect(screen.getByText('Name:')).toBeInTheDocument();
-        expect(screen.getByText(/quality.*sensitivity|sensitivity.*quality/)).toBeInTheDocument();
+        expect(screen.queryByText('quality')).not.toBeInTheDocument();
+        expect(screen.queryByText('Clear All')).not.toBeInTheDocument();
       });
     });
   });
@@ -660,9 +636,12 @@ describe('AnnotationFilter', () => {
         expect(callCount).toBeGreaterThan(0);
       });
 
-      // Apply text filter
-      const searchInput = screen.getByPlaceholderText('Search aspect names...');
-      await user.type(searchInput, 'quality');
+      // Open menu, select Name, type filter, press Enter to create chip
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
       // Wait for filter to be applied and callback to be called again
       await waitFor(() => {
@@ -720,7 +699,7 @@ describe('AnnotationFilter', () => {
       );
 
       // Should render because there's a valid aspect
-      expect(screen.getByText('Filter')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
     });
 
     it('should handle glossary term aspects', () => {
@@ -745,7 +724,7 @@ describe('AnnotationFilter', () => {
       );
 
       // Should render with valid aspect only
-      expect(screen.getByText('Filter')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
     });
 
     it('should handle entry without entryType', () => {
@@ -767,10 +746,10 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      expect(screen.getByText('Filter')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
     });
 
-    it('should unselect value when clicked twice', async () => {
+    it('should remove last chip when pressing Backspace on empty input', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -783,39 +762,26 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Create a filter chip
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
+      await user.type(screen.getByPlaceholderText('Enter Name value...'), 'quality{Enter}');
 
-      // Select a value
       await waitFor(() => {
         expect(screen.getByText('quality')).toBeInTheDocument();
       });
 
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        // Select
-        await user.click(qualityMenuItem);
+      // Press Backspace on empty input to remove last chip
+      await user.keyboard('{Backspace}');
 
-        // Verify selected
-        await waitFor(() => {
-          const checkbox = qualityMenuItem.querySelector('input[type="checkbox"]');
-          expect(checkbox).toBeChecked();
-        });
-
-        // Unselect
-        await user.click(qualityMenuItem);
-
-        // Verify unselected
-        await waitFor(() => {
-          const checkbox = qualityMenuItem.querySelector('input[type="checkbox"]');
-          expect(checkbox).not.toBeChecked();
-        });
-      }
+      await waitFor(() => {
+        expect(screen.queryByText('quality')).not.toBeInTheDocument();
+      });
     });
 
-    it('should load existing filter values when reopening property', async () => {
+    it('should clear text property prefix when pressing Backspace on empty input', async () => {
       const entry = createMockEntry(mockAspectData);
       const user = userEvent.setup();
 
@@ -828,33 +794,23 @@ describe('AnnotationFilter', () => {
         />
       );
 
-      // Open filter menu and select property
-      const filterButton = screen.getByRole('button', { name: /filter by aspect name/i });
-      await user.click(filterButton);
-      await user.click(screen.getByText('Name'));
+      // Open menu and select "Name" property
+      const searchInput = screen.getByPlaceholderText('Enter property name or value');
+      await user.click(searchInput);
+      const nameOption = await screen.findByRole('menuitem', { name: /Name/i });
+      await user.click(nameOption);
 
-      // Select a value
+      // Verify prefix is shown
       await waitFor(() => {
-        expect(screen.getByText('quality')).toBeInTheDocument();
+        expect(screen.getByText('Name:')).toBeInTheDocument();
       });
 
-      const qualityMenuItem = screen.getByText('quality').closest('[role="menuitem"]');
-      if (qualityMenuItem) {
-        await user.click(qualityMenuItem);
-      }
+      // Press Backspace to clear prefix
+      await user.keyboard('{Backspace}');
 
-      // Go back and reselect property
-      await user.click(screen.getByText('← Back to Properties'));
-      await user.click(screen.getByText('Name'));
-
-      // Previously selected value should still be checked
       await waitFor(() => {
-        const checkboxes = screen.getAllByRole('checkbox');
-        const qualityCheckbox = checkboxes.find(cb => {
-          const menuItem = cb.closest('[role="menuitem"]');
-          return menuItem?.textContent?.includes('quality');
-        });
-        expect(qualityCheckbox).toBeChecked();
+        expect(screen.queryByText('Name:')).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Enter property name or value')).toBeInTheDocument();
       });
     });
   });

@@ -176,24 +176,16 @@ describe('DataQuality Components', () => {
 
   describe('ConfigurationsPanel', () => {
     const defaultProps = {
-      isOpen: true,
       onClose: vi.fn(),
       dataQualtyScan: mockDataQualityScan
     };
 
     it('renders when open', () => {
       render(<ConfigurationsPanel {...defaultProps} />);
-      
+
       expect(screen.getByText('Configurations')).toBeInTheDocument();
       expect(screen.getByText('Scope')).toBeInTheDocument();
       expect(screen.getByText('Entire data')).toBeInTheDocument();
-    });
-
-    it('does not render when closed', () => {
-      render(<ConfigurationsPanel {...defaultProps} isOpen={false} />);
-      
-      // The panel is positioned off-screen when closed, but the content is still in the DOM
-      expect(screen.getByText('Configurations')).toBeInTheDocument();
     });
 
     it('displays configuration data correctly', () => {
@@ -291,7 +283,7 @@ describe('DataQuality Components', () => {
       expect(screen.getByText('test_column')).toBeInTheDocument();
       expect(screen.getByText('test_rule')).toBeInTheDocument();
       expect(screen.getByText('NOT_NULL')).toBeInTheDocument();
-      expect(screen.getAllByText('PASSED')).toHaveLength(2); // Table cell and ConfigurationsPanel
+      expect(screen.getAllByText('PASSED')).toHaveLength(1); // Table cell (ConfigurationsPanel is inside a closed Drawer)
       expect(screen.getByText('COMPLETENESS')).toBeInTheDocument();
       expect(screen.getByText('95%')).toBeInTheDocument();
     });

@@ -18,6 +18,8 @@ vi.mock('../Common/ResourceViewer', () => ({
     showFilters,
     showSortBy,
     showResultsCount,
+    hideMostRelevant,
+    customFilters,
   }: {
     resources: unknown[];
     resourcesStatus: string;
@@ -30,6 +32,8 @@ vi.mock('../Common/ResourceViewer', () => ({
     showFilters: boolean;
     showSortBy: boolean;
     showResultsCount: boolean;
+    hideMostRelevant: boolean;
+    customFilters: React.ReactNode;
   }) => (
     <div data-testid="resource-viewer">
       <span data-testid="rv-status">{resourcesStatus}</span>
@@ -40,6 +44,8 @@ vi.mock('../Common/ResourceViewer', () => ({
       <span data-testid="rv-show-filters">{showFilters ? 'true' : 'false'}</span>
       <span data-testid="rv-show-sort">{showSortBy ? 'true' : 'false'}</span>
       <span data-testid="rv-show-results">{showResultsCount ? 'true' : 'false'}</span>
+      <span data-testid="rv-hide-most-relevant">{hideMostRelevant ? 'true' : 'false'}</span>
+      <div data-testid="rv-custom-filters">{customFilters}</div>
       <button data-testid="rv-set-preview" onClick={() => onPreviewDataChange({ name: 'test' })}>
         Set Preview
       </button>
@@ -202,9 +208,7 @@ describe('AspectLinkedAssets', () => {
     it('should render filter toggle button', () => {
       render(<AspectLinkedAssets {...defaultProps} />);
 
-      // Filter toggle is inside a Tooltip, look for the Tune icon container
-      const tuneIcon = document.querySelector('[data-testid="TuneIcon"]');
-      expect(tuneIcon).toBeInTheDocument();
+      expect(screen.getByText('Filters')).toBeInTheDocument();
     });
 
     it('should render ResourceViewer with correct props', () => {
@@ -213,9 +217,10 @@ describe('AspectLinkedAssets', () => {
       expect(screen.getByTestId('rv-status')).toHaveTextContent('succeeded');
       expect(screen.getByTestId('rv-view-mode')).toHaveTextContent('list');
       expect(screen.getByTestId('rv-page-size')).toHaveTextContent('20');
-      expect(screen.getByTestId('rv-show-filters')).toHaveTextContent('false');
+      expect(screen.getByTestId('rv-show-filters')).toHaveTextContent('true');
       expect(screen.getByTestId('rv-show-sort')).toHaveTextContent('true');
-      expect(screen.getByTestId('rv-show-results')).toHaveTextContent('true');
+      expect(screen.getByTestId('rv-show-results')).toHaveTextContent('false');
+      expect(screen.getByTestId('rv-hide-most-relevant')).toHaveTextContent('true');
     });
 
     it('should pass isGlossary=true to FilterDropdown', async () => {
@@ -224,7 +229,7 @@ describe('AspectLinkedAssets', () => {
       render(<AspectLinkedAssets {...defaultProps} />);
 
       // Open filter panel
-      const filterToggle = document.querySelector('[data-testid="TuneIcon"]')?.closest('div[class*="cursor"]') as HTMLElement;
+      const filterToggle = screen.getByText('Filters');
       await user.click(filterToggle);
 
       expect(screen.getByTestId('fd-is-glossary')).toHaveTextContent('true');
@@ -263,22 +268,23 @@ describe('AspectLinkedAssets', () => {
   });
 
   describe('search functionality', () => {
-    it('should filter assets by name', () => {
+    it('should display searchTerm in input without filtering results', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="Asset One" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      // searchTerm is now just the FilterBar input text, not an active filter
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
-    it('should filter assets by description', () => {
+    it('should not filter by description via searchTerm', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="Second asset" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
-    it('should filter assets case-insensitively', () => {
+    it('should not filter case-insensitively via searchTerm', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="ASSET ONE" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
     it('should show all assets when search term is empty', () => {
@@ -312,22 +318,23 @@ describe('AspectLinkedAssets', () => {
       expect(searchInput).toHaveValue('existing search');
     });
 
-    it('should show no results when search matches nothing', () => {
+    it('should show all assets even with non-matching searchTerm', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="nonexistent asset" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('0');
+      // searchTerm is just input text, filtering requires creating chips
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
-    it('should match partial names', () => {
+    it('should show all assets with partial name searchTerm', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="One" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
-    it('should match partial descriptions', () => {
+    it('should show all assets with partial description searchTerm', () => {
       render(<AspectLinkedAssets {...defaultProps} searchTerm="First" />);
 
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
   });
 
@@ -490,7 +497,7 @@ describe('AspectLinkedAssets', () => {
       expect(screen.getByTestId('rv-count')).toHaveTextContent('3');
     });
 
-    it('should combine search and filters', async () => {
+    it('should apply dropdown filters with searchTerm as input text only', async () => {
       const user = userEvent.setup();
 
       render(<AspectLinkedAssets {...defaultProps} searchTerm="Asset Three" />);
@@ -501,9 +508,8 @@ describe('AspectLinkedAssets', () => {
       // Add system filter for BigQuery
       await user.click(screen.getByTestId('fd-add-system-filter'));
 
-      // Search matches "Asset Three", filter matches BigQuery assets
-      // Asset Three is BigQuery, so it should show
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
+      // searchTerm doesn't filter, only dropdown filter applies (2 BigQuery assets)
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('2');
     });
   });
 
@@ -620,8 +626,8 @@ describe('AspectLinkedAssets', () => {
 
       render(<AspectLinkedAssets {...defaultProps} linkedAssets={assetsWithMissingName} searchTerm="missing" />);
 
-      // Should not crash and should not match
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('0');
+      // searchTerm is just input text, doesn't filter — asset is still shown
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
     });
 
     it('should handle assets with missing description', () => {
@@ -658,8 +664,8 @@ describe('AspectLinkedAssets', () => {
 
       render(<AspectLinkedAssets {...defaultProps} linkedAssets={assetsWithMissingEntrySource} searchTerm="anything" />);
 
-      // Should not crash
-      expect(screen.getByTestId('rv-count')).toHaveTextContent('0');
+      // searchTerm is just input text, doesn't filter — asset is still shown
+      expect(screen.getByTestId('rv-count')).toHaveTextContent('1');
     });
 
     it('should handle assets with missing aspects', () => {

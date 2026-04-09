@@ -22,6 +22,13 @@ const render = (ui: React.ReactElement, options?: any) => {
   return rtlRender(ui, { wrapper: Wrapper, ...options });
 };
 
+// Mock ResizeObserver for jsdom
+(globalThis as Record<string, unknown>).ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
 // Mock the Tag component
 vi.mock("../Tags/Tag", () => ({
   default: ({ text, css }: { text: string; css?: React.CSSProperties }) => (
@@ -781,7 +788,7 @@ describe("SearchTableView", () => {
       );
 
       const tags = screen.getAllByTestId("tag");
-      expect(tags[0]).toHaveTextContent("Dataplex");
+      expect(tags[0]).toHaveTextContent("Knowledge Catalog");
     });
 
     it("handles uppercase system names correctly", () => {
@@ -1355,6 +1362,26 @@ describe("SearchTableView", () => {
       expect(
         screen.getByText("Entry <with> 'special' \"chars\" & symbols")
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Column Resizing", () => {
+    it("renders 4 resize handles (one per column except last)", () => {
+      render(
+        <SearchTableView {...defaultProps} resources={mockResources} />
+      );
+      const handles = screen.getAllByTestId("resize-handle");
+      expect(handles).toHaveLength(4);
+    });
+
+    it("resize handles have col-resize cursor", () => {
+      render(
+        <SearchTableView {...defaultProps} resources={mockResources} />
+      );
+      const handles = screen.getAllByTestId("resize-handle");
+      handles.forEach((handle) => {
+        expect(handle.style.cursor).toBe("col-resize");
+      });
     });
   });
 });

@@ -17,7 +17,8 @@ import {
   Checkbox,
   TextField,
   InputAdornment,
-  Tooltip
+  Tooltip,
+  Drawer
 } from '@mui/material';
 import {
   ExpandLess,
@@ -411,24 +412,7 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName, allScansStatus }) =
         <Box sx={{
           flex: 1,
           position: 'relative',
-          marginTop: '20px',
         }}>
-          {/* Dark overlay when configurations panel is open */}
-          {isConfigurationsOpen && (
-            <Box 
-              onClick={() => setIsConfigurationsOpen(false)}
-              sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 1000,
-                cursor: 'pointer'
-              }} 
-            />
-          )}
           <Box sx={{
             backgroundColor: '#ffffff',
             borderRadius: '8px',
@@ -1268,11 +1252,23 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName, allScansStatus }) =
               </TableContainer>
             </Box>
           </Collapse>
-          <DataProfileConfigurationsPanel
-            isOpen={isConfigurationsOpen}
+          <Drawer
+            anchor="right"
+            open={isConfigurationsOpen}
             onClose={() => setIsConfigurationsOpen(false)}
-            dataProfileScan={dataProfileScan}
-          />
+            PaperProps={{
+              sx: {
+                width: '612px',
+                backgroundColor: '#ffffff',
+                boxShadow: '-4px 0px 8px rgba(0, 0, 0, 0.1)',
+              }
+            }}
+          >
+            <DataProfileConfigurationsPanel
+              onClose={() => setIsConfigurationsOpen(false)}
+              dataProfileScan={dataProfileScan}
+            />
+          </Drawer>
           </Box>
         </Box>
       ) : (
@@ -1282,9 +1278,8 @@ const DataProfile: React.FC<DataProfileProps> = ({ scanName, allScansStatus }) =
         borderRadius: '8px',
         border: '1px solid #DADCE0',
         overflow: 'hidden',
-        marginTop: '20px',
         display: 'flex',
-        justifyContent: 'center', 
+        justifyContent: 'center',
         alignItems: 'center',
         minHeight: '500px'
       }}>

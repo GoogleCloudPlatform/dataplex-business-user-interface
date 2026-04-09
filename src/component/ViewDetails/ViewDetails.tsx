@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { Box, Tab, Tabs, Tooltip, Skeleton } from '@mui/material'
-import { ArrowBack } from '@mui/icons-material'
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { Box, IconButton, Tab, Tabs, Tooltip, Skeleton } from '@mui/material'
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import CustomTabPanel from '../TabPanel/CustomTabPanel'
@@ -8,6 +8,7 @@ import PreviewAnnotation from '../Annotation/PreviewAnnotation'
 import AnnotationFilter from '../Annotation/AnnotationFilter'
 import Tag from '../Tags/Tag'
 import DetailPageOverview from '../DetailPageOverview/DetailPageOverview'
+import DetailPageOverviewSkeleton from '../DetailPageOverview/DetailPageOverviewSkeleton'
 import Lineage from '../Lineage'
 import DataQuality from '../DataQuality/DataQuality'
 import DataProfile from '../DataProfile/DataProfile'
@@ -18,7 +19,8 @@ import { getSampleData } from '../../features/sample-data/sampleDataSlice'
 import { popFromHistory, pushToHistory, fetchEntry } from '../../features/entry/entrySlice'
 import { fetchAllDataScans, selectAllScans, selectAllScansStatus } from '../../features/dataScan/dataScanSlice';
 import { useAuth } from '../../auth/AuthProvider'
-import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink  } from '../../utils/resourceUtils'
+import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink, getAssetIcon  } from '../../utils/resourceUtils'
+import { getGlossaryMuiIcon, isGlossaryAssetType, assetNameToGlossaryType } from '../../constants/glossaryIcons'
 import { findItem } from '../../utils/glossaryUtils';
 import {
   fetchViewDetailsTermRelationships,
@@ -32,6 +34,7 @@ import GlossariesSynonyms from '../Glossaries/GlossariesSynonyms';
 import GlossariesSynonymsSkeleton from '../Glossaries/GlossariesSynonymsSkeleton';
 import ResourcePreview from '../Common/ResourcePreview';
 import TableInsights from '../TableInsights/TableInsights'
+import { useNoAccess } from '../../contexts/NoAccessContext';
 // import { useFavorite } from '../../hooks/useFavorite'
 
 /**
@@ -97,7 +100,9 @@ const ViewDetails = () => {
   const { user } = useAuth();
   const entry = useSelector((state: any) => state.entry.items);
   const entryStatus = useSelector((state: any) => state.entry.status);
+  const entryError = useSelector((state: any) => state.entry.error);
   const entryHistory = useSelector((state: any) => state.entry.history);
+  const { triggerNoAccess } = useNoAccess();
   const sampleData = useSelector((state: any) => state.sampleData.items);
   const sampleDataStatus = useSelector((state: any) => state.sampleData.status);
   const glossaryItems = useSelector((state: any) => state.glossaries.viewDetailsItems);
@@ -127,11 +132,14 @@ const ViewDetails = () => {
   const [assetPreviewData, setAssetPreviewData] = useState<any | null>(null);
   const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
   const [lockedEntry, setLockedEntry] = useState<any>(null);
-
-  //const [showSidePanel, setShowSidePanel] = React.useState(true);
-
-  // Use shared favorite state
-  // const { isFavorite, toggleFavorite } = useFavorite(entry?.name || '');
+  const [isScrolled, setIsScrolled] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const handleScroll = useCallback(() => {
+    if (scrollContainerRef.current) {
+      setIsScrolled(scrollContainerRef.current.scrollTop > 0);
+    }
+  }, []);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   const handleAnnotationCollapseAll = () => {
     setExpandedAnnotations(new Set());
@@ -176,7 +184,6 @@ const ViewDetails = () => {
       dispatch(popFromHistory());
     } else {
       // If no history, fall back to browser navigation
-      dispatch({ type: 'resources/setItems', payload: [] });
       navigate(-1);
     }
   };
@@ -305,18 +312,19 @@ const ViewDetails = () => {
 
   // Use locked entry for display when preview is open, otherwise use current entry
   const displayEntry = lockedEntry || entry;
+  const bigQueryLink = generateBigQueryLink(displayEntry);
+  const lookerLink = generateLookerStudioLink(displayEntry);
 
-
-//   let schema = <Schema entry={entry} css={{width:"100%"}} />;
+  const headerDescription = displayEntry?.entrySource?.description || '';
 
 let annotationTab = <PreviewAnnotation
   entry={filteredEntry || displayEntry}
-  css={{width:"100%", borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px', borderTopLeftRadius: '0px', borderTopRightRadius: '0px', marginRight: '8px'}}
+  css={{width:"100%", marginRight: '8px'}}
   isTopComponent={true}
   expandedItems={expandedAnnotations}
   setExpandedItems={setExpandedAnnotations}
 
-/>;  let overviewTab = <DetailPageOverview entry={displayEntry} css={{width:"100%"}} sampleTableData={sampleTableData}/>;
+/>;  let overviewTab = <DetailPageOverview entry={displayEntry} css={{width:"100%"}} sampleTableData={sampleTableData} noTopSpacing={true}/>;
   
 //   useEffect(() => {
 //     if(getEntryType(entry.name, '/') == 'Tables') {
@@ -403,6 +411,13 @@ useEffect(() => {
       // console.log("loader:", loading);
   }
 }, [entryStatus, isAssetPreviewOpen]);
+
+  // Show no-access modal when entry fetch returns PERMISSION_DENIED
+  useEffect(() => {
+    if (entryStatus === 'failed' && entryError?.type === 'PERMISSION_DENIED') {
+      triggerNoAccess({ message: entryError.message });
+    }
+  }, [entryStatus, entryError, triggerNoAccess]);
 
   // Handle case where entry is already loaded from persistence
   useEffect(() => {
@@ -513,50 +528,68 @@ useEffect(() => {
   const lineageTab = <Lineage entry={displayEntry}/>;
 
   return (
-    <div style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#F8FAFD", height: "100vh", overflow: "hidden" }}>
-      <div style={{display: "flex", flexDirection: "row", gap: "1rem", flex: 1, minHeight: 0, overflow: "hidden"}}>
-      <div style={{display: "flex", flexDirection: "column", borderRadius:"24px",background: "#ffffff", flex: 1, height: "calc(100vh - 80px)", minHeight: 0, overflow: "hidden"}}>
-        {loading ? (
-          <Box sx={{ padding: "0px 20px" }}>
-            {/* Header Skeleton: Back button + Title + Tags */}
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px',
-              padding: '24px 0px 16px 0px'
-            }}>
-              <Skeleton variant="circular" width={32} height={32} />
-              <Skeleton variant="text" width={250} height={28} />
-              <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: '8px' }} />
-              <Skeleton variant="rounded" width={60} height={24} sx={{ borderRadius: '8px' }} />
-            </Box>
+    <div ref={scrollContainerRef} onScroll={handleScroll} style={{display: "flex", flexDirection: "column", padding: "0px 0", background:"#FFFFFF", height: "100%", overflowY: "auto" }}>
+      {loading ? (
+        <div style={{display: "flex", flexDirection: "row", gap: "1rem"}}>
+          <div style={{display: "flex", flexDirection: "column", flex: 1, minWidth: 0}}>
+            <Box sx={{ padding: "0px 20px", display: "flex", flexDirection: "column" }}>
+              {/* Row 1: Title Bar Skeleton */}
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                padding: '20px 0px 0px 0px'
+              }}>
+                <Skeleton variant="circular" width={32} height={32} sx={{ flexShrink: 0 }} />
+                <Skeleton variant="rounded" width={48} height={48} sx={{ borderRadius: '10px', flexShrink: 0 }} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <Skeleton variant="text" width={300} height={36} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Skeleton variant="rounded" width={70} height={22} sx={{ borderRadius: '8px' }} />
+                      <Skeleton variant="rounded" width={60} height={22} sx={{ borderRadius: '8px' }} />
+                      <Skeleton variant="rounded" width={55} height={20} sx={{ borderRadius: '8px' }} />
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
 
-            {/* Tabs Skeleton */}
-            <Box sx={{
-              display: 'flex',
-              gap: '24px',
-              paddingLeft: '28px',
-              paddingBottom: '12px',
-              borderBottom: '1px solid #E0E0E0'
-            }}>
-              <Skeleton variant="text" width={80} height={20} />
-              <Skeleton variant="text" width={70} height={20} />
-              <Skeleton variant="text" width={65} height={20} />
-              <Skeleton variant="text" width={90} height={20} />
-            </Box>
+              {/* Row 2: Description Skeleton */}
+              <Box sx={{ padding: '12px 0px 0px 0px' }}>
+                <Skeleton variant="text" width="80%" height={20} />
+                <Skeleton variant="text" width="50%" height={20} />
+              </Box>
 
-            {/* Body Skeleton */}
-            <Box sx={{ margin: '24px 40px', minHeight: '400px' }}>
-              <Skeleton variant="rounded" width="100%" height={400} sx={{ borderRadius: '8px' }} />
+              {/* Row 3: Tab Bar Skeleton */}
+              <Box sx={{
+                display: 'flex',
+                gap: '24px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid #E0E0E0'
+              }}>
+                <Skeleton variant="text" width={80} height={20} />
+                <Skeleton variant="text" width={70} height={20} />
+                <Skeleton variant="text" width={65} height={20} />
+                <Skeleton variant="text" width={90} height={20} />
+              </Box>
+
+              {/* Row 5: Body - DetailPageOverview Skeleton */}
+              <Box sx={{ paddingTop: '0px', paddingBottom: '2rem' }}>
+                <DetailPageOverviewSkeleton />
+              </Box>
             </Box>
-          </Box>
-        ) : (<div style={{padding:"0px 0rem", display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden"}}>
-                        {/* Fixed Header Container - does not scroll */}
+          </div>
+        </div>
+      ) : (<>
+                        {/* Fixed Header Container - sticky, direct child of scroll container */}
                         <div style={{
-                            flexShrink: 0,
                             backgroundColor: '#ffffff',
-                            zIndex: 1000,
-                            borderRadius: '20px 20px 0 0'
+                            zIndex: 1001,
+                            position: "sticky",
+                            top: 0,
+                            paddingBottom: "12px",
+                            boxShadow: isScrolled ? "0px 2px 4px rgba(0, 0, 0, 0.12)" : "none",
+                            transition: "box-shadow 0.2s ease",
                         }}>
 
             {/* Primary Title Bar */}
@@ -564,184 +597,282 @@ useEffect(() => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "24px 0px 4px 0px"
+                padding: "20px 20px 0px 20px"
             }}>
-                {/* Left Side - Back Arrow, Title, and Tags */}
-                <div style={{
-                    display: "flex",
-                    alignItems: "center"
-                }}>
-                    <button 
-                        onClick={goBack} 
-                        style={{
-                            background: "none", 
-                            border: "none", 
-                            color: "#0B57D0", 
-                            cursor: "pointer", 
-                            padding: "4px",
-                            display: "flex",
-                            alignItems: "center",
-                            marginRight: "1rem"
-                        }}
-                    >
-                        <ArrowBack style={{fontSize: "24px"}} />
-                    </button>
-                    <Tooltip
-                      title={
-                        displayEntry.entrySource.displayName.length > 0
-                        ? displayEntry.entrySource.displayName
-                        : getName(displayEntry.name || '', '/')
-                      }
-                      arrow placement='top'
-                    >
-                    <label style={{
-                        fontFamily: '"Google Sans", sans-serif',
-                        color: "#1F1F1F",
-                        fontSize: "1.125rem",
-                        fontWeight: "500",
-                        // textTransform: "capitalize",
-                        marginRight: "0.5rem",
-                        maxWidth: '400px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        {displayEntry.entrySource.displayName.length > 0 ? displayEntry.entrySource.displayName : getName(displayEntry.name || '', '/')}
-                    </label>
-                    </Tooltip>
-                    <Tag
-                        text={displayEntry.entrySource.system ? (displayEntry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : displayEntry.entrySource?.system.replace("_", " ").replace("-", " ").toLowerCase()) : 'Custom'} 
-                        css={{
-                            fontFamily: '"Google Sans Text", sans-serif',
-                            backgroundColor: '#C2E7FF',
-                            color: '#004A77',
-                            borderRadius: '8px',
-                            padding: '4px 8px',
-                            height: '1.25rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            border: 'none',
-                            textTransform: 'capitalize',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginRight: '0.5rem',
-                            display: 'flex'
-                        }}
-                    />
-                    <Tag
-                        text={getEntryType(displayEntry.name, '/')} 
-                        css={{
-                            fontFamily: '"Google Sans Text", sans-serif',
-                            backgroundColor: '#C2E7FF',
-                            color: '#004A77',
-                            borderRadius: '8px',
-                            padding: '4px 8px',
-                            height: '1.25rem',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            border: 'none',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            display: 'flex'
-                        }}
-                    />
-                </div>
-                
-                {/* Right Side - Star and Action Buttons */}
+                {/* Left Side - Back Arrow, Icon, Title, and Tags */}
                 <div style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "16px",
-                    marginRight: "2rem"
+                    gap: "20px"
                 }}>
-                  {/* <svg 
-                    width="1.25rem" 
-                    height="1.25rem" 
-                    viewBox="0 0 18 18" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{
-                        cursor: "pointer",
-                        flexShrink: 0 // Prevent icon from shrinking
-                    }}
-                    onClick={() => {
-                      const newStatus = toggleFavorite();
-                      console.log(newStatus ? 'Added to favorites' : 'Removed from favorites');
-                    }}                >
-                    {isFavorite ? (
-                        // Filled star when favorited
-                        <path 
-                            d="M9 1.5L11.1075 6.465L16.5 6.93L12.4125 10.4775L13.635 15.75L9 12.9525L4.365 15.75L5.595 10.4775L1.5 6.93L6.8925 6.4725L9 1.5Z" 
-                            fill="#F4B400"
-                        />
-                    ) : (
-                        // Outlined star when not favorited
-                        <path 
-                            fillRule="evenodd" 
-                            clipRule="evenodd" 
-                            d="M11.1075 6.465L16.5 6.93L12.4125 10.4775L13.635 15.75L9 12.9525L4.365 15.75L5.595 10.4775L1.5 6.93L6.8925 6.4725L9 1.5L11.1075 6.465ZM6.18 13.2525L9 11.55L11.8275 13.26L11.0775 10.05L13.5675 7.89L10.2825 7.605L9 4.575L7.725 7.5975L4.44 7.8825L6.93 10.0425L6.18 13.2525Z" 
-                            fill="#575757"
-                            opacity="0.4"
-                        />
-                    )}
-                  </svg> */}
-                  
+                    <IconButton
+                        onClick={goBack}
+                        sx={{
+                            p: '4px',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            color: '#0B57D0',
+                            transition: 'background-color 0.2s',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' },
+                        }}
+                    >
+                        <ArrowBack style={{fontSize: "24px"}} />
+                    </IconButton>
+                    {/* Entry Type Icon Block */}
+                    <Box sx={{
+                        width: "48px",
+                        height: "48px",
+                        background: "#EDF2FC",
+                        border: "1px solid #E7F0FE",
+                        borderRadius: "10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                    }}>
+                        {(() => {
+                            const rawType = displayEntry?.entryType?.split('-').length > 1
+                                ? displayEntry.entryType.split('-').pop()!
+                                : displayEntry?.name?.split('/').at(-2) ?? '';
+                            const iconType = rawType.charAt(0).toUpperCase() + rawType.slice(1);
+                            if (isGlossaryAssetType(iconType)) {
+                                return getGlossaryMuiIcon(assetNameToGlossaryType(iconType), {
+                                    size: '24px',
+                                    color: '#4285F4',
+                                });
+                            }
+                            return (
+                                <Box
+                                    component="img"
+                                    src={getAssetIcon(iconType)}
+                                    alt="Entry type icon"
+                                    sx={{
+                                        width: "24px",
+                                        height: "24px",
+                                        filter: "brightness(0) saturate(100%) invert(22%) sepia(85%) saturate(2867%) hue-rotate(220deg) brightness(92%) contrast(95%)"
+                                    }}
+                                />
+                            );
+                        })()}
+                    </Box>
+                    {/* Title and Tags Column */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+                            <Tooltip
+                              title={
+                                displayEntry.entrySource.displayName.length > 0
+                                ? displayEntry.entrySource.displayName
+                                : getName(displayEntry.name || '', '/')
+                              }
+                              arrow placement='top'
+                            >
+                            <label style={{
+                                fontFamily: '"Google Sans", sans-serif',
+                                color: "#1F1F1F",
+                                fontSize: "28px",
+                                fontWeight: "400",
+                                lineHeight: "36px",
+                                maxWidth: '500px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {displayEntry.entrySource.displayName.length > 0 ? displayEntry.entrySource.displayName : getName(displayEntry.name || '', '/')}
+                            </label>
+                            </Tooltip>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                <Tag
+                                    text={(() => { const sys = displayEntry.entrySource.system; if (!sys) return 'Custom'; const lower = sys.toLowerCase(); if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog'; if (lower === 'bigquery') return 'BigQuery'; return sys.replace("_", " ").replace("-", " ").toLowerCase(); })()}
+                                    css={{
+                                        fontFamily: '"Google Sans", sans-serif',
+                                        backgroundColor: '#C2E7FF',
+                                        color: '#004A77',
+                                        borderRadius: '8px',
+                                        padding: '3px 8px',
+                                        height: '22px',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                        border: 'none',
+                                        textTransform: 'capitalize',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        display: 'flex',
+                                        letterSpacing: '0.1px'
+                                    }}
+                                />
+                                <Tag
+                                    text={(() => {
+                                        const rawType = displayEntry?.entryType?.split('-').length > 1
+                                            ? displayEntry.entryType.split('-').pop()!
+                                            : displayEntry?.name?.split('/').at(-2) ?? '';
+                                        return rawType.charAt(0).toUpperCase() + rawType.slice(1);
+                                    })()}
+                                    css={{
+                                        fontFamily: '"Google Sans", sans-serif',
+                                        backgroundColor: '#C2E7FF',
+                                        color: '#004A77',
+                                        borderRadius: '8px',
+                                        padding: '3px 8px',
+                                        height: '22px',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                        border: 'none',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        display: 'flex',
+                                        letterSpacing: '0.1px'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side - CTA Buttons */}
+                <div style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px"
+                }}>
                   {
                     displayEntry.entrySource?.system.toLowerCase() === 'bigquery' ? (<>
-                        <button
-                              onClick={() => window.open(generateBigQueryLink(displayEntry), '_blank')}
-                              style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
+                        <Box
+                              component="button"
+                              disabled={!bigQueryLink}
+                              onClick={() => bigQueryLink && window.open(bigQueryLink, '_blank')}
+                              sx={{
+                              background: "transparent",
+                              border: "1px solid #DADCE0",
+                              borderRadius: "100px",
+                              cursor: bigQueryLink ? "pointer" : "not-allowed",
                               display: "flex",
                               alignItems: "center",
+                              justifyContent: "center",
                               gap: "8px",
+                              padding: "10px 16px",
                               color: "#0B57D0",
-                              fontFamily: '"Google Sans Text", sans-serif',
-                              fontSize: "0.75rem",
-                              fontWeight: "700"
+                              fontFamily: '"Google Sans", sans-serif',
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              lineHeight: "20px",
+                              whiteSpace: "nowrap",
+                              transition: "background-color 0.2s ease",
+                              opacity: bigQueryLink ? 1 : 0.5,
+                              '&:hover': {
+                                backgroundColor: bigQueryLink ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
+                              },
                           }}>
                               <img
                                   src="/assets/images/Product-Icons.png"
                                   alt="Open in BQ"
-                                  style={{width: "16px", height: "16px", position:'relative', top: '-2px'}}
+                                  style={{width: "20px", height: "20px"}}
                               />
                               Open in BigQuery
-                        </button>
-                        <button
-                              onClick={() => window.open(generateLookerStudioLink(displayEntry), '_blank')}
-                              style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
+                        </Box>
+                        <Box
+                              component="button"
+                              disabled={!lookerLink}
+                              onClick={() => lookerLink && window.open(lookerLink, '_blank')}
+                              sx={{
+                              background: "transparent",
+                              border: "1px solid #DADCE0",
+                              borderRadius: "100px",
+                              cursor: lookerLink ? "pointer" : "not-allowed",
                               display: "flex",
                               alignItems: "center",
+                              justifyContent: "center",
                               gap: "8px",
+                              padding: "10px 16px",
                               color: "#0B57D0",
-                              fontFamily: '"Google Sans Text", sans-serif',
-                              fontSize: "0.75rem",
-                              fontWeight: "700"
+                              fontFamily: '"Google Sans", sans-serif',
+                              fontSize: "14px",
+                              fontWeight: "500",
+                              lineHeight: "20px",
+                              whiteSpace: "nowrap",
+                              transition: "background-color 0.2s ease",
+                              opacity: lookerLink ? 1 : 0.5,
+                              '&:hover': {
+                                backgroundColor: lookerLink ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
+                              },
                           }}>
-                              <img 
-                                  src="/assets/images/looker.png" 
-                                  alt="Open in Looker" 
-                                  style={{width: "12px", position:'relative', top: '-3px'}} 
+                              <img
+                                  src="/assets/images/looker.png"
+                                  alt="Open in Looker"
+                                  style={{width: "20px", height: "20px"}}
                               />
-                              Explore with Looker Studio
-                        </button>
+                              Explore in Looker
+                        </Box>
                       </>
                     ):(<></>)
                   }
                 </div>
               </div>
+            {/* Close sticky header - only name slip stays sticky */}
+            </div>
+
+            {/* Flex row for content + preview sidebar */}
+            <div style={{display: "flex", flexDirection: "row", gap: "2px"}}>
+            <div style={{display: "flex", flexDirection: "column", flex: 1, minWidth: 0, overflow: 'hidden'}}>
+
+              {/* Description Section with Show more/less */}
+              <div style={{ padding: "16px 20px 0px", maxWidth: "800px" }}>
+                {headerDescription ? (
+                  <>
+                    <div style={{
+                        fontFamily: '"Google Sans", sans-serif',
+                        fontSize: "14px",
+                        lineHeight: "20px",
+                        color: "#575757",
+                        fontWeight: 400,
+                        maxHeight: descriptionExpanded ? "none" : "60px",
+                        overflow: "hidden",
+                        position: "relative"
+                    }}>
+                        {headerDescription}
+                    </div>
+                    {headerDescription.length > 200 && (
+                        <button
+                            onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                            style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "6px 0px",
+                                color: "#0B57D0",
+                                fontFamily: '"Google Sans", sans-serif',
+                                fontSize: "14px",
+                                fontWeight: 500,
+                                lineHeight: "20px"
+                            }}
+                        >
+                            {descriptionExpanded ? <KeyboardArrowUp sx={{ fontSize: "20px" }} /> : <KeyboardArrowDown sx={{ fontSize: "20px" }} />}
+                            {descriptionExpanded ? 'Show less' : 'Show more'}
+                        </button>
+                    )}
+                  </>
+                ) : (
+                  <div style={{
+                      fontFamily: '"Google Sans", sans-serif',
+                      fontSize: "14px",
+                      lineHeight: "20px",
+                      color: "#575757",
+                      fontWeight: 400,
+                      fontStyle: "italic",
+                  }}>
+                      No description provided for this asset.
+                  </div>
+                )}
+              </div>
+
               {/* Navigation Tab Bar */}
               <div style={{ paddingTop: "0px", marginTop: "0px" }}>
                 <Box
                   sx={{
                     width: "100%",
-                    borderBottom: 1,
-                    borderBottomColor: "#E0E0E0",
                   }}
                 >
                   <Box
@@ -752,16 +883,14 @@ useEffect(() => {
                         minHeight: "48px",
                       },
                       "& .MuiTab-root": {
-                        fontFamily: '"Google Sans Text", sans-serif',
-                        fontSize: "0.875rem",
-                        fontWeight: "500",
+                        fontFamily: '"Product Sans Regular", sans-serif',
+                        fontSize: "14px",
                         color: "#575757",
                         textTransform: "none",
                         minHeight: "48px",
                         padding: "12px 20px 16px",
                         "&.Mui-selected": {
                           color: "#0B57D0",
-                          fontWeight: "600",
                         },
                       },
                       "& .MuiTabs-indicator": {
@@ -819,10 +948,9 @@ useEffect(() => {
                     </Box>
                 </Box>
             </div>
-          </div>
-                        
-           {/* Tab Content - Non-sticky, Scrollable */}
-            <div style={{paddingTop:"0px", marginTop:"0px", marginLeft: "2.5rem", marginRight: "2rem", flex: 1, overflowY: "auto", minHeight: 0, paddingBottom: "2rem"}}>
+
+           {/* Tab Content */}
+            <div style={{paddingTop:"0px", marginTop:"0px", marginLeft: "20px", marginRight: "20px", paddingBottom: "2rem", borderTop: "1px solid #E0E0E0"}}>
                     <CustomTabPanel value={tabValue} index={0}>
                         {overviewTab}
                     </CustomTabPanel>
@@ -832,7 +960,7 @@ useEffect(() => {
                             <AnnotationFilter
                               entry={displayEntry}
                               onFilteredEntryChange={setFilteredEntry}
-                              sx={{width: "100%", marginTop: '1.25rem' }}
+                              sx={{width: "100%" }}
                               onCollapseAll={handleAnnotationCollapseAll}
                               onExpandAll={handleAnnotationExpandAll}
                             />
@@ -860,7 +988,7 @@ useEffect(() => {
                             <AnnotationFilter
                               entry={displayEntry}
                               onFilteredEntryChange={setFilteredEntry}
-                              sx={{ marginTop: '1.25rem' }}
+                              sx={{}}
                               onCollapseAll={handleAnnotationCollapseAll}
                               onExpandAll={handleAnnotationExpandAll}
                             />
@@ -874,11 +1002,11 @@ useEffect(() => {
                       <>
                         <CustomTabPanel value={tabValue} index={1}>
                           {isGlossaryDataLoading ? (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesCategoriesTermsSkeleton />
                             </Box>
                           ) : (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesCategoriesTerms
                                 mode="categories"
                                 items={filteredCategories}
@@ -895,11 +1023,11 @@ useEffect(() => {
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={2}>
                           {isGlossaryDataLoading ? (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesCategoriesTermsSkeleton />
                             </Box>
                           ) : (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesCategoriesTerms
                                 mode="terms"
                                 items={filteredTerms}
@@ -918,7 +1046,7 @@ useEffect(() => {
                             <AnnotationFilter
                               entry={displayEntry}
                               onFilteredEntryChange={setFilteredEntry}
-                              sx={{ marginTop: '1.25rem' }}
+                              sx={{}}
                               onCollapseAll={handleAnnotationCollapseAll}
                               onExpandAll={handleAnnotationExpandAll}
                             />
@@ -929,11 +1057,11 @@ useEffect(() => {
                       <>
                         <CustomTabPanel value={tabValue} index={1}>
                           {isGlossaryDataLoading ? (
-                            <Box sx={{ p: '20px', height: 'calc(100% - 40px)' }}>
+                            <Box sx={{ p: '0 20px 20px 20px', height: 'calc(100% - 40px)' }}>
                               <ShimmerLoader count={6} type="card" />
                             </Box>
                           ) : (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%', marginTop: '-10px' }}>
                               <GlossariesLinkedAssets
                                 linkedAssets={currentGlossaryItem?.linkedAssets || []}
                                 searchTerm={contentSearchTerm}
@@ -949,11 +1077,11 @@ useEffect(() => {
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={2}>
                           {isGlossaryDataLoading ? (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesSynonymsSkeleton />
                             </Box>
                           ) : (
-                            <Box sx={{ marginTop: '1.25rem', height: 'calc(100% - 1.25rem)' }}>
+                            <Box sx={{ height: '100%' }}>
                               <GlossariesSynonyms
                                 relations={relations}
                                 searchTerm={contentSearchTerm}
@@ -973,7 +1101,7 @@ useEffect(() => {
                             <AnnotationFilter
                               entry={displayEntry}
                               onFilteredEntryChange={setFilteredEntry}
-                              sx={{ marginTop: '1.25rem' }}
+                              sx={{}}
                               onCollapseAll={handleAnnotationCollapseAll}
                               onExpandAll={handleAnnotationExpandAll}
                             />
@@ -986,7 +1114,7 @@ useEffect(() => {
                             <AnnotationFilter
                               entry={displayEntry}
                               onFilteredEntryChange={setFilteredEntry}
-                              sx={{ marginTop: '1.25rem' }}
+                              sx={{}}
                               onCollapseAll={handleAnnotationCollapseAll}
                               onExpandAll={handleAnnotationExpandAll}
                             />
@@ -1004,24 +1132,24 @@ useEffect(() => {
                       </>
                     )}
           </div>
-        </div>)
-        }
-      </div>
+        </div>
       {/* Asset Preview Panel - Sticky Sidebar */}
       <Box
         sx={{
           width: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
           minWidth: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
-          height: "calc(100vh - 2rem)",
-          marginBottom: "2rem",
+          height: "calc(100vh - 180px)",
+          position: "sticky",
+          top: "80px",
+          marginTop: "10px",
           borderRadius: "20px",
           backgroundColor: "#fff",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: isAssetPreviewOpen ? "0px 4px 12px rgba(0,0,0,0.1)" : "none",
           transition: "width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out",
           opacity: isAssetPreviewOpen ? 1 : 0,
+          marginRight: isAssetPreviewOpen ? "16px" : 0,
         }}
       >
         <ResourcePreview
@@ -1049,6 +1177,8 @@ useEffect(() => {
         />
       </Box>
       </div>
+      </>
+      )}
     </div>
   )
 }

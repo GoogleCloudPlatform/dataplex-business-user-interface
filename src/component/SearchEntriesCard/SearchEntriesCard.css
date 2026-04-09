@@ -20,3 +20,16 @@ html[data-theme="dark"] .entriesHoverEffect:not(.selected):hover {
   visibility: visible;
   opacity: 1;
 }
+
+/* Smaller screens: reduce hover button padding to prevent overflow */
+@media (max-width: 1200px) {
+  .entriesHoverEffect .hover-actions .MuiBox-root,
+  .entriesHoverEffect .hover-actions > div {
+    padding: 4px 8px !important;
+  }
+
+  .entriesHoverEffect .hover-actions .view-details-text,
+  .entriesHoverEffect .hover-actions span {
+    font-size: 12px !important;
+  }
+}

@@ -515,10 +515,15 @@ return (previewData != null) ?(
           >
             What access are you seeking?
           </Typography>
-          <FormControl fullWidth>
+          <Tooltip
+            title={accessGroups.length === 0 ? "No access groups are available for this data product" : ""}
+            arrow
+            placement="top"
+          >
+            <FormControl fullWidth disabled={accessGroups.length === 0}>
                 <InputLabel id="submit-access-select-helper-label">Access Group *</InputLabel>
                 <Select
-                    sx={{ 
+                    sx={{
                         fontSize: '0.9rem',
                         lineHeight: 1.4,
                     }}
@@ -538,10 +543,10 @@ return (previewData != null) ?(
                     {
                         accessGroups.map((val: any, index: number) => (
                             <MenuItem
-                                sx={{ 
+                                sx={{
                                     fontSize: '0.9rem',
                                     lineHeight: 1.4,
-                                }} 
+                                }}
                                 key={index} value={val?.principal?.googleGroup}>
                                 {val?.displayName || val?.id}
                             </MenuItem>
@@ -550,6 +555,7 @@ return (previewData != null) ?(
                 </Select>
                 {isRequiredError && <FormHelperText style={{ color: 'red' }}>Please select an access group for your request it's required.</FormHelperText>}
             </FormControl>
+          </Tooltip>
         </Box>
         )}
 

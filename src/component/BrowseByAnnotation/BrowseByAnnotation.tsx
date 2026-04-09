@@ -1,13 +1,15 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import SideNav from './SideNav';
 import MainComponent from './MainComponent';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography, useMediaQuery } from '@mui/material';
 import { useAuth } from '../../auth/AuthProvider';
 import { useDispatch, useSelector } from 'react-redux';
-import { browseResourcesByAspects, setAspectBrowseCache } from '../../features/resources/resourcesSlice';
+import { browseResourcesByAspects, setAspectBrowseCache, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache } from '../../features/resources/resourcesSlice';
 import { getAspectDetail } from '../../features/aspectDetail/aspectDetailSlice';
 import { fetchEntry } from '../../features/entry/entrySlice';
 import type { AppDispatch, RootState } from '../../app/store';
+import type { ActiveFilter } from '../Common/FilterBar';
+import { setSideNavOpen } from '../../features/search/searchSlice';
 
 /**
  * @file BrowseByAnnotation.tsx
@@ -53,20 +55,68 @@ const BrowseByAnnotation = () => {
   const id_token = user?.token || '';
   const dispatch = useDispatch<AppDispatch>();
 
-  const [loader, setLoader] = useState<boolean>(true);
-  const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
-  const [selectedSubItem, setSelectedSubItem] = useState<any | null>(null);
-  const [dynamicAnnotationsData, setDynamicAnnotationsData] = useState<any>([]);
+  // Redux-backed state for navigation preservation
+  const reduxSelectedItemName = useSelector((state: RootState) => state.resources.browseSelectedItemName);
+  const reduxSelectedSubItem = useSelector((state: RootState) => state.resources.browseSelectedSubItem);
+  const reduxTabValue = useSelector((state: RootState) => state.resources.browseTabValue);
+  const reduxDynamicAnnotationsData = useSelector((state: RootState) => state.resources.browseDynamicAnnotationsData) as any[];
+  const reduxSubTypesWithCache = useSelector((state: RootState) => state.resources.browseSubTypesWithCache) as Record<string, boolean>;
 
-  // New state variables for tab-based view
-  const [tabValue, setTabValue] = useState<number>(0);  // 0=Overview, 1=Sub Types
+  const [loader, setLoader] = useState<boolean>(reduxDynamicAnnotationsData.length === 0);
+  const [selectedItemName, _setSelectedItemName] = useState<string | null>(reduxSelectedItemName);
+  const [selectedSubItem, _setSelectedSubItem] = useState<any | null>(reduxSelectedSubItem);
+  const [dynamicAnnotationsData, _setDynamicAnnotationsData] = useState<any>(reduxDynamicAnnotationsData.length > 0 ? reduxDynamicAnnotationsData : []);
+  const [subTypesWithCache, _setSubTypesWithCache] = useState<Record<string, boolean>>(reduxSubTypesWithCache);
+  const [tabValue, _setTabValue] = useState<number>(reduxTabValue);
+
+  // Wrapper functions that sync local state to Redux
+  const setSelectedItemName = useCallback((val: string | null) => {
+    _setSelectedItemName(val);
+    dispatch(setBrowseSelectedItemName(val));
+  }, [dispatch]);
+  const setSelectedSubItem = useCallback((val: any | null) => {
+    _setSelectedSubItem(val);
+    dispatch(setBrowseSelectedSubItem(val));
+  }, [dispatch]);
+  const setTabValue = useCallback((val: number) => {
+    _setTabValue(val);
+    dispatch(setBrowseTabValue(val));
+  }, [dispatch]);
+  const setDynamicAnnotationsData = useCallback((val: any) => {
+    // Support both direct value and updater function pattern
+    if (typeof val === 'function') {
+      _setDynamicAnnotationsData((prev: any) => {
+        const next = val(prev);
+        dispatch(setBrowseDynamicAnnotationsData(next));
+        return next;
+      });
+    } else {
+      _setDynamicAnnotationsData(val);
+      dispatch(setBrowseDynamicAnnotationsData(val));
+    }
+  }, [dispatch]);
+  const setSubTypesWithCache = useCallback((val: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
+    if (typeof val === 'function') {
+      _setSubTypesWithCache((prev) => {
+        const next = val(prev);
+        dispatch(setBrowseSubTypesWithCache(next));
+        return next;
+      });
+    } else {
+      _setSubTypesWithCache(val);
+      dispatch(setBrowseSubTypesWithCache(val));
+    }
+  }, [dispatch]);
+
+  const [aspectFilters, setAspectFilters] = useState<ActiveFilter[]>([]);
+
+  // State variables for tab-based view
   const [contentSearchTerm, setContentSearchTerm] = useState<string>('');
   const [sortBy, setSortBy] = useState<'name' | 'assets' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loadingAspectName, setLoadingAspectName] = useState<string | null>(null);
-
-  // NEW: Track which sub types have linked assets cached
-  const [subTypesWithCache, setSubTypesWithCache] = useState<Record<string, boolean>>({});
+  const isSidebarOpen = useSelector((state: any) => state.search.isSideNavOpen);
+  const isSmallScreen = useMediaQuery('(max-width: 1280px)');
   // NEW: AbortController for Phase 2
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -82,6 +132,85 @@ const BrowseByAnnotation = () => {
   const selectedItem = dynamicAnnotationsData.find(
     (item: any) => item.name === selectedItemName
   ) || null;
+
+  // Reverse map from FilterBar property labels to field keys
+  const LABEL_TO_FIELD: Record<string, string> = {
+    'Name contains': 'name_contains',
+    'Name prefix': 'name_prefix',
+    'Location': 'location',
+    'Created on': 'created_on',
+    'Created before': 'created_before',
+    'Created after': 'created_after',
+  };
+
+  // Client-side filtering of aspects based on active filter chips
+  const filteredAnnotationsData = useMemo(() => {
+    if (aspectFilters.length === 0) return dynamicAnnotationsData;
+
+    // Split filters into groups by isOr flag
+    const filterGroups: ActiveFilter[][] = [];
+    let currentGroup: ActiveFilter[] = [];
+    for (const filter of aspectFilters) {
+      if (filter.isOr && currentGroup.length > 0) {
+        filterGroups.push(currentGroup);
+        currentGroup = [filter];
+      } else {
+        currentGroup.push(filter);
+      }
+    }
+    if (currentGroup.length > 0) filterGroups.push(currentGroup);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matchesGroup = (item: any, group: ActiveFilter[]): boolean => {
+      return group.every((filter) => {
+        const val = (filter.values[0] || '').toLowerCase();
+        const field = LABEL_TO_FIELD[filter.property] || 'name_contains';
+        switch (field) {
+          case "name_contains":
+            return (item.title || "").toLowerCase().includes(val) ||
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (item.subItems || []).some((sub: any) =>
+                (sub.title || "").toLowerCase().includes(val) ||
+                (sub.displayName || "").toLowerCase().includes(val));
+          case "name_prefix":
+            return (item.title || "").toLowerCase().startsWith(val) ||
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (item.subItems || []).some((sub: any) =>
+                (sub.title || "").toLowerCase().startsWith(val) ||
+                (sub.displayName || "").toLowerCase().startsWith(val));
+          case "location":
+            return (item.location || "").toLowerCase().includes(val);
+          case "created_on": {
+            if (!item.createTime) return false;
+            const itemDate = new Date(item.createTime.seconds ? item.createTime.seconds * 1000 : item.createTime);
+            const filterDate = new Date(filter.values[0]);
+            return itemDate.toISOString().slice(0, 10) === filterDate.toISOString().slice(0, 10);
+          }
+          case "created_before": {
+            if (!item.createTime) return false;
+            const itemDate = new Date(item.createTime.seconds ? item.createTime.seconds * 1000 : item.createTime);
+            const filterDate = new Date(filter.values[0]);
+            return itemDate < filterDate;
+          }
+          case "created_after": {
+            if (!item.createTime) return false;
+            const itemDate = new Date(item.createTime.seconds ? item.createTime.seconds * 1000 : item.createTime);
+            const filterDate = new Date(filter.values[0]);
+            filterDate.setDate(filterDate.getDate() + 1); // Include the filter date
+            return itemDate >= filterDate;
+          }
+          default:
+            return true;
+        }
+      });
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return dynamicAnnotationsData.filter((item: any) =>
+      // OR between groups: item matches if it matches ANY group
+      filterGroups.some((group) => matchesGroup(item, group))
+    );
+  }, [dynamicAnnotationsData, aspectFilters]);
 
   // Cache key generator helper
   const generateCacheKey = (aspectTitle: string, subTypeName: string) => {
@@ -308,7 +437,7 @@ const BrowseByAnnotation = () => {
   }, [selectedItemName, selectedSubItem, dispatch, id_token]);
 
   // Cleanup only on unmount (not on selectedItem change)
-  // Note: Abort on aspect change is handled in Phase 2 (lines 172-174)
+  // Note: Abort on aspect change is handled in Phase 2
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -318,6 +447,11 @@ const BrowseByAnnotation = () => {
   }, []); // Empty array = only run on unmount
 
   useEffect(()=> {
+    // Skip rebuild if data already exists (back navigation)
+    if (dynamicAnnotationsData.length > 0) {
+      setLoader(false);
+      return;
+    }
     if(aspects){
       const fullAspectList = aspects || [];
       const aspectList: Record<string, string[]> = browseByAspectTypes || {};
@@ -343,6 +477,7 @@ const BrowseByAnnotation = () => {
             subItems: subItems,
             location: aspectInfo?.dataplexEntry?.entrySource?.location || '',
             resource: aspectInfo?.dataplexEntry?.entrySource?.resource || '',
+            createTime: aspectInfo?.dataplexEntry?.createTime || null,
           });
         });
         setDynamicAnnotationsData(generatedData);
@@ -400,31 +535,35 @@ const BrowseByAnnotation = () => {
     dynamicAnnotationsData.length > 0 ? (
       <Box sx={{
         display: 'flex',
-        justifyContent: 'center',
         alignItems: 'flex-start',
         px: 0,
-        pb: 2,
+        pb: 0,
         pt: 0,
         backgroundColor: '#F8FAFD',
         height: 'calc(100vh - 72px)',
         width: '100%',
         overflow: 'hidden',
       }}>
-        {/* Side Navigation */}
+        {/* Side Navigation - Fixed Position */}
         <SideNav
           selectedItem={selectedItem}
           onItemClick={handleItemClick}
           selectedSubItem={selectedSubItem}
           onSubItemClick={handleSubItemClick}
-          annotationsData={dynamicAnnotationsData}
+          annotationsData={filteredAnnotationsData}
           loadingAspectName={loadingAspectName}
+          filters={aspectFilters}
+          onFiltersChange={setAspectFilters}
+          isOpen={isSidebarOpen}
         />
+        {/* Main Content - Shifted right to account for fixed sidebar */}
+        <Box sx={{ marginLeft: isSidebarOpen ? '252px' : '0px', width: isSidebarOpen ? 'calc(100% - 252px)' : '100%', height: '100%', overflow: 'hidden', transition: 'margin-left 0.3s ease-in-out, width 0.3s ease-in-out' }}>
         <MainComponent
           selectedCard={selectedItem}
           onItemClick={handleItemClick}
           selectedSubItem={selectedSubItem}
           onSubItemClick={handleSubItemClick}
-          annotationsData={dynamicAnnotationsData}
+          annotationsData={filteredAnnotationsData}
           tabValue={tabValue}
           onTabChange={handleTabChange}
           contentSearchTerm={contentSearchTerm}
@@ -435,7 +574,11 @@ const BrowseByAnnotation = () => {
           onSortOrderToggle={handleSortOrderToggle}
           loadingAspectName={loadingAspectName}
           subTypesWithCache={subTypesWithCache}
+          isSidebarOpen={isSidebarOpen}
+          onSidebarToggle={(open: boolean) => dispatch(setSideNavOpen(open))}
+          isSmallScreen={isSmallScreen}
         />
+        </Box>
       </Box>
     ) : (<Box sx={{ display: 'flex', height: '85vh', width: '100%', backgroundColor: '#F8FAFD', justifyContent: 'center', alignContent: 'center', alignItems: 'center' }}>
           <Typography 

@@ -90,6 +90,34 @@ vi.mock('../../utils/resourceUtils', () => ({
   generateBigQueryLink: vi.fn(() => 'https://console.cloud.google.com/bigquery?ws=test'),
   generateLookerStudioLink: vi.fn(() => 'https://lookerstudio.google.com'),
   hasValidAnnotationData: vi.fn(() => true),
+  getFormattedDateTimeParts: vi.fn((seconds: number) => {
+    if (!seconds) return { date: '-', time: '' };
+    return { date: 'Jan 1, 2022', time: '12:00:00 AM' };
+  }),
+  getAssetIcon: vi.fn(() => '/assets/icons/table.svg'),
+}));
+
+// Mock NotificationContext
+vi.mock('../../contexts/NotificationContext', () => ({
+  useNotification: () => ({
+    showNotification: vi.fn(),
+    showSuccess: vi.fn(),
+    showError: vi.fn(),
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
+    clearNotification: vi.fn(),
+    clearAllNotifications: vi.fn()
+  })
+}));
+
+// Mock NoAccessContext
+vi.mock('../../contexts/NoAccessContext', () => ({
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: vi.fn(),
+    dismissNoAccess: vi.fn(),
+  }),
 }));
 
 // Mock glossaryUtils
@@ -239,6 +267,14 @@ Object.defineProperty(window, 'open', {
   writable: true
 });
 
+// Mock navigator.clipboard
+Object.defineProperty(navigator, 'clipboard', {
+  value: {
+    writeText: vi.fn()
+  },
+  writable: true
+});
+
 describe('ViewDetails', () => {
   const mockUser = {
     name: 'Test User',
@@ -271,11 +307,14 @@ describe('ViewDetails', () => {
   const mockEntry = {
     name: 'project/dataset/table',
     fullyQualifiedName: 'project:dataset.table',
-    entryType: 'tables/table',
+    entryType: 'projects/test/locations/global/entryTypes/bigquery-tables',
+    updateTime: { seconds: 1641081600 },
     entrySource: {
       system: 'BigQuery',
       displayName: 'Test Table',
-      resource: 'projects/test/datasets/test/tables/test'
+      description: 'This is a test table description for the detail page.',
+      resource: 'projects/test/datasets/test/tables/test',
+      location: 'US'
     },
     aspects: {
       '123.custom.test': {
@@ -288,7 +327,7 @@ describe('ViewDetails', () => {
   const mockDatasetEntry = {
     name: 'project/dataset',
     fullyQualifiedName: 'project:dataset',
-    entryType: 'datasets/dataset',
+    entryType: 'projects/test/locations/global/entryTypes/bigquery-datasets',
     entrySource: {
       system: 'BigQuery',
       displayName: 'Test Dataset',
@@ -300,7 +339,7 @@ describe('ViewDetails', () => {
   const mockGlossaryEntry = {
     name: 'projects/test/locations/us/entryGroups/@dataplex/entries/glossary',
     fullyQualifiedName: 'test:glossary',
-    entryType: 'glossaries/glossary',
+    entryType: 'projects/test/locations/global/entryTypes/dataplex-glossary',
     entrySource: {
       system: 'dataplex',
       displayName: 'Test Glossary',
@@ -312,7 +351,7 @@ describe('ViewDetails', () => {
   const mockCategoryEntry = {
     name: 'projects/test/locations/us/entryGroups/@dataplex/entries/category',
     fullyQualifiedName: 'test:category',
-    entryType: 'glossaries/category',
+    entryType: 'projects/test/locations/global/entryTypes/dataplex-category',
     entrySource: {
       system: 'dataplex',
       displayName: 'Test Category',
@@ -324,7 +363,7 @@ describe('ViewDetails', () => {
   const mockTermEntry = {
     name: 'projects/test/locations/us/entryGroups/@dataplex/entries/term',
     fullyQualifiedName: 'test:term',
-    entryType: 'glossaries/term',
+    entryType: 'projects/test/locations/global/entryTypes/dataplex-term',
     entrySource: {
       system: 'dataplex',
       displayName: 'Test Term',
@@ -336,7 +375,7 @@ describe('ViewDetails', () => {
   const mockOtherEntry = {
     name: 'project/other/resource',
     fullyQualifiedName: 'project:other.resource',
-    entryType: 'other/type',
+    entryType: 'projects/test/locations/global/entryTypes/other',
     entrySource: {
       system: 'custom',
       displayName: 'Other Resource',
@@ -485,11 +524,11 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        const lookerButton = screen.getByText('Explore with Looker Studio');
+        const lookerButton = screen.getByText('Explore in Looker');
         expect(lookerButton).toBeInTheDocument();
       });
 
-      const lookerButton = screen.getByText('Explore with Looker Studio');
+      const lookerButton = screen.getByText('Explore in Looker');
       fireEvent.click(lookerButton);
 
       expect(mockWindowOpen).toHaveBeenCalledWith('https://lookerstudio.google.com', '_blank');
@@ -503,7 +542,7 @@ describe('ViewDetails', () => {
         expect(screen.getByText('Aspects')).toBeInTheDocument();
         expect(screen.getByText('Lineage')).toBeInTheDocument();
         expect(screen.getByText('Data Profile')).toBeInTheDocument();
-        expect(screen.getByText('Data Quality')).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Data Quality' })).toBeInTheDocument();
       });
     });
   });
@@ -554,7 +593,7 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Data Quality'));
+        fireEvent.click(screen.getByRole('tab', { name: 'Data Quality' }));
       });
 
       await waitFor(() => {
@@ -630,8 +669,8 @@ describe('ViewDetails', () => {
         expect(screen.getByText('Aspects')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Data Profile')).not.toBeInTheDocument();
-      expect(screen.queryByText('Data Quality')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Profile' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Quality' })).not.toBeInTheDocument();
     });
 
     it('renders entry list for datasets', async () => {
@@ -656,9 +695,9 @@ describe('ViewDetails', () => {
         expect(screen.getByText('Aspects')).toBeInTheDocument();
       });
 
-      expect(screen.queryByText('Lineage')).not.toBeInTheDocument();
-      expect(screen.queryByText('Data Profile')).not.toBeInTheDocument();
-      expect(screen.queryByText('Data Quality')).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Lineage' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Profile' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Quality' })).not.toBeInTheDocument();
     });
 
     it('does not render BigQuery/Looker buttons for non-BigQuery entries', async () => {
@@ -669,7 +708,7 @@ describe('ViewDetails', () => {
       });
 
       expect(screen.queryByText('Open in BigQuery')).not.toBeInTheDocument();
-      expect(screen.queryByText('Explore with Looker Studio')).not.toBeInTheDocument();
+      expect(screen.queryByText('Explore in Looker')).not.toBeInTheDocument();
     });
   });
 
@@ -770,7 +809,8 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        expect(screen.getByText('BigQuery')).toBeInTheDocument();
+        const bigQueryElements = screen.getAllByText('BigQuery');
+        expect(bigQueryElements.length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -1025,11 +1065,11 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        expect(screen.getByText('Data Quality')).toBeInTheDocument();
-        expect(screen.getByText('Data Profile')).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Data Quality' })).toBeInTheDocument();
+        expect(screen.getByRole('tab', { name: 'Data Profile' })).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Data Quality'));
+      fireEvent.click(screen.getByRole('tab', { name: 'Data Quality' }));
 
       await waitFor(() => {
         expect(screen.getByTestId('data-quality')).toBeInTheDocument();
@@ -1316,7 +1356,7 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        const lookerButton = screen.getByText('Explore with Looker Studio');
+        const lookerButton = screen.getByText('Explore in Looker');
         fireEvent.click(lookerButton);
       });
 
@@ -1332,15 +1372,17 @@ describe('ViewDetails', () => {
       renderViewDetails();
 
       await waitFor(() => {
-        expect(screen.getByText('BigQuery')).toBeInTheDocument();
+        const bigQueryElements = screen.getAllByText('BigQuery');
+        expect(bigQueryElements.length).toBeGreaterThanOrEqual(1);
       });
     });
 
-    it('renders dataplex tag for glossary entries', async () => {
+    it('renders Knowledge Catalog tag for glossary entries', async () => {
       renderViewDetails(mockGlossaryEntry);
 
       await waitFor(() => {
-        expect(screen.getByText('dataplex')).toBeInTheDocument();
+        const knowledgeCatalogElements = screen.getAllByText('Knowledge Catalog');
+        expect(knowledgeCatalogElements.length).toBeGreaterThanOrEqual(1);
       });
     });
   });
@@ -1368,6 +1410,37 @@ describe('ViewDetails', () => {
       await waitFor(() => {
         expect(screen.getByText('Other')).toBeInTheDocument();
       });
+    });
+  });
+
+  // Header Stats Bar tests removed - stats bar was removed from ViewDetails
+
+  describe('Header Description', () => {
+    it('renders description when available', async () => {
+      renderViewDetails();
+
+      await waitFor(() => {
+        expect(screen.getByText('This is a test table description for the detail page.')).toBeInTheDocument();
+      });
+    });
+
+    it('does not render description section when description is empty', async () => {
+      const entryWithoutDescription = {
+        ...mockEntry,
+        entrySource: {
+          ...mockEntry.entrySource,
+          description: ''
+        }
+      };
+
+      renderViewDetails(entryWithoutDescription);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Table')).toBeInTheDocument();
+      });
+
+      // No description section should be shown
+      expect(screen.queryByText('Show more')).not.toBeInTheDocument();
     });
   });
 

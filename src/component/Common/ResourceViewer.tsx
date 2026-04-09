@@ -11,12 +11,13 @@ import SearchTableView from '../SearchPage/SearchTableView';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
-import { fetchEntry } from '../../features/entry/entrySlice';
+import { fetchEntry, clearHistory } from '../../features/entry/entrySlice';
 // import FilterChips from './FilterChips';
 import SubmitAccess from '../SearchPage/SubmitAccess';
 import NotificationBar from '../SearchPage/NotificationBar';
 import { getName } from '../../utils/resourceUtils';
 import FilterChipCarousel from './FilterChipCarousel';
+import { useNoAccess } from '../../contexts/NoAccessContext';
 
 /**
  * @file ResourceViewer.tsx
@@ -124,8 +125,8 @@ interface ResourceViewerProps {
   onPreviewDataChange: (data: any | null) => void;
   
   // Filter props
-  selectedTypeFilter: string | null;
-  onTypeFilterChange: (filter: string | null) => void;
+  selectedTypeFilter?: string | null;
+  onTypeFilterChange?: (filter: string | null) => void;
   typeAliases: string[];
   
   // View mode props
@@ -141,14 +142,17 @@ interface ResourceViewerProps {
   showResultsCount?: boolean;
   customHeader?: React.ReactNode;
   customFilters?: React.ReactNode;
+  customFilterChips?: React.ReactNode;
   selectedFilters?: any[];
   onFiltersChange?: (filters: any[]) => void;
   availableTypeAliases?: { name: string; count: number }[];
   onTypeAliasClick?: (type: string) => void;
+  hideMostRelevant?: boolean;
   
   // Styling props
   containerStyle?: React.CSSProperties;
   contentStyle?: React.CSSProperties;
+  headerStyle?: React.CSSProperties;
   
   // Event handlers
   onViewDetails?: (entry: any) => void;
@@ -183,13 +187,16 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   showResultsCount = true,
   customHeader,
   customFilters,
+  customFilterChips,
   containerStyle,
   contentStyle,
+  headerStyle,
   onFavoriteClick,
   selectedFilters: _selectedFilters = [],
   onFiltersChange: _onFiltersChange,
   availableTypeAliases,
   onTypeAliasClick,
+  hideMostRelevant = false,
   startIndex: _startIndex = 0,
   pageSize: _pageSize = 20,
   setPageSize,
@@ -201,6 +208,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   // Navigation and auth hooks
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { triggerNoAccess } = useNoAccess();
   // const id_token = user?.token || '';
 
   const dispatch = useDispatch<AppDispatch>();
@@ -219,7 +227,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   const [cardNotificationMessage, setCardNotificationMessage] = useState('');
 
   // Sort state
-  const [sortBy, setSortBy] = useState<'mostRelevant' | 'name' | 'lastModified'>('mostRelevant');
+  const [sortBy, setSortBy] = useState<'mostRelevant' | 'name' | 'lastModified'>(hideMostRelevant ? 'name' : 'mostRelevant');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [sortMenuAnchor, setSortMenuAnchor] = useState<null | HTMLElement>(null);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
@@ -227,7 +235,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   
   // Note: Preview panel is managed by parent components through previewData
 
-  // Handle failed resource status - navigate to login
+  // Handle failed resource status
   useEffect(() => {
     if (resourcesStatus === 'failed') {
       let subString = "INVALID_ARGUMENT:";
@@ -248,17 +256,27 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                 fontSize: '16px'
               }}>{(error?.message || error) + ' invalid arguments passed in search params'}</p>
           </div>);
+        }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+          // Show no-access popup instead of auto-logout for 403 errors
+          triggerNoAccess({
+            message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+          });
         }else{
           setPageSize(20);
           logout();
           navigate('/login');
         }
+      }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+        // Show no-access popup instead of auto-logout for 403 errors
+        triggerNoAccess({
+          message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+        });
       }else{
         logout();
         navigate('/login');
       }
     }
-  }, [resourcesStatus, logout, navigate]);
+  }, [resourcesStatus, logout, navigate, triggerNoAccess]);
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop } = event.currentTarget;
@@ -388,6 +406,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
     const isAccessGranted = entryStatus === 'succeeded';
 
     if (isCurrentlyPreviewed && isAccessGranted) {
+      dispatch(clearHistory());
       navigate('/view-details');
     } else {
       onPreviewDataChange(clickedEntry);
@@ -395,6 +414,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   };
 
   const handleNavigateToTab = (clickedEntry: any, tabName: string) => {
+    dispatch(clearHistory());
     dispatch(fetchEntry({ entryName: clickedEntry.name, id_token }));
     navigate('/view-details', { state: { tabName } });
   };
@@ -499,11 +519,17 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
           <div style={{
             padding: previewData ? "10px 4px 8px 10px" : "10px 10px 8px 10px",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "24px",
+            flexDirection: "column",
+            gap: "4px",
+            ...headerStyle,
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "24px", minWidth: 0, flexShrink: 1 }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "24px",
+            }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", minWidth: 0, flex: 1 }}>
               {showFilters && customFilters}
               {showResultsCount && (
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -558,7 +584,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                     />
                     {sortBy === 'mostRelevant' ? 'Most relevant' : sortBy === 'name' ? 'Name' : 'Last modified'}
                   </Typography>
-                  {sortBy !== 'mostRelevant' && (
+                  {(hideMostRelevant || sortBy !== 'mostRelevant') && (
                     <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
                       <span
                         onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
@@ -692,6 +718,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               </ToggleButtonGroup>
 
             </div>
+            </div>
+            {customFilterChips}
           </div>
         )}
 
@@ -728,18 +756,20 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
             }
           }}
         >
-          <MenuItem
-            onClick={() => handleSortOptionSelect('mostRelevant')}
-            sx={{
-              fontSize: '12px',
-              fontWeight: sortBy === 'mostRelevant' ? '500' : '400',
-              color: sortBy === 'mostRelevant' ? (mode === 'dark' ? '#8ab4f8' : '#0B57D0') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F'),
-              backgroundColor: sortBy === 'mostRelevant' ? (mode === 'dark' ? 'rgba(138,180,248,0.16)' : '#F8FAFD') : 'transparent',
-              '&:hover': { backgroundColor: mode === 'dark' ? '#3c4043' : '#F1F3F4' },
-            }}
-          >
-            Most relevant
-          </MenuItem>
+          {!hideMostRelevant && (
+            <MenuItem
+              onClick={() => handleSortOptionSelect('mostRelevant')}
+              sx={{
+                fontSize: '12px',
+                fontWeight: sortBy === 'mostRelevant' ? '500' : '400',
+                color: sortBy === 'mostRelevant' ? (mode === 'dark' ? '#8ab4f8' : '#0B57D0') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F'),
+                backgroundColor: sortBy === 'mostRelevant' ? (mode === 'dark' ? 'rgba(138,180,248,0.16)' : '#F8FAFD') : 'transparent',
+                '&:hover': { backgroundColor: mode === 'dark' ? '#3c4043' : '#F1F3F4' },
+              }}
+            >
+              Most relevant
+            </MenuItem>
+          )}
           <MenuItem
             onClick={() => handleSortOptionSelect('name')}
             sx={{
@@ -800,7 +830,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                     cursor: 'pointer',
                     padding: '0px',
                     marginTop: index === 0 ? '10px' : '0px',
-                    marginBottom: '20px',
+                    marginBottom: '11px',
                     marginLeft: '10px',
                     marginRight: previewData ? '4px' : '10px',
                   }}
@@ -868,10 +898,18 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               fontSize: '16px'
             }}>{(error?.message || error) + ' invalid arguments passed in search params'}</p>
         </div>);
+      }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+        triggerNoAccess({
+          message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+        });
       }else{
         logout();
         navigate('/login');
       }
+    }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+      triggerNoAccess({
+        message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+      });
     }else{
       logout();
       navigate('/login');

@@ -41,12 +41,13 @@
   --tab-mb: 8px;
 
   /* Overview Rows */
-  --label-font-size: 11px;
+  --label-font-size: 12px;
   --label-line-height: 18px;
+  --label-width: 78px;
   --value-font-size: 12px;
   --value-line-height: 20px;
   --row-padding: 6px 0;
-  --row-gap: 12px;
+  --row-gap: 30px;
 
   /* Description */
   --desc-label-size: 12px;
@@ -95,11 +96,11 @@
 
     --tab-font-size: 12px;
 
-    --label-font-size: 10px;
+    --label-font-size: 12px;
     --label-line-height: 16px;
     --value-font-size: 11px;
     --value-line-height: 18px;
-    --row-gap: 8px;
+    --row-gap: 30px;
 
     --desc-label-size: 11px;
     --desc-text-size: 13px;
@@ -152,12 +153,12 @@
     --tab-underline-height: 2px;
     --tab-mb: 12px;
 
-    --label-font-size: 9px;
+    --label-font-size: 12px;
     --label-line-height: 14px;
     --value-font-size: 10px;
     --value-line-height: 16px;
     --row-padding: 4px 0;
-    --row-gap: 6px;
+    --row-gap: 30px;
 
     --desc-label-size: 10px;
     --desc-text-size: 10px;
@@ -171,14 +172,6 @@
     --empty-content-font-size: 11px;
   }
 
-  .preview-overview-row {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-
-  .preview-overview-value {
-    text-align: left !important;
-  }
 }
 
 /* === ULTRA-SMALL CARD (< 200px) === */
@@ -207,12 +200,12 @@
     --tab-font-size: 10px;
     --tab-mb: 8px;
 
-    --label-font-size: 8px;
+    --label-font-size: 12px;
     --label-line-height: 12px;
     --value-font-size: 9px;
     --value-line-height: 14px;
     --row-padding: 3px 0;
-    --row-gap: 4px;
+    --row-gap: 30px;
 
     --desc-label-size: 9px;
     --desc-text-size: 10px;
@@ -246,8 +239,85 @@
 
     --value-font-size: 13px;
     --value-line-height: 22px;
-    --row-gap: 16px;
+    --row-gap: 30px;
 
     --desc-text-size: 15px;
+  }
+}
+
+/* ============================================
+   VIEWPORT-BASED @media QUERIES (Overview tab)
+   ============================================ */
+
+/* Smaller/zoomed screens (≤1536px) — fluid scaling with clamp() */
+@media (max-width: 1536px) {
+  .preview-card {
+    --preview-padding: clamp(12px, 2vw, 20px);
+    --title-font-size: clamp(14px, 1.6vw, 16px);
+    --title-line-height: clamp(20px, 2.4vw, 24px);
+    --btn-height: clamp(36px, 4vw, 40px);
+    --btn-font-size: clamp(12px, 1.4vw, 14px);
+    --icon-btn-size: clamp(36px, 4vw, 40px);
+    --icon-img-size: clamp(20px, 2.2vw, 22px);
+    --tab-font-size: clamp(12px, 1.4vw, 14px);
+    --label-font-size: 12px;
+    --label-line-height: clamp(14px, 1.8vw, 18px);
+    --label-width: clamp(60px, 8vw, 78px);
+    --value-font-size: clamp(10px, 1.2vw, 12px);
+    --value-line-height: clamp(16px, 2vw, 20px);
+    --row-padding: clamp(4px, 0.6vw, 6px) 0;
+    --row-gap: 30px;
+    --desc-label-size: clamp(10px, 1.2vw, 12px);
+    --desc-text-size: clamp(12px, 1.4vw, 14px);
+    --desc-section-padding: clamp(8px, 1.2vw, 12px) 0;
+    --show-more-size: clamp(10px, 1.2vw, 12px);
+  }
+
+  .preview-overview-row {
+    flex-direction: row !important;
+    align-items: baseline !important;
+  }
+
+  .preview-overview-value {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+}
+
+/* Small tablets / iPad Mini (≤768px) — match 232px panel reference */
+@media (max-width: 768px) {
+  .preview-card {
+    --preview-padding: clamp(12px, 2.1vw, 16px);
+    --preview-radius: clamp(16px, 3.1vw, 24px);
+    --title-font-size: clamp(14px, 2.1vw, 16px);
+    --title-line-height: clamp(20px, 3.1vw, 24px);
+    --close-icon-size: clamp(20px, 3.1vw, 24px);
+    --btn-height: clamp(36px, 5.2vw, 40px);
+    --btn-font-size: clamp(12px, 1.8vw, 14px);
+    --icon-btn-size: clamp(36px, 5.2vw, 40px);
+    --icon-img-size: clamp(20px, 3.1vw, 22px);
+    --tab-font-size: clamp(12px, 1.8vw, 14px);
+    --label-font-size: 12px;
+    --label-line-height: clamp(16px, 2.3vw, 18px);
+    --label-width: clamp(55px, 10vw, 78px);
+    --value-font-size: clamp(11px, 1.6vw, 12px);
+    --value-line-height: clamp(18px, 2.6vw, 20px);
+    --row-padding: clamp(4px, 0.8vw, 6px) 0;
+    --row-gap: 30px;
+    --desc-label-size: clamp(11px, 1.6vw, 12px);
+    --desc-text-size: clamp(12px, 1.8vw, 14px);
+    --desc-section-padding: clamp(8px, 1.6vw, 12px) 0;
+    --show-more-size: clamp(11px, 1.6vw, 12px);
+  }
+
+  .preview-overview-row {
+    flex-direction: row !important;
+    align-items: baseline !important;
+  }
+
+  .preview-overview-value {
+    white-space: normal !important;
+    word-break: break-word;
   }
 }

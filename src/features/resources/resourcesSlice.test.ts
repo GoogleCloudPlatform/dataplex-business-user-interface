@@ -33,6 +33,11 @@ type ResourcesState = {
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: any | string | undefined | unknown | null;
   entryListError: any | string | undefined | unknown | null;
+  browseSelectedItemName: string | null;
+  browseSelectedSubItem: any | null;
+  browseTabValue: number;
+  browseDynamicAnnotationsData: any[];
+  browseSubTypesWithCache: Record<string, boolean>;
 };
 
 // Define store type
@@ -239,6 +244,11 @@ describe('resourcesSlice', () => {
           status: 'loading',
           error: null,
           entryListError: null,
+          browseSelectedItemName: null,
+          browseSelectedSubItem: null,
+          browseTabValue: 0,
+          browseDynamicAnnotationsData: [],
+          browseSubTypesWithCache: {},
         };
 
         const newItems = [{ new: 'data' }];

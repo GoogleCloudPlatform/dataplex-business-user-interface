@@ -17,7 +17,8 @@ import {
   ListItemText,
   TextField,
   InputAdornment,
-  Tooltip
+  Tooltip,
+  Drawer
 } from '@mui/material';
 import { 
   FilterList,
@@ -405,22 +406,6 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({dataQualtyScan}) => {
       flex: 2,
       position: 'relative'
     }}>
-      {/* Dark overlay when configurations panel is open */}
-      {isConfigurationsOpen && (
-        <Box 
-          onClick={() => setIsConfigurationsOpen(false)}
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000,
-            cursor: 'pointer'
-          }} 
-        />
-      )}
       <Box sx={{
         backgroundColor: '#ffffff',
         borderRadius: '0.5rem',
@@ -1132,11 +1117,23 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({dataQualtyScan}) => {
       </Collapse>
 
       {/* Configurations Panel */}
-      <ConfigurationsPanel 
-        isOpen={isConfigurationsOpen}
+      <Drawer
+        anchor="right"
+        open={isConfigurationsOpen}
         onClose={handleConfigurationsClose}
-        dataQualtyScan={dataQualtyScan}
-      />
+        PaperProps={{
+          sx: {
+            width: '38.25rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '-0.25rem 0rem 0.5rem rgba(0, 0, 0, 0.1)',
+          }
+        }}
+      >
+        <ConfigurationsPanel
+          onClose={handleConfigurationsClose}
+          dataQualtyScan={dataQualtyScan}
+        />
+      </Drawer>
       </Box>
     </Box>
   );

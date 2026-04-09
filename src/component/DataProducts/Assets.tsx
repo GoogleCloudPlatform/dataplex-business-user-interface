@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { useSelector } from 'react-redux';
 import DataProductAssets from './DataProductAssets';
+import ShimmerLoader from '../Shimmer/ShimmerLoader';
 import { useAuth } from '../../auth/AuthProvider';
 import axios from 'axios';
 
@@ -417,11 +418,17 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
             }}>
                 {
                     !assetListLoader && (
-                        <Box sx={{ marginTop: '1.25rem' }}>
-                            <Skeleton variant="rectangular" width="100%" height={40} sx={{ marginBottom: '10px', borderRadius: '8px' }} />
-                            <Skeleton variant="rectangular" width="100%" height={40} sx={{ marginBottom: '10px', borderRadius: '8px' }} />
-                            <Skeleton variant="rectangular" width="100%" height={40} sx={{ marginBottom: '10px', borderRadius: '8px' }} />
-                            <Skeleton variant="rectangular" width="100%" height={40} sx={{ marginBottom: '10px', borderRadius: '8px' }} />
+                        <Box>
+                            {/* Header skeleton: Filter button + Search bar + controls */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' }}>
+                                <Skeleton variant="rounded" width={85} height={32} sx={{ borderRadius: '59px' }} />
+                                <Skeleton variant="rounded" width={309} height={32} sx={{ borderRadius: '54px' }} />
+                                <Box sx={{ flex: 1 }} />
+                                <Skeleton variant="rounded" width={64} height={32} sx={{ borderRadius: '8px' }} />
+                                <Skeleton variant="rounded" width={120} height={20} sx={{ borderRadius: '4px' }} />
+                            </Box>
+                            {/* Table skeleton */}
+                            <ShimmerLoader count={8} type="search-table" />
                         </Box>
                     )
                 }
@@ -462,7 +469,7 @@ const Assets: React.FC<AssetsProps> = ({ entry, css, onAssetPreviewChange  }) =>
                     //                 </Box>
                     //             );
                     // })
-                    <Box sx={{ marginTop: '1.25rem' }}>
+                    <Box>
                         <DataProductAssets
                         linkedAssets={dataProductsAssetsList || []}
                         searchTerm={searchTerm}

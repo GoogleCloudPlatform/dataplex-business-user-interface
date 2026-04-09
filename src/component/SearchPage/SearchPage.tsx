@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Grid } from '@mui/material'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Paper, useMediaQuery } from '@mui/material'
 import { Tune, Close } from '@mui/icons-material'
 import { useDispatch, useSelector } from 'react-redux'
 import FilterDropdown from '../Filter/FilterDropDown'
@@ -47,28 +47,29 @@ import { typeAliases } from '../../utils/resourceUtils'
  * `ResourceViewer`, and `ResourcePreview` components.
  */
 
-interface SearchPageProps {
-  searchResult?: any[]; // Optional search results array
-}
-
-const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
+const SearchPage: React.FC = () => {
   const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
   const searchTerm = useSelector((state:any) => state.search.searchTerm);
   const searchType = useSelector((state:any) => state.search.searchType);
   const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
+  const searchSubmitted = useSelector((state: any) => state.search.searchSubmitted);
+  const searchFilters = useSelector((state: any) => state.search.searchFilters);
   const mode = useSelector((state: any) => state.user.mode) as string;
   const id_token = user?.token || '';
   const [previewData, setPreviewData] = useState<any | null>(null);
-  const [filters, setFilters] = useState<any[]>([]);
-  const [prevFilters, setPrevFilters] = useState<any[]>([]);
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(null);
+  const [filters, setFilters] = useState<any[]>(searchFilters || []);
+  const [prevFilters, setPrevFilters] = useState<any[]>(searchFilters || []);
   const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
   const isFiltersOpen = useSelector((state: any) => state.search.isSearchFiltersOpen);
+  const isSmallScreen = useMediaQuery('(max-width: 1280px)');
   const [startIndex, setStartIndex] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(20);
   const [pageNumber, setPageNumber] = useState<number>(1);
-  
+  const isInitialMount = useRef(true);
+  const isInitialFiltersMount = useRef(true);
+  const isInitialSearchTypeMount = useRef(true);
+
 
   const handleFilterChange = useCallback((selectedFilters: any[]) => {
     setFilters(selectedFilters);
@@ -77,7 +78,18 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
   const handleTuneIconClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    dispatch(setSearchFiltersOpen(!isFiltersOpen));
+    const newFilterState = !isFiltersOpen;
+    dispatch(setSearchFiltersOpen(newFilterState));
+    if (isSmallScreen && newFilterState) {
+      setPreviewData(null);
+    }
+  };
+
+  const handlePreviewDataChange = (data: any) => {
+    setPreviewData(data);
+    if (isSmallScreen && data !== null) {
+      dispatch(setSearchFiltersOpen(false));
+    }
   };
 
   // Set background on main-content-area so no white shows behind shifted navbar
@@ -94,6 +106,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
   }, [mode]);
 
   useEffect(() => {
+    if (!searchSubmitted) return; // Back navigation: retain existing data
+
     setPageSize(20);
     setPageNumber(1);
     setStartIndex(0);
@@ -101,24 +115,30 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
     dispatch({ type: 'resources/setItemsPreviousPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsStoreData', payload: [] });
-    // Only search if there's a search term and no existing results
-    if (searchTerm && searchTerm.trim() !== '' && resources.length === 0) {
-
+    if (searchTerm && searchTerm.trim() !== '') {
       dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters, semanticSearch: semanticSearch}) );
     }
+    dispatch({ type: 'search/setSearchSubmitted', payload: false });
   }, []);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return; // Skip on mount — the mount useEffect handles initial load
+    }
     setStartIndex(0);
     setPageNumber(1);
     setPageSize(20);
     dispatch({ type: 'resources/setItemsPreviousPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsPageRequest', payload: null });
-    dispatch({ type: 'resources/setItemsStoreData', payload: [] });   
+    dispatch({ type: 'resources/setItemsStoreData', payload: [] });
   }, [searchTerm]);
 
   useEffect(() => {
-    console.log("Search result:", searchResult);
+    if (isInitialFiltersMount.current) {
+      isInitialFiltersMount.current = false;
+      return; // Skip on mount — filters haven't actually changed
+    }
     dispatch({ type: 'resources/setItemsPreviousPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsStoreData', payload: [] });
@@ -131,6 +151,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
   }, [filters]);
 
   useEffect(() => {
+    if (isInitialSearchTypeMount.current) {
+      isInitialSearchTypeMount.current = false;
+      return; // Skip on mount — filters are already correct from the previous session
+    }
     dispatch({ type: 'resources/setItemsPreviousPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsPageRequest', payload: null });
     dispatch({ type: 'resources/setItemsStoreData', payload: [] });
@@ -153,25 +177,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
     }
   }, [searchType]);
 
-  // Keep dropdown filters in sync with selected type tag
-  useEffect(() => {
-    // When a type tag is selected, ensure the corresponding checkbox is checked in dropdown
-    if (selectedTypeFilter) {
-      const withoutTypeAliases = filters.filter((f: any) => f.type !== 'typeAliases');
-      const alreadySelected = filters.some((f: any) => f.type === 'typeAliases' && f.name === selectedTypeFilter);
-      const next = alreadySelected 
-        ? filters 
-        : [...withoutTypeAliases, { name: selectedTypeFilter, type: 'typeAliases' }];
-      setFilters(next);
-    } else {
-      // When the type tag is cleared, uncheck corresponding checkbox in dropdown
-      if (filters.some((f: any) => f.type === 'typeAliases')) {
-        const next = filters.filter((f: any) => f.type !== 'typeAliases');
-        setFilters(next);
-      }
-    }
-  }, [selectedTypeFilter]);
-
   // Select data from the Redux store
   const resources = useSelector((state: any) => state.resources.items);
   const resourcesStatus = useSelector((state: any) => state.resources.status);
@@ -189,7 +194,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
     if (!resources || resources.length === 0) {
       // No results but there are active type filters — show all chips so user can deselect
       if (activeTypeFilters.length > 0) {
-        return typeAliases.map((item: string) => ({ name: item, count: 0 }));
+        return activeTypeFilters.map((f) => ({ name: f.name, count: 0 }));
       }
       return [];
     }
@@ -332,7 +337,6 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
                     const updated = filters.find((f: any) => (f.name === type && f.type === 'typeAliases'))
                       ? filters.filter((f: any) => !(f.name === type && f.type === 'typeAliases'))
                       : [...filters, { name: type, type: 'typeAliases' }];
-                    setSelectedTypeFilter(null);
                     handleFilterChange(updated);
                     dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
                   }}
@@ -342,61 +346,76 @@ const SearchPage: React.FC<SearchPageProps> = ({ searchResult }) => {
             </div>
 
             {/* Main Content - Always Stable Layout */}
-            <Grid container spacing={0} style={{padding:"0", height: 'calc(100vh - 3.9rem)'}}>
-                <Grid size={previewData ? 9 : 12}>
-                    <div style={{
-                        transition: 'margin-left 0.3s ease-in-out',
-                        marginLeft: isFiltersOpen ? '252px' : '0px'
-                    }}>
-                          <ResourceViewer
-                          resources={resources}
-                          resourcesStatus={resourcesStatus}
-                          error={error}
-                          previewData={previewData}
-                          onPreviewDataChange={setPreviewData}
-                          selectedTypeFilter={selectedTypeFilter}
-                          onTypeFilterChange={setSelectedTypeFilter}
-                          typeAliases={typeAliases}
-                          viewMode={viewMode}
-                          onViewModeChange={setViewMode}
-                          id_token={id_token}
-                          showFilters={true}
-                          showSortBy={true}
-                          showResultsCount={true}
-                          customFilters={customFilters}
-                          selectedFilters={filters}
-                          onFiltersChange={handleFilterChange}
-                          availableTypeAliases={availableTypeAliases}
-                          onTypeAliasClick={(type) => {
-                            const updated = filters.find((f: any) => (f.name === type && f.type === 'typeAliases'))
-                              ? filters.filter((f: any) => !(f.name === type && f.type === 'typeAliases'))
-                              : [...filters, { name: type, type: 'typeAliases' }];
-                            setSelectedTypeFilter(null);
-                            handleFilterChange(updated);
-                            dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
-                          }}
-                          containerStyle={{ marginLeft: '0px' }}
-                          contentStyle={{ margin: '0px', ...(viewMode === 'table' && previewData ? { paddingRight: '0px' } : {}) }}
-                          renderPreview={false}
-                          startIndex={startIndex}
-                          pageSize={pageSize}
-                          setPageSize={setPageSize}
-                          requestItemStore={requestItemStore}
-                          resourcesTotalSize={resourcesTotalSize}
-                          handlePagination={handlePagination}
-                        />
-                    </div>
-                </Grid>
-                {previewData && (
-                  <Grid size={3} style={{ backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF', overflow: 'visible', paddingLeft: '8px', paddingRight: '20px' }}>
-                      <ResourcePreview
-                        previewData={previewData}
-                        onPreviewDataChange={setPreviewData}
-                        id_token={id_token}
-                      />
-                  </Grid>
-                )}
-            </Grid>
+            <div style={{display: 'flex', padding: '0', height: 'calc(100vh - 3.9rem)'}}>
+                <div style={{
+                    flex: 1,
+                    minWidth: 0,
+                    transition: 'margin-left 0.3s ease-in-out',
+                    marginLeft: isFiltersOpen ? '252px' : '0px'
+                }}>
+                      <ResourceViewer
+                      resources={resources}
+                      resourcesStatus={resourcesStatus}
+                      error={error}
+                      previewData={previewData}
+                      onPreviewDataChange={handlePreviewDataChange}
+                      typeAliases={typeAliases}
+                      viewMode={viewMode}
+                      onViewModeChange={setViewMode}
+                      id_token={id_token}
+                      showFilters={true}
+                      showSortBy={true}
+                      showResultsCount={true}
+                      customFilters={customFilters}
+                      selectedFilters={filters}
+                      onFiltersChange={handleFilterChange}
+                      availableTypeAliases={availableTypeAliases}
+                      onTypeAliasClick={(type) => {
+                        const updated = filters.find((f: any) => (f.name === type && f.type === 'typeAliases'))
+                          ? filters.filter((f: any) => !(f.name === type && f.type === 'typeAliases'))
+                          : [...filters, { name: type, type: 'typeAliases' }];
+                        handleFilterChange(updated);
+                        dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
+                      }}
+                      containerStyle={{ marginLeft: '0px' }}
+                      contentStyle={{ margin: '0px', ...(viewMode === 'table' && previewData ? { paddingRight: '0px' } : {}) }}
+                      renderPreview={false}
+                      startIndex={startIndex}
+                      pageSize={pageSize}
+                      setPageSize={setPageSize}
+                      requestItemStore={requestItemStore}
+                      resourcesTotalSize={resourcesTotalSize}
+                      handlePagination={handlePagination}
+                    />
+                </div>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    width: previewData ? '25%' : '0px',
+                    minWidth: previewData ? '25%' : '0px',
+                    height: 'calc(100vh - 5rem)',
+                    borderRadius: '0px',
+                    backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
+                    border: 'transparent',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    transition: 'width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                    paddingLeft: previewData ? '8px' : '0px',
+                    paddingRight: previewData ? '20px' : '0px',
+                    opacity: previewData ? 1 : 0,
+                  }}
+                >
+                  {previewData && (
+                    <ResourcePreview
+                      previewData={previewData}
+                      onPreviewDataChange={handlePreviewDataChange}
+                      id_token={id_token}
+                    />
+                  )}
+                </Paper>
+            </div>
         </div>
     </>
   )

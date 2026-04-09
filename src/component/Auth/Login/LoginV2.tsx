@@ -5,8 +5,9 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sanitizeRedirectURL } from '../../../services/urlPreservationService';
 import { CircularProgress } from '@mui/material';
-import dataplexLogo from '/assets/svg/dataplex-universal-catalog-logo.svg';
-import googleLogo from '/assets/images/google-logo-figma-53c44d.png';
+import dataplexLogo from '../../../assets/svg/knowledge-catalog-logo.svg';
+import googleLogo from '../../../assets/images/google-logo-figma-53c44d.png';
+import { REQUIRED_SCOPES } from '../../../constants/auth';
 
 const LoginV2: React.FC = () => {
   const { login } = useAuth();
@@ -18,6 +19,17 @@ const LoginV2: React.FC = () => {
     onSuccess: async (tokenResponse) => {
       const { access_token } = tokenResponse;
       setLoading(true);
+
+      // Check if user granted all required OAuth scopes
+      const grantedScopes = (tokenResponse.scope || '').split(' ');
+      const missingScopes = REQUIRED_SCOPES.filter(s => !grantedScopes.includes(s));
+      if (missingScopes.length > 0) {
+        console.warn('[Login] Missing OAuth scopes:', missingScopes);
+        localStorage.setItem('scopeCheckFailed', JSON.stringify(missingScopes));
+      } else {
+        localStorage.removeItem('scopeCheckFailed');
+      }
+
       try {
         await login({
           credential: access_token,
@@ -42,7 +54,7 @@ const LoginV2: React.FC = () => {
     },
     onError: () => console.error('Google Login Failed'),
     flow: 'implicit',
-    scope: 'https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
+    scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
   });
 
   return (
@@ -52,7 +64,7 @@ const LoginV2: React.FC = () => {
         <div className="loginv2-left">
           <img
             src={dataplexLogo}
-            alt="Dataplex Universal Catalog"
+            alt="Knowledge Catalog"
             className="loginv2-logo"
           />
           <h1 className="loginv2-heading">

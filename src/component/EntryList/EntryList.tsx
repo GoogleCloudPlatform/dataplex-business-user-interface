@@ -286,7 +286,6 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
         minHeight: '200px',
         opacity: 1,
         gap: 2,
-        marginTop: '1.25rem',
       }}>
         <Typography variant="body1" color="text.secondary">
           No entries available
@@ -302,7 +301,6 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
       borderRadius: '8px',
       // borderBottom: '1px solid #DADCE0',
       overflow: 'hidden',
-      marginTop: '1.25rem'
     }}>
       {/* Filter Bar */}
       <Box sx={{

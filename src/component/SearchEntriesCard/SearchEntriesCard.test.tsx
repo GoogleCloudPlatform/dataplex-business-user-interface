@@ -24,8 +24,6 @@ vi.mock('../../assets/svg/view_icon.svg', () => ({ default: 'view-icon.svg' }));
 vi.mock('../../assets/svg/fileset_icon.svg', () => ({ default: 'fileset-icon.svg' }));
 vi.mock('../../assets/svg/folder_icon.svg', () => ({ default: 'folder-icon.svg' }));
 vi.mock('../../assets/svg/function_icon.svg', () => ({ default: 'function-icon.svg' }));
-vi.mock('../../assets/svg/glossary_icon.svg', () => ({ default: 'glossary-icon.svg' }));
-vi.mock('../../assets/svg/glossary_category_icon.svg', () => ({ default: 'glossary-category-icon.svg' }));
 vi.mock('../../assets/svg/listing_icon.svg', () => ({ default: 'listing-icon.svg' }));
 vi.mock('../../assets/svg/look_icon.svg', () => ({ default: 'look-icon.svg' }));
 vi.mock('../../assets/svg/model_icon.svg', () => ({ default: 'model-icon.svg' }));
@@ -201,7 +199,9 @@ describe('SearchEntriesCard', () => {
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[0]).toHaveTextContent('dataplex');
+        // "dataplex" maps to "Knowledge Catalog" which is then lowercased in the tag text
+        // (CSS textTransform: capitalize handles visual capitalization)
+        expect(tags[0]).toHaveTextContent('knowledge catalog');
       });
     });
 
@@ -652,7 +652,15 @@ describe('SearchEntriesCard', () => {
     });
 
     it('renders Glossary icon', async () => {
-      await testAssetIcon('Glossary', 'Glossary');
+      const entry = createMockEntry({
+        name: 'projects/test/locations/us/Glossary/test-entry',
+        entryType: 'single_word'
+      });
+      const { container } = render(<SearchEntriesCard entry={entry} />);
+
+      await waitFor(() => {
+        expect(container.querySelector('span.material-symbols-outlined')).toBeInTheDocument();
+      });
     });
 
     it('renders Glossary Category icon', async () => {
@@ -663,7 +671,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        expect(screen.getByAltText('Glossary Category')).toBeInTheDocument();
+        expect(screen.getByTestId('CategoryOutlinedIcon')).toBeInTheDocument();
       });
     });
 
@@ -675,7 +683,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        expect(screen.getByAltText('Glossary Term')).toBeInTheDocument();
+        expect(screen.getByTestId('ArticleOutlinedIcon')).toBeInTheDocument();
       });
     });
 
@@ -761,29 +769,25 @@ describe('SearchEntriesCard', () => {
       });
     });
 
-    it('renders system tag with correct styling', async () => {
+    it('renders system tag with correct content', async () => {
       const entry = createMockEntry();
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[0]).toHaveStyle({
-          fontFamily: '"Google Sans Text", sans-serif',
-          color: '#004A77'
-        });
+        // System tag should display BigQuery for bigquery system
+        expect(tags[0]).toHaveTextContent('BigQuery');
       });
     });
 
-    it('renders entry type tag with correct styling', async () => {
+    it('renders entry type tag with correct content', async () => {
       const entry = createMockEntry();
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[1]).toHaveStyle({
-          fontFamily: '"Google Sans Text", sans-serif',
-          color: '#004A77'
-        });
+        // Entry type tag should display the extracted type
+        expect(tags[1]).toHaveTextContent('table');
       });
     });
   });

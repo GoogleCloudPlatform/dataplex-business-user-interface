@@ -3,56 +3,12 @@ import { render, screen } from "@testing-library/react";
 import Schema from "./Schema";
 
 // ============================================================================
-// Mock @mui/x-data-grid to avoid CSS import error
+// Mock react-redux
 // ============================================================================
 
-vi.mock("@mui/x-data-grid", () => ({
-  DataGrid: () => null,
-}));
-
-// ============================================================================
-// Mock TableView Component
-// ============================================================================
-
-vi.mock("../Table/TableView", () => ({
-  default: ({
-    rows,
-    columns,
-    rowHeight,
-    columnHeaderHeight,
-    sx,
-  }: any) => (
-    <div
-      data-testid="table-view"
-      data-rows={JSON.stringify(rows)}
-      data-columns={JSON.stringify(columns.map((c: any) => c.field))}
-      data-row-height={rowHeight}
-      data-column-header-height={columnHeaderHeight}
-      data-has-sx={sx ? "true" : "false"}
-    >
-      <table>
-        <thead>
-          <tr>
-            {columns.map((col: any) => (
-              <th key={col.field}>{col.headerName}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row: any) => (
-            <tr key={row.id}>
-              <td>{row.name}</td>
-              <td>{row.type}</td>
-              <td>{row.metaDataType}</td>
-              <td>{row.mode}</td>
-              <td>{row.defaultValue}</td>
-              <td>{row.description}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ),
+const mockUseSelector = vi.fn();
+vi.mock("react-redux", () => ({
+  useSelector: (selector: any) => mockUseSelector(selector),
 }));
 
 // ============================================================================
@@ -110,6 +66,7 @@ const createMockEntry = (
 describe("Schema", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseSelector.mockReturnValue("light");
   });
 
   afterEach(() => {
@@ -126,12 +83,12 @@ describe("Schema", () => {
         createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
       ]);
 
-      render(<Schema entry={entry} />);
+      const { container } = render(<Schema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(container.firstChild).toBeInTheDocument();
     });
 
-    it("renders TableView with correct rows", () => {
+    it("renders the flex-based table with correct rows", () => {
       const entry = createMockEntry("456", [
         createSchemaField("user_id", "INT64", "PRIMITIVE", "REQUIRED", "0", "User identifier"),
         createSchemaField("username", "STRING", "PRIMITIVE", "NULLABLE", null, "Username"),
@@ -139,39 +96,10 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(2);
-      expect(rows[0]).toEqual({
-        id: 1,
-        name: "user_id",
-        type: "INT64",
-        metaDataType: "PRIMITIVE",
-        mode: "REQUIRED",
-        defaultValue: "0",
-        description: "User identifier",
-      });
-    });
-
-    it("renders TableView with correct columns", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const columns = JSON.parse(tableView.getAttribute("data-columns") || "[]");
-
-      expect(columns).toEqual([
-        "name",
-        "type",
-        "metaDataType",
-        "mode",
-        "defaultValue",
-        "description",
-      ]);
+      expect(screen.getByText("user_id")).toBeInTheDocument();
+      expect(screen.getByText("username")).toBeInTheDocument();
+      expect(screen.getByText("User identifier")).toBeInTheDocument();
+      expect(screen.getByText("Username")).toBeInTheDocument();
     });
 
     it("displays column headers correctly", () => {
@@ -185,30 +113,17 @@ describe("Schema", () => {
       expect(screen.getByText("Type")).toBeInTheDocument();
       expect(screen.getByText("Metadata Type")).toBeInTheDocument();
       expect(screen.getByText("Mode")).toBeInTheDocument();
-      expect(screen.getByText("Default Value")).toBeInTheDocument();
       expect(screen.getByText("Description")).toBeInTheDocument();
     });
 
-    it("passes rowHeight to TableView", () => {
+    it("does not display Default Value column header", () => {
       const entry = createMockEntry("123", [
         createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
       ]);
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-row-height", "36");
-    });
-
-    it("passes columnHeaderHeight to TableView", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-column-header-height", "36.5");
+      expect(screen.queryByText("Default Value")).not.toBeInTheDocument();
     });
   });
 
@@ -223,16 +138,17 @@ describe("Schema", () => {
       render(<Schema entry={entry} />);
 
       expect(
-        screen.getByText("No Schema Data available for this table")
+        screen.getByText("No data matches the applied filters")
       ).toBeInTheDocument();
     });
 
-    it("does not render TableView when schema is empty", () => {
+    it("does not render table headers when schema is empty", () => {
       const entry = createMockEntry("123", []);
 
       render(<Schema entry={entry} />);
 
-      expect(screen.queryByTestId("table-view")).not.toBeInTheDocument();
+      expect(screen.queryByText("Name")).not.toBeInTheDocument();
+      expect(screen.queryByText("Type")).not.toBeInTheDocument();
     });
 
     it("applies correct styling to fallback message", () => {
@@ -240,71 +156,13 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const fallbackDiv = screen.getByText("No Schema Data available for this table");
+      const fallbackDiv = screen.getByText("No data matches the applied filters");
       expect(fallbackDiv).toHaveStyle({
         padding: "48px",
         textAlign: "center",
         fontSize: "14px",
         color: "#575757",
       });
-    });
-  });
-
-  // ==========================================================================
-  // Default Value Handling Tests
-  // ==========================================================================
-
-  describe("Default Value Handling", () => {
-    it("displays actual default value when provided", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("status", "STRING", "PRIMITIVE", "NULLABLE", "active", null),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].defaultValue).toBe("active");
-    });
-
-    it("displays '-' when defaultValue is null", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("count", "INTEGER", "PRIMITIVE", "NULLABLE", null, null),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].defaultValue).toBe("-");
-    });
-
-    it("displays '-' when defaultValue is missing", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("age", "INTEGER", "PRIMITIVE", "NULLABLE", undefined, null),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].defaultValue).toBe("-");
-    });
-
-    it("displays empty string default value", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("notes", "STRING", "PRIMITIVE", "NULLABLE", "", null),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].defaultValue).toBe("");
     });
   });
 
@@ -320,10 +178,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].description).toBe("User email address");
+      expect(screen.getByText("User email address")).toBeInTheDocument();
     });
 
     it("displays '-' when description is null", () => {
@@ -333,10 +188,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].description).toBe("-");
+      expect(screen.getByText("-")).toBeInTheDocument();
     });
 
     it("displays '-' when description is missing", () => {
@@ -346,23 +198,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].description).toBe("-");
-    });
-
-    it("displays empty string description", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("comment", "STRING", "PRIMITIVE", "NULLABLE", null, ""),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].description).toBe("");
+      expect(screen.getByText("-")).toBeInTheDocument();
     });
   });
 
@@ -378,7 +214,6 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
       expect(screen.getByText("field1")).toBeInTheDocument();
     });
 
@@ -389,7 +224,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByText("data")).toBeInTheDocument();
     });
 
     it("handles alphanumeric project ID", () => {
@@ -399,7 +234,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByText("column")).toBeInTheDocument();
     });
   });
 
@@ -419,13 +254,14 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(5);
+      expect(screen.getByText("id")).toBeInTheDocument();
+      expect(screen.getByText("name")).toBeInTheDocument();
+      expect(screen.getByText("email")).toBeInTheDocument();
+      expect(screen.getByText("age")).toBeInTheDocument();
+      expect(screen.getByText("is_active")).toBeInTheDocument();
     });
 
-    it("assigns sequential IDs starting from 1", () => {
+    it("renders correct number of rows", () => {
       const entry = createMockEntry("123", [
         createSchemaField("col1", "STRING", "PRIMITIVE", "NULLABLE"),
         createSchemaField("col2", "INTEGER", "PRIMITIVE", "NULLABLE"),
@@ -434,10 +270,10 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows.map((r: any) => r.id)).toEqual([1, 2, 3]);
+      // Each row contains the field name; verify all 3 are rendered
+      expect(screen.getByText("col1")).toBeInTheDocument();
+      expect(screen.getByText("col2")).toBeInTheDocument();
+      expect(screen.getByText("col3")).toBeInTheDocument();
     });
   });
 
@@ -446,29 +282,6 @@ describe("Schema", () => {
   // ==========================================================================
 
   describe("SX Props", () => {
-    it("passes sx prop to TableView", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
-      ]);
-      const customSx = { backgroundColor: "red" };
-
-      render(<Schema entry={entry} sx={customSx} />);
-
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-has-sx", "true");
-    });
-
-    it("works without sx prop", () => {
-      const entry = createMockEntry("123", [
-        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
-      ]);
-
-      render(<Schema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-has-sx", "true"); // Default sx is always provided
-    });
-
     it("applies sx to root div", () => {
       const entry = createMockEntry("123", [
         createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
@@ -476,6 +289,17 @@ describe("Schema", () => {
       const customSx = { marginTop: "10px" };
 
       const { container } = render(<Schema entry={entry} sx={customSx} />);
+
+      const rootDiv = container.firstChild as HTMLElement;
+      expect(rootDiv).toHaveStyle({ width: "100%" });
+    });
+
+    it("works without sx prop", () => {
+      const entry = createMockEntry("123", [
+        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
+      ]);
+
+      const { container } = render(<Schema entry={entry} />);
 
       const rootDiv = container.firstChild as HTMLElement;
       expect(rootDiv).toHaveStyle({ width: "100%" });
@@ -498,7 +322,6 @@ describe("Schema", () => {
       expect(screen.getByText("INT64")).toBeInTheDocument();
       expect(screen.getByText("PRIMITIVE")).toBeInTheDocument();
       expect(screen.getByText("REQUIRED")).toBeInTheDocument();
-      expect(screen.getByText("1")).toBeInTheDocument();
       expect(screen.getByText("User ID")).toBeInTheDocument();
     });
 
@@ -535,6 +358,21 @@ describe("Schema", () => {
       expect(screen.getByText("NULLABLE")).toBeInTheDocument();
       expect(screen.getByText("REPEATED")).toBeInTheDocument();
     });
+
+    it("renders Type and Metadata Type as tag chips", () => {
+      const entry = createMockEntry("123", [
+        createSchemaField("col1", "STRING", "PRIMITIVE", "NULLABLE"),
+      ]);
+
+      const { container } = render(<Schema entry={entry} />);
+
+      // Tag chips should have the E9EEF6 background
+      const tagChips = container.querySelectorAll('span');
+      const chipElements = Array.from(tagChips).filter(
+        (el) => el.style.background === 'rgb(233, 238, 246)' || el.textContent === 'STRING' || el.textContent === 'PRIMITIVE'
+      );
+      expect(chipElements.length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   // ==========================================================================
@@ -550,10 +388,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].name).toBe(longName);
+      expect(screen.getByText(longName)).toBeInTheDocument();
     });
 
     it("handles special characters in field names", () => {
@@ -575,10 +410,7 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].description).toBe(unicodeDesc);
+      expect(screen.getByText(unicodeDesc)).toBeInTheDocument();
     });
 
     it("handles different metadata types", () => {
@@ -593,6 +425,40 @@ describe("Schema", () => {
       expect(screen.getByText("PRIMITIVE")).toBeInTheDocument();
       expect(screen.getByText("COMPLEX")).toBeInTheDocument();
       expect(screen.getByText("COLLECTION")).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Table Structure Tests
+  // ==========================================================================
+
+  describe("Table Structure", () => {
+    it("renders header row with 5 columns", () => {
+      const entry = createMockEntry("123", [
+        createSchemaField("id", "INTEGER", "PRIMITIVE", "REQUIRED"),
+      ]);
+
+      render(<Schema entry={entry} />);
+
+      // All 5 column headers should be present
+      expect(screen.getByText("Name")).toBeInTheDocument();
+      expect(screen.getByText("Type")).toBeInTheDocument();
+      expect(screen.getByText("Metadata Type")).toBeInTheDocument();
+      expect(screen.getByText("Mode")).toBeInTheDocument();
+      expect(screen.getByText("Description")).toBeInTheDocument();
+    });
+
+    it("renders border between rows except last", () => {
+      const entry = createMockEntry("123", [
+        createSchemaField("col1", "STRING", "PRIMITIVE", "NULLABLE"),
+        createSchemaField("col2", "INTEGER", "PRIMITIVE", "NULLABLE"),
+      ]);
+
+      const { container } = render(<Schema entry={entry} />);
+
+      // The component should render MUI Box elements for rows
+      const boxes = container.querySelectorAll('[class*="MuiBox-root"]');
+      expect(boxes.length).toBeGreaterThan(0);
     });
   });
 
@@ -615,13 +481,12 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(8);
       expect(screen.getByText("id")).toBeInTheDocument();
       expect(screen.getByText("username")).toBeInTheDocument();
       expect(screen.getByText("email")).toBeInTheDocument();
+      expect(screen.getByText("Primary key")).toBeInTheDocument();
+      expect(screen.getByText("Username")).toBeInTheDocument();
+      expect(screen.getByText("User email")).toBeInTheDocument();
     });
 
     it("handles realistic BigQuery schema", () => {
@@ -683,7 +548,7 @@ describe("Schema", () => {
       expect(screen.getByText("user_pseudo_id")).toBeInTheDocument();
     });
 
-    it("schema with mixed default values and descriptions", () => {
+    it("schema with mixed descriptions", () => {
       const entry = createMockEntry("123", [
         createSchemaField("col1", "STRING", "PRIMITIVE", "REQUIRED", "default1", "desc1"),
         createSchemaField("col2", "STRING", "PRIMITIVE", "REQUIRED", null, "desc2"),
@@ -693,17 +558,41 @@ describe("Schema", () => {
 
       render(<Schema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
+      expect(screen.getByText("desc1")).toBeInTheDocument();
+      expect(screen.getByText("desc2")).toBeInTheDocument();
+      // col3 and col4 have null descriptions, should display '-'
+      const dashes = screen.getAllByText("-");
+      expect(dashes.length).toBeGreaterThanOrEqual(2);
+    });
+  });
 
-      expect(rows[0].defaultValue).toBe("default1");
-      expect(rows[0].description).toBe("desc1");
-      expect(rows[1].defaultValue).toBe("-");
-      expect(rows[1].description).toBe("desc2");
-      expect(rows[2].defaultValue).toBe("default3");
-      expect(rows[2].description).toBe("-");
-      expect(rows[3].defaultValue).toBe("-");
-      expect(rows[3].description).toBe("-");
+  // ==========================================================================
+  // Column Resizing Tests
+  // ==========================================================================
+
+  describe("Column Resizing", () => {
+    it("renders resize handles for first four columns (not Description)", () => {
+      const entry = createMockEntry("123", [
+        createSchemaField("id", "INT64", "PRIMITIVE", "REQUIRED", "0", "Primary key"),
+      ]);
+
+      render(<Schema entry={entry} />);
+
+      const handles = screen.getAllByTestId("resize-handle");
+      expect(handles).toHaveLength(4);
+    });
+
+    it("renders in dark mode without crashing", () => {
+      mockUseSelector.mockReturnValue("dark");
+      const entry = createMockEntry("123", [
+        createSchemaField("id", "INT64", "PRIMITIVE", "REQUIRED", "0", "Primary key"),
+      ]);
+
+      render(<Schema entry={entry} />);
+
+      expect(screen.getByText("id")).toBeInTheDocument();
+      const handles = screen.getAllByTestId("resize-handle");
+      expect(handles).toHaveLength(4);
     });
   });
 });

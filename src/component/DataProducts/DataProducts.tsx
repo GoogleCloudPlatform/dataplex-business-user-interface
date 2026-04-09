@@ -4,7 +4,6 @@ import {
   Box, Typography, Paper, Grid,
   Tooltip, Menu, MenuItem,
   TextField, Skeleton,
-  Button, IconButton,
   ToggleButton,
   ToggleButtonGroup
 } from '@mui/material';
@@ -12,16 +11,18 @@ import {
 import {
   Search, AccessTime,
   LocationOnOutlined,
-  Sort, ExpandMore
+  ExpandMore
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { type AppDispatch } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
-import { fetchDataProductsList, getDataProductDetails } from '../../features/dataProducts/dataProductsSlice';
+import { fetchDataProductsList, getDataProductDetails, setDataProductsViewMode, setDataProductsDetailTabValue } from '../../features/dataProducts/dataProductsSlice';
 import { useNavigate } from 'react-router-dom';
 import Tag from '../Tags/Tag';
 import axios from 'axios';
 import { getMimeType } from '../../utils/resourceUtils';
+import DataProductsTableView from './DataProductsTableView';
+import DataProductsTableViewSkeleton from './DataProductsTableViewSkeleton';
 import './DataProducts.css'
 
 // Types
@@ -117,7 +118,7 @@ const DataProductCard = React.memo(({
   <Box sx={CARD_SX} onClick={onClick} className='parent-container'>
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
       <img
-        src={dataProduct.icon ? `data:image/${getMimeType(dataProduct.icon)};base64,${dataProduct.icon}` : '/assets/images/data-product-card.png'}
+        src={dataProduct.icon ? `data:${getMimeType(dataProduct.icon)};base64,${dataProduct.icon}` : '/assets/images/data-product-card.png'}
         alt={dataProduct.displayName}
         style={{ width: 'clamp(30px, 3vw, 40px)', height: 'clamp(30px, 3vw, 40px)', marginBottom: 'clamp(8px, 0.8vw, 12px)' }}
       />
@@ -142,7 +143,7 @@ const DataProductCard = React.memo(({
       </Box>
     </Box>
     <Box>
-      <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: 'clamp(11px, 1vw, 14px)', color: '#575757', lineHeight: 1.4, height: 'clamp(32px, 3vw, 40px)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <Typography variant="body2" sx={{ fontFamily: 'Google Sans Text', fontSize: 'clamp(11px, 1vw, 14px)', color: '#575757', lineHeight: 1.4, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-word' }}>
         {dataProduct.description || 'No description available.'}
       </Typography>
     </Box>
@@ -241,12 +242,12 @@ const DataProducts = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { dataProductsItems, status } = useSelector((state: any) => state.dataProducts);
+  const { dataProductsItems, status, error } = useSelector((state: any) => state.dataProducts);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [sortBy, setSortBy] = useState<SortBy>('lastModified');
-  const [viewMode, setViewMode] = useState<'table' | 'list'>('list');
+  const viewMode = (useSelector((state: any) => state.dataProducts.viewMode) || 'list') as 'table' | 'list';
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
   const [dataProductsList, setDataProductsList] = useState<DataProduct[]>([]);
   const [searchLoader, setSearchLoader] = useState(false);
@@ -254,9 +255,9 @@ const DataProducts = () => {
 
   const handleViewModeChange = useCallback((_event: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
-        setViewMode(newMode);
+        dispatch(setDataProductsViewMode(newMode));
     }
-  }, []);
+  }, [dispatch]);
 
 
 
@@ -298,11 +299,13 @@ const DataProducts = () => {
 
   const handleCardClick = useCallback((dataProduct: DataProduct) => {
     dispatch(getDataProductDetails({ dataProductId: dataProduct.name, id_token: user?.token }));
+    dispatch(setDataProductsDetailTabValue(0)); // Reset to Overview tab on fresh navigation
     localStorage.setItem('selectedDataProduct', JSON.stringify(dataProduct));
     navigate(`/data-products-details?dataProductId=${encodeURIComponent(dataProduct.name)}`);
   }, [dispatch, navigate, user?.token]);
 
   // Memoize the display state for better performance
+  const showNoAccess = useMemo(() => status === 'failed' && error?.type === 'PERMISSION_DENIED', [status, error]);
   const showLoading = useMemo(() => status === 'loading' || searchLoader, [status, searchLoader]);
   const showEmptyState = useMemo(() =>
     status === 'succeeded' &&
@@ -376,7 +379,7 @@ const DataProducts = () => {
       px: { xs: 0, sm: 0 },
       pb: { xs: 1, sm: 2 },
       pt: 0,
-      backgroundColor: '#F8FAFD',
+      backgroundColor: '#fff',
       height: { xs: 'calc(100vh - 56px)', sm: 'calc(100vh - 72px)' },
       width: '100%',
       overflow: 'hidden'
@@ -438,82 +441,103 @@ const DataProducts = () => {
                     }}
                 />
 
-                {/* Sort Controls */}
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                    {/* Sort Order Toggle Button */}
-                    <IconButton
-                        onClick={handleSortOrderToggle}
-                        sx={{ p: 'clamp(2px, 0.3vw, 4px)', mr: 'clamp(2px, 0.3vw, 4px)', color: "#1F1F1F" }}
-                    >
-                        <Sort
-                            sx={{
-                                fontSize: 'clamp(12px, 1.2vw, 16px)',
-                                transform: sortOrder === "asc" ? "scaleY(-1)" : "none",
-                            }}
-                        />
-                    </IconButton>
-
-                    {/* Sort By Dropdown */}
-                    <Button
-                        onClick={handleSortMenuClick}
-                        endIcon={
-                            <ExpandMore
-                                sx={{
-                                    color: "#1F1F1F",
-                                    fontSize: 'clamp(14px, 1.4vw, 20px)',
-                                    transform: sortAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                                    transition: "transform 0.2s",
-                                }}
-                            />
-                        }
-                        sx={{
-                            textTransform: "none",
-                            color: "#1F1F1F",
-                            fontFamily: "Product Sans",
-                            fontSize: 'clamp(10px, 0.9vw, 12px)',
-                            fontWeight: 400,
-                            padding: 0,
-                            minWidth: "auto",
-                            "&:hover": { background: "transparent" },
-                        }}
-                    >
-                        Sort by: {sortBy === 'name' ? 'Name' : 'Last Modified'}
-                    </Button>
-                </Box>
-
-                <Menu
-                    anchorEl={sortAnchorEl}
-                    open={Boolean(sortAnchorEl)}
-                    onClose={handleSortMenuClose}
-                    MenuListProps={{ dense: true, sx: { py: 0.5 } }}
-                    PaperProps={{
-                        sx: {
-                            borderRadius: "8px",
-                            boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
-                        },
-                    }}
-                >
-                    <MenuItem
-                        onClick={() => handleSortOptionSelect('name')}
-                        sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
-                    >
-                        Name
-                    </MenuItem>
-                    <MenuItem
-                        onClick={() => handleSortOptionSelect('lastModified')}
-                        sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
-                    >
-                        Last Modified
-                    </MenuItem>
-                </Menu>
                 <Box sx={{
                   alignSelf: { xs: 'flex-start', sm: 'flex-end' },
                   marginLeft: { xs: 0, sm: 'auto' },
                   paddingRight: { xs: 0, sm: '40px' },
                   width: { xs: '100%', sm: 'auto' },
                   display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
                   justifyContent: { xs: 'flex-end', sm: 'flex-end' }
                 }}>
+                    {/* Sort Controls — hidden in table view */}
+                    {viewMode !== 'table' && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Typography
+                          component="span"
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            color: '#1F1F1F',
+                            whiteSpace: "nowrap",
+                            fontFamily: '"Google Sans Text", sans-serif',
+                          }}
+                          onClick={handleSortMenuClick}
+                        >
+                          <ExpandMore
+                            sx={{
+                              fontSize: '20px',
+                              color: '#575757',
+                              transform: sortAnchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.3s ease',
+                            }}
+                          />
+                          {sortBy === 'name' ? 'Name' : 'Last modified'}
+                        </Typography>
+                        <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
+                          <span
+                            aria-label={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'}
+                            role="button"
+                            onClick={handleSortOrderToggle}
+                            style={{
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              flexShrink: 0,
+                              transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s ease-in-out',
+                            }}
+                          >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <rect width="24" height="24" rx="12" fill="#C2E7FF"/>
+                              <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill="#004A77"/>
+                            </svg>
+                          </span>
+                        </Tooltip>
+                      </div>
+                    )}
+                    <Menu
+                      anchorEl={sortAnchorEl}
+                      open={Boolean(sortAnchorEl)}
+                      onClose={handleSortMenuClose}
+                      PaperProps={{
+                        style: {
+                          marginTop: '4px',
+                          borderRadius: '8px',
+                          boxShadow: '0px 1px 2px rgba(0,0,0,0.3), 0px 2px 6px 2px rgba(0,0,0,0.15)',
+                          minWidth: '140px',
+                        }
+                      }}
+                    >
+                      <MenuItem
+                        onClick={() => handleSortOptionSelect('name')}
+                        sx={{
+                          fontSize: '12px',
+                          fontFamily: '"Google Sans Text", sans-serif',
+                          fontWeight: sortBy === 'name' ? '500' : '400',
+                          color: sortBy === 'name' ? '#0B57D0' : '#1F1F1F',
+                          backgroundColor: sortBy === 'name' ? '#F8FAFD' : 'transparent',
+                        }}
+                      >
+                        Name
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => handleSortOptionSelect('lastModified')}
+                        sx={{
+                          fontSize: '12px',
+                          fontFamily: '"Google Sans Text", sans-serif',
+                          fontWeight: sortBy === 'lastModified' ? '500' : '400',
+                          color: sortBy === 'lastModified' ? '#0B57D0' : '#1F1F1F',
+                          backgroundColor: sortBy === 'lastModified' ? '#F8FAFD' : 'transparent',
+                        }}
+                      >
+                        Last Modified
+                      </MenuItem>
+                    </Menu>
                         {/* View Mode Toggle */}
                     <ToggleButtonGroup
                         value={viewMode}
@@ -621,14 +645,29 @@ const DataProducts = () => {
             <Box sx={{
               flexGrow: 1,
               py: { xs: 1, sm: 2 },
-              px: { xs: '10px', sm: '20px' },
+              px: { xs: '10px', sm: viewMode === 'table' ? '0px' : '20px' },
               position: 'relative',
               top: { xs: '30px', sm: '40px' },
               overflowY: 'auto'
             }}>
-                <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
+                {showNoAccess && (
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        minHeight: { xs: 'calc(100vh - 250px)', sm: 'calc(100vh - 300px)' },
+                        gap: 2
+                    }}>
+                        <Typography variant="body1" color="text.secondary">
+                            You have no access to data products.
+                        </Typography>
+                    </Box>
+                )}
+                {!showNoAccess && <Grid container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
                     {
-                        showLoading &&
+                        showLoading && viewMode === 'list' &&
                             Array.from(new Array(6)).map((_, index) => (
                                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                                     <Box sx={{
@@ -652,6 +691,10 @@ const DataProducts = () => {
                                 </Grid>
                             ))
                     }
+                    {
+                        showLoading && viewMode === 'table' &&
+                            <DataProductsTableViewSkeleton />
+                    }
                     { !showLoading && !showEmptyState &&
                         ( viewMode === 'list' ?
                         (dataProductsList.map((dataProducts: DataProduct) => (
@@ -665,91 +708,12 @@ const DataProducts = () => {
                                 />
                             </Grid>
                         )))
-                        : (<>
-                            <Box sx={{ width: '100%', overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ textAlign: 'left', padding: '12px', fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F' }}>Name</th>
-                                            <th style={{ textAlign: 'left', padding: '12px', fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F' }}>Description</th>
-                                            <th style={{ textAlign: 'left', padding: '12px', fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F' }}>Owner</th>
-                                            <th style={{ textAlign: 'left', padding: '12px', fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F' }}>Last Modified</th>
-                                            <th style={{ textAlign: 'left', padding: '12px', fontFamily: 'Google Sans', fontSize: '14px', fontWeight: 500, color: '#1F1F1F' }}>Location</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {
-                                            dataProductsList.map((dataProducts: DataProduct) => (
-                                            <tr
-                                                key={dataProducts.name}
-                                                onClick={() => handleCardClick(dataProducts)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    transition: 'background-color 0.2s',
-                                                    borderBottom: '1px solid #E0E0E0',
-                                                    height: '72px'
-                                                }}
-                                            >
-                                                <td style={{height: '72px'}}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <img
-                                                        src={dataProducts.icon ? `data:image/${getMimeType(dataProducts.icon)};base64,${dataProducts.icon}` : '/assets/images/data-product-card.png'}
-                                                        alt={dataProducts.displayName}
-                                                        style={{ width: '32px', height: '32px' }}
-                                                    />
-                                                    <span style={{ fontFamily: 'Google Sans', fontSize: '15px', fontWeight: 500, color: '#1F1F1F', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {dataProducts.displayName}
-                                                    </span>
-                                                    </div>
-                                                </td>
-                                                <td style={{height: '72px' }}>
-                                                    <span style={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', maxWidth:'350px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                                        {dataProducts.description || 'No description available.'}
-                                                    </span>
-                                                </td>
-                                                <td style={{ height: '72px' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{
-                                                        width: '1.5rem',
-                                                        height: '1.5rem',
-                                                        borderRadius: '50%',
-                                                        backgroundColor: '#FFDCD2', // Fallback color
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#9C3A1F', // Fallback color
-                                                        fontSize: '0.875rem',
-                                                        fontWeight: 500,
-                                                        flexShrink: 0
-                                                    }}>
-                                                        {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0].charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <span style={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757' }}>
-                                                        {dataProducts.ownerEmails.length > 0 && dataProducts.ownerEmails[0]}
-                                                        { dataProducts.ownerEmails.length > 1 ? (`+${dataProducts.ownerEmails.length - 1}`) : '' }
-                                                    </span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ height: '72px'}}>
-                                                    <span style={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <AccessTime style={{fontSize: 14}}/>
-                                                        {dataProducts.updateTime.split('T')[0]}
-                                                    </span>
-                                                </td>
-                                                <td style={{ height: '72px'  }}>
-                                                    <span style={{ fontFamily: 'Google Sans Text', fontSize: '14px', color: '#575757', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <LocationOnOutlined style={{fontSize: 14}}/>
-                                                        {dataProducts.name.split('/')[3]}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-
-                                                
-                            </Box>
-                        </>))
+                        : (
+                          <DataProductsTableView
+                            dataProducts={dataProductsList}
+                            onRowClick={handleCardClick}
+                          />
+                        ))
                     }
                     { showEmptyState && (
                         <Box sx={{
@@ -767,7 +731,7 @@ const DataProducts = () => {
                             </Typography>
                         </Box>
                     )}
-                </Grid>
+                </Grid>}
             </Box>
         </Box>
         </Paper>

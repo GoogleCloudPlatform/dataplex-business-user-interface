@@ -7,7 +7,7 @@ import { AccessTime, LocationOnOutlined, LockOutlined } from '@mui/icons-materia
 import BigQueryProductIcon from '../../assets/svg/BigQuery.svg';
 import './SearchEntriesCard.css';
 import { type SxProps, type Theme } from '@mui/material/styles';
-import { fetchEntry, checkEntryAccess } from '../../features/entry/entrySlice';
+import { fetchEntry, checkEntryAccess, clearHistory } from '../../features/entry/entrySlice';
 import type { AppDispatch } from '../../app/store';
 import { generateBigQueryLink, generateLookerStudioLink, getEntryType } from '../../utils/resourceUtils';
 import { debounce } from '../../utils/debounce';
@@ -29,8 +29,7 @@ import ViewIcon from '../../assets/svg/view_icon.svg';
 import FilesetIcon from '../../assets/svg/fileset_icon.svg';
 import FolderIcon from '../../assets/svg/folder_icon.svg';
 import FunctionIcon from '../../assets/svg/function_icon.svg';
-import GlossaryIcon from '../../assets/svg/glossary_icon.svg';
-import GlossaryCategoryIcon from '../../assets/svg/glossary_category_icon.svg';
+import { isGlossaryAssetType, getGlossaryMuiIcon, assetNameToGlossaryType } from '../../constants/glossaryIcons';
 import ListingIcon from '../../assets/svg/listing_icon.svg';
 import LookIcon from '../../assets/svg/look_icon.svg';
 import ModelIcon from '../../assets/svg/model_icon.svg';
@@ -138,6 +137,7 @@ const getAssetIcon = (assetName: string) => {
     case 'Dashboard element':
       return DashboardElementIcon;
     case 'Data exchange':
+    case 'Exchange':
       return DataExchangeIcon;
     case 'Data source connection':
       return ConnectionIcon;
@@ -163,12 +163,6 @@ const getAssetIcon = (assetName: string) => {
       return FolderIcon;
     case 'Function':
       return FunctionIcon;
-    case 'Glossary':
-      return GlossaryIcon;
-    case 'Glossary Category':
-      return GlossaryCategoryIcon;
-    case 'Glossary Term':
-      return GlossaryIcon;
     case 'Listing':
       return ListingIcon;
     case 'Look':
@@ -208,6 +202,8 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
   const isAccessLoading = entryAccessStatus === 'loading';
   const hasBigQueryTable = entry.name && getEntryType(entry.name, '/') === 'Tables'
     && entry.entrySource?.system?.toLowerCase() === 'bigquery';
+  const bigQueryLink = generateBigQueryLink(entry);
+  const lookerStudioLink = generateLookerStudioLink(entry);
 
   const debouncedCheckAccess = useMemo(
     () => debounce((entryName: string, token: string) => {
@@ -269,7 +265,9 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
       calculatedName = segments[segments.length - 1];
     }
     setName(calculatedName);
-    setSystemName(entry.entrySource.system ?? 'Custom');
+    const rawSystem = entry.entrySource.system ?? 'Custom';
+    const SYSTEM_DISPLAY_NAMES: Record<string, string> = { "dataplex universal catalog": "Knowledge Catalog", "dataplex": "Knowledge Catalog" };
+    setSystemName(SYSTEM_DISPLAY_NAMES[rawSystem.toLowerCase()] || rawSystem);
     setEntryType(entry.entryType.split('-').length > 1 ? entry.entryType.split('-').pop() : entry.name.split('/').at(-2).charAt(0).toUpperCase() + entry.name.split('/').at(-2).slice(1));
     const myDate = (typeof entry.updateTime !== 'string') ? new Date(entry.updateTime.seconds * 1000) : new Date(entry.updateTime);
     const formattedDate = new Intl.DateTimeFormat('en-US', { month: "short" , day: "numeric", year: "numeric" }).format(myDate);
@@ -295,15 +293,16 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
             }
           }}
           sx={{
-            padding: '16px',
+            padding: '12px 16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
+            gap: '8px',
             backgroundColor: isSelected ? (mode === 'dark' ? '#004a76' : '#EDF2FC') : (mode === 'dark' ? '#131314' : '#FFFFFF'),
             border: isSelected ? (mode === 'dark' ? '1px solid #8ab4f8' : '1px solid #0E4DCA') : (mode === 'dark' ? '1px solid #3c4043' : '1px solid #DADCE0'),
             borderRadius: '16px',
-            height: '148px',
+            height: '120px',
             boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
           className={`entriesHoverEffect${isSelected ? ' selected' : ''}`}
           >
@@ -312,6 +311,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flex: 'none',
           }}>
             <div style={{
               display: "flex",
@@ -320,7 +320,12 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
               flex: '1 1 auto',
               minWidth: 0,
             }}>
-              {getAssetIcon(capitalizeFirstLetter(entryType)) && (
+              {isGlossaryAssetType(capitalizeFirstLetter(entryType)) ? (
+                getGlossaryMuiIcon(assetNameToGlossaryType(capitalizeFirstLetter(entryType)), {
+                  size: '24px',
+                  color: '#4285F4',
+                })
+              ) : getAssetIcon(capitalizeFirstLetter(entryType)) ? (
                 <img
                   src={getAssetIcon(capitalizeFirstLetter(entryType))!}
                   alt={capitalizeFirstLetter(entryType)}
@@ -330,14 +335,14 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                     flex: '0 0 auto'
                   }}
                 />
-              )}
+              ) : null}
               <Typography component="span"
                   variant="heading2Medium"
                   sx={{
                     color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
-                    fontSize: "18px",
+                    fontSize: "16px",
                     fontFamily: '"Google Sans", sans-serif',
-                    fontWeight: 400,
+                    fontWeight: 500,
                     flex: '1 1 auto',
                     minWidth: 0,
                     overflow: 'hidden',
@@ -426,13 +431,13 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
             margin: 0,
             fontSize: "14px",
             color: mode === 'dark' ? '#dedfe0' : '#575757',
-            lineHeight: 1.4,
+            lineHeight: '20px',
+            height: '20px',
+            flex: 'none',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            display: '-webkit-box',
-            WebkitLineClamp: 1,
-            WebkitBoxOrient: 'vertical',
-            fontWeight: 400
+            whiteSpace: 'nowrap',
+            fontWeight: 400,
           }}>
             {description.length > 0 ? description : "No Description Available"}
           </p>
@@ -443,9 +448,10 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
             alignItems: "center",
             justifyContent: 'space-between',
             gap: '8px',
+            flex: 'none',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
                 <Tag text={(() => {
                   return systemName.toLowerCase() === 'bigquery' ? 'BigQuery' : systemName.replace("_", " ").replace("-", " ").toLowerCase();
                 })()} className="asset-tag" css={{
@@ -487,7 +493,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 <span style={{
                   color: mode === 'dark' ? '#dedfe0' : '#575757',
                   fontSize: "12px",
-                  fontWeight: 500,
+                  fontWeight: 400,
                   display: "flex",
                   alignItems: "center",
                   flex: '0 0 auto',
@@ -501,12 +507,12 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 <span style={{
                   color: mode === 'dark' ? '#dedfe0' : '#575757',
                   fontSize: "12px",
-                  fontWeight: 500,
+                  fontWeight: 400,
                   display: "flex",
                   alignItems: "center",
                   flex: '0 1 auto',
                   gap: '4px',
-                  minWidth: 0
+                  minWidth: '60px'
                 }}>
                   <LocationOnOutlined style={{ fontSize: 18, flexShrink: 0 }}/>
                   <span style={{
@@ -529,26 +535,42 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 {/* Open in BigQuery */}
                 {entry.entrySource?.system?.toLowerCase() === 'bigquery' && (
                   isAccessConfirmed ? (
-                    <Tooltip title="Open in BigQuery" arrow placement="top">
-                      <Box
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); const url = generateBigQueryLink(entry); if (url) window.open(url, '_blank'); }}
-                        sx={{
-                          width: '32px',
-                          height: '32px',
-                          border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
-                          borderRadius: '100px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxSizing: 'border-box',
-                          transition: 'background-color 0.2s ease',
-                          '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
-                        }}
-                      >
+                    bigQueryLink ? (
+                      <Tooltip title="Open in BigQuery" arrow placement="top">
+                        <Box
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(bigQueryLink, '_blank'); }}
+                          sx={{
+                            width: '32px',
+                            height: '32px',
+                            border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
+                            borderRadius: '100px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxSizing: 'border-box',
+                            transition: 'background-color 0.2s ease',
+                            '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
+                          }}
+                        >
+                          <img src={BigQueryProductIcon} alt="BigQuery" style={{ width: '20px', height: '20px' }} />
+                        </Box>
+                      </Tooltip>
+                    ) : (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
+                        borderRadius: '100px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxSizing: 'border-box',
+                        opacity: 0.4,
+                      }}>
                         <img src={BigQueryProductIcon} alt="BigQuery" style={{ width: '20px', height: '20px' }} />
-                      </Box>
-                    </Tooltip>
+                      </div>
+                    )
                   ) : isAccessLoading ? (
                     <div style={{
                       width: '32px',
@@ -582,26 +604,42 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 {/* Explore with Looker Studio */}
                 {entry.entrySource?.system?.toLowerCase() === 'bigquery' && (
                   isAccessConfirmed ? (
-                    <Tooltip title="Explore with Looker Studio" arrow placement="top">
-                      <Box
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); const url = generateLookerStudioLink(entry); if (url) window.open(url, '_blank'); }}
-                        sx={{
-                          width: '32px',
-                          height: '32px',
-                          border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
-                          borderRadius: '100px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxSizing: 'border-box',
-                          transition: 'background-color 0.2s ease',
-                          '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
-                        }}
-                      >
+                    lookerStudioLink ? (
+                      <Tooltip title="Explore with Looker Studio" arrow placement="top">
+                        <Box
+                          onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(lookerStudioLink, '_blank'); }}
+                          sx={{
+                            width: '32px',
+                            height: '32px',
+                            border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
+                            borderRadius: '100px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxSizing: 'border-box',
+                            transition: 'background-color 0.2s ease',
+                            '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)' },
+                          }}
+                        >
+                          <img src="/assets/svg/looker-icon.svg" alt="Looker Studio" style={{ width: '20px', height: '20px' }} />
+                        </Box>
+                      </Tooltip>
+                    ) : (
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #C5C7C5',
+                        borderRadius: '100px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxSizing: 'border-box',
+                        opacity: 0.4,
+                      }}>
                         <img src="/assets/svg/looker-icon.svg" alt="Looker Studio" style={{ width: '20px', height: '20px' }} />
-                      </Box>
-                    </Tooltip>
+                      </div>
+                    )
                   ) : isAccessLoading ? (
                     <div style={{
                       width: '32px',
@@ -635,11 +673,11 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 {/* Details Button */}
                 {isAccessConfirmed ? (
                   <Box
-                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); dispatch(fetchEntry({ entryName: entry.name, id_token })); navigate('/view-details'); }}
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); dispatch(clearHistory()); dispatch(fetchEntry({ entryName: entry.name, id_token })); navigate('/view-details'); }}
                     sx={{
                       height: '32px',
                       padding: '6px 12px',
-                      background: mode === 'dark' ? '#a7c6fa' : '#0E4DCA',
+                      background: mode === 'dark' ? '#a7c6fa' : '#0B57D0',
                       borderRadius: '100px',
                       display: 'flex',
                       alignItems: 'center',
@@ -652,34 +690,34 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                   >
                     <span className="view-details-text" style={{
                       fontFamily: '"Google Sans", sans-serif',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       fontSize: '14px',
                       lineHeight: '20px',
                       letterSpacing: '0.1px',
-                      color: mode === 'dark' ? '#072e6f' : '#FFFFFF',
+                      color: mode === 'dark' ? '#072e6f' : '#F0F4F8',
                       whiteSpace: 'nowrap',
                     }}>
-                      View Details
+                      Details
                     </span>
                   </Box>
                 ) : isAccessLoading ? (
                   <div style={{
                     height: '32px',
                     padding: '6px 12px',
-                    background: mode === 'dark' ? '#a7c6fa' : '#0E4DCA',
+                    background: mode === 'dark' ? '#a7c6fa' : '#0B57D0',
                     borderRadius: '100px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxSizing: 'border-box',
                   }}>
-                    <CircularProgress size={16} sx={{ color: '#FFFFFF' }} />
+                    <CircularProgress size={16} sx={{ color: '#F0F4F8' }} />
                   </div>
                 ) : (
                   <div style={{
                     height: '32px',
                     padding: '6px 12px',
-                    background: mode === 'dark' ? '#a7c6fa' : '#0E4DCA',
+                    background: mode === 'dark' ? '#a7c6fa' : '#0B57D0',
                     borderRadius: '100px',
                     display: 'flex',
                     alignItems: 'center',
@@ -689,14 +727,14 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                   }}>
                     <span className="view-details-text" style={{
                       fontFamily: '"Google Sans", sans-serif',
-                      fontWeight: 600,
+                      fontWeight: 500,
                       fontSize: '14px',
                       lineHeight: '20px',
                       letterSpacing: '0.1px',
-                      color: mode === 'dark' ? '#072e6f' : '#FFFFFF',
+                      color: mode === 'dark' ? '#072e6f' : '#F0F4F8',
                       whiteSpace: 'nowrap',
                     }}>
-                      View Details
+                      Details
                     </span>
                   </div>
                 )}
@@ -727,7 +765,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                     fontSize: '14px',
                     lineHeight: '20px',
                     letterSpacing: '0.1px',
-                    color: mode === 'dark' ? '#9aa0a6' : '#44464F',
+                    color: mode === 'dark' ? '#9aa0a6' : '#575757',
                     whiteSpace: 'nowrap',
                   }}>
                     Request Access

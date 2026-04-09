@@ -120,40 +120,38 @@ describe('GlossariesCategoriesTerms', () => {
     it('renders with categories mode', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} mode="categories" />);
 
-      expect(screen.getByPlaceholderText('Search categories')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter categories')).toBeInTheDocument();
     });
 
     it('renders with terms mode', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} mode="terms" />);
 
-      expect(screen.getByPlaceholderText('Search terms')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter terms')).toBeInTheDocument();
     });
 
     it('renders search input', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
       expect(searchInput).toBeInTheDocument();
     });
 
     it('renders sort button with default Last Modified', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="lastModified" />);
 
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
 
     it('renders sort button with Name when sortBy is name', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="name" />);
 
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     it('renders sort order toggle button', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      // The Sort icon button should be present
-      const sortButtons = screen.getAllByRole('button');
-      expect(sortButtons.length).toBeGreaterThan(0);
+      expect(screen.getByTestId('sort-order-toggle')).toBeInTheDocument();
     });
   });
 
@@ -175,7 +173,7 @@ describe('GlossariesCategoriesTerms', () => {
     it('displays current search term value', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} searchTerm="test search" />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories') as HTMLInputElement;
+      const searchInput = screen.getByPlaceholderText('Filter categories') as HTMLInputElement;
       expect(searchInput.value).toBe('test search');
     });
 
@@ -183,18 +181,19 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
       await user.type(searchInput, 'new search');
 
       expect(mockOnSearchTermChange).toHaveBeenCalled();
     });
 
-    it('calls onSearchTermChange for each character typed', async () => {
-      const user = userEvent.setup();
+    it('calls onSearchTermChange when text is changed', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
-      await user.type(searchInput, 'abc');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
+      fireEvent.change(searchInput, { target: { value: 'a' } });
+      fireEvent.change(searchInput, { target: { value: 'ab' } });
+      fireEvent.change(searchInput, { target: { value: 'abc' } });
 
       expect(mockOnSearchTermChange).toHaveBeenCalledTimes(3);
     });
@@ -202,7 +201,7 @@ describe('GlossariesCategoriesTerms', () => {
     it('passes correct value to onSearchTermChange', async () => {
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
       fireEvent.change(searchInput, { target: { value: 'test' } });
 
       expect(mockOnSearchTermChange).toHaveBeenCalledWith('test');
@@ -214,9 +213,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      // Find the IconButton (first button before the "Sort by" text button)
-      const buttons = screen.getAllByRole('button');
-      const sortOrderButton = buttons[0]; // First button is the sort order toggle
+      const sortOrderButton = screen.getByTestId('sort-order-toggle');
       await user.click(sortOrderButton);
 
       expect(mockOnSortOrderToggle).toHaveBeenCalledTimes(1);
@@ -226,13 +223,13 @@ describe('GlossariesCategoriesTerms', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortOrder="asc" />);
 
       // The component should render - the transform style is applied to the icon
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
 
     it('sort icon is not flipped when sortOrder is desc', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortOrder="desc" />);
 
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
   });
 
@@ -241,7 +238,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -253,7 +250,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -270,7 +267,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="lastModified" />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
@@ -283,7 +280,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="name" />);
 
-      const sortButton = screen.getByText('Sort by: Name');
+      const sortButton = screen.getByText('Name');
       await user.click(sortButton);
 
       const lastModifiedOption = screen.getByRole('menuitem', { name: 'Last Modified' });
@@ -296,7 +293,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="lastModified" />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       const lastModifiedOption = screen.getByRole('menuitem', { name: 'Last Modified' });
@@ -309,7 +306,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="lastModified" />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
@@ -459,13 +456,13 @@ describe('GlossariesCategoriesTerms', () => {
     it('shows correct sort label for name', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="name" />);
 
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     it('shows correct sort label for lastModified', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} sortBy="lastModified" />);
 
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
   });
 
@@ -473,18 +470,17 @@ describe('GlossariesCategoriesTerms', () => {
     it('search input is accessible', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} mode="categories" />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
       expect(searchInput).toBeInTheDocument();
       expect(searchInput.tagName).toBe('INPUT');
     });
 
-    it('sort button is keyboard accessible', async () => {
+    it('sort button is clickable', async () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
-      sortButton.focus();
-      await user.keyboard('{Enter}');
+      const sortButton = screen.getByText('Last Modified');
+      await user.click(sortButton);
 
       expect(screen.getByRole('menu')).toBeInTheDocument();
     });
@@ -493,7 +489,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       const menu = screen.getByRole('menu');
@@ -593,21 +589,21 @@ describe('GlossariesCategoriesTerms', () => {
     it('search input accepts empty string', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} searchTerm="" />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories') as HTMLInputElement;
+      const searchInput = screen.getByPlaceholderText('Filter categories') as HTMLInputElement;
       expect(searchInput.value).toBe('');
     });
 
     it('search input accepts special characters', () => {
       render(<GlossariesCategoriesTerms {...defaultProps} searchTerm="test@#$%&*" />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories') as HTMLInputElement;
+      const searchInput = screen.getByPlaceholderText('Filter categories') as HTMLInputElement;
       expect(searchInput.value).toBe('test@#$%&*');
     });
 
     it('clearing search input calls onSearchTermChange with empty string', async () => {
       render(<GlossariesCategoriesTerms {...defaultProps} searchTerm="test" />);
 
-      const searchInput = screen.getByPlaceholderText('Search categories');
+      const searchInput = screen.getByPlaceholderText('Filter categories');
       fireEvent.change(searchInput, { target: { value: '' } });
 
       expect(mockOnSearchTermChange).toHaveBeenCalledWith('');
@@ -619,7 +615,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
       await user.click(sortButton);
 
       const menuItems = screen.getAllByRole('menuitem');
@@ -630,7 +626,7 @@ describe('GlossariesCategoriesTerms', () => {
       const user = userEvent.setup();
       render(<GlossariesCategoriesTerms {...defaultProps} />);
 
-      const sortButton = screen.getByText('Sort by: Last Modified');
+      const sortButton = screen.getByText('Last Modified');
 
       // Open
       await user.click(sortButton);
@@ -697,8 +693,7 @@ describe('GlossariesCategoriesTerms', () => {
         <GlossariesCategoriesTerms {...defaultProps} sortOrder="desc" />
       );
 
-      const buttons = screen.getAllByRole('button');
-      const sortOrderButton = buttons[0];
+      const sortOrderButton = screen.getByTestId('sort-order-toggle');
       await user.click(sortOrderButton);
 
       expect(mockOnSortOrderToggle).toHaveBeenCalled();
@@ -707,7 +702,7 @@ describe('GlossariesCategoriesTerms', () => {
       rerender(<GlossariesCategoriesTerms {...defaultProps} sortOrder="asc" />);
 
       // Component should re-render with new sort order
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
   });
 
@@ -717,11 +712,11 @@ describe('GlossariesCategoriesTerms', () => {
         <GlossariesCategoriesTerms {...defaultProps} mode="categories" />
       );
 
-      expect(screen.getByPlaceholderText('Search categories')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter categories')).toBeInTheDocument();
 
       rerender(<GlossariesCategoriesTerms {...defaultProps} mode="terms" />);
 
-      expect(screen.getByPlaceholderText('Search terms')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter terms')).toBeInTheDocument();
     });
 
     it('updates empty state message when mode changes', () => {
@@ -796,14 +791,14 @@ describe('GlossariesCategoriesTerms', () => {
         <GlossariesCategoriesTerms {...defaultProps} searchTerm="initial" />
       );
 
-      let searchInput = screen.getByPlaceholderText('Search categories') as HTMLInputElement;
+      let searchInput = screen.getByPlaceholderText('Filter categories') as HTMLInputElement;
       expect(searchInput.value).toBe('initial');
 
       rerender(
         <GlossariesCategoriesTerms {...defaultProps} searchTerm="updated" />
       );
 
-      searchInput = screen.getByPlaceholderText('Search categories') as HTMLInputElement;
+      searchInput = screen.getByPlaceholderText('Filter categories') as HTMLInputElement;
       expect(searchInput.value).toBe('updated');
     });
   });

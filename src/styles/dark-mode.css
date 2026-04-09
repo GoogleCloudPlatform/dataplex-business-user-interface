@@ -135,8 +135,8 @@ html[data-theme="dark"] .MuiPopover-paper .MuiDivider-root {
   border-color: #3c4043;
 }
 
-/* --- Dataplex Logo (img tag, inverted to white for dark mode) --- */
-html[data-theme="dark"] .app-layout img[alt="Dataplex Universal Catalog"] {
+/* --- Knowledge Catalog Logo (img tag, inverted to white for dark mode) --- */
+html[data-theme="dark"] .app-layout img[alt="Knowledge Catalog"] {
   filter: brightness(0) invert(1) brightness(0.85);
 }
 

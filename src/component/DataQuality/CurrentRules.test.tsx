@@ -4,8 +4,8 @@ import CurrentRules from './CurrentRules';
 
 // Mock ConfigurationsPanel
 vi.mock('./ConfigurationsPanel', () => ({
-  default: ({ isOpen, onClose, dataQualtyScan }: { isOpen: boolean; onClose: () => void; dataQualtyScan: any }) => (
-    <div data-testid="configurations-panel" data-open={isOpen}>
+  default: ({ onClose, dataQualtyScan }: { onClose: () => void; dataQualtyScan: any }) => (
+    <div data-testid="configurations-panel">
       <button onClick={onClose} data-testid="config-close-btn">Close Config</button>
       Configurations Panel
       {dataQualtyScan && <span data-testid="scan-data">Has Scan Data</span>}
@@ -202,14 +202,16 @@ describe('CurrentRules', () => {
   });
 
   describe('Configurations Panel', () => {
-    it('should open configurations panel on button click', () => {
+    it('should open configurations panel on button click', async () => {
       render(<CurrentRules dataQualtyScan={mockDataQualityScan} />);
       const configButton = screen.getByRole('button', { name: /configurations/i });
 
       fireEvent.click(configButton);
 
-      const panel = screen.getByTestId('configurations-panel');
-      expect(panel).toHaveAttribute('data-open', 'true');
+      await waitFor(() => {
+        expect(screen.getByRole('presentation')).toBeInTheDocument();
+        expect(screen.getByTestId('configurations-panel')).toBeInTheDocument();
+      });
     });
 
     it('should close configurations panel on overlay click', async () => {
@@ -219,41 +221,49 @@ describe('CurrentRules', () => {
       const configButton = screen.getByRole('button', { name: /configurations/i });
       fireEvent.click(configButton);
 
-      expect(screen.getByTestId('configurations-panel')).toHaveAttribute('data-open', 'true');
+      await waitFor(() => {
+        expect(screen.getByRole('presentation')).toBeInTheDocument();
+      });
 
-      // Find and click the overlay
-      const overlay = document.querySelector('[style*="position: fixed"]');
-      if (overlay) {
-        fireEvent.click(overlay);
+      // Click the MUI Drawer backdrop to close
+      const backdrop = document.querySelector('.MuiBackdrop-root');
+      if (backdrop) {
+        fireEvent.click(backdrop);
 
         await waitFor(() => {
-          const panel = screen.getByTestId('configurations-panel');
-          expect(panel).toHaveAttribute('data-open', 'false');
+          expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
         });
       }
     });
 
-    it('should close configurations panel via close callback', () => {
+    it('should close configurations panel via close callback', async () => {
       render(<CurrentRules dataQualtyScan={mockDataQualityScan} />);
 
       // Open panel
       const configButton = screen.getByRole('button', { name: /configurations/i });
       fireEvent.click(configButton);
 
+      await waitFor(() => {
+        expect(screen.getByTestId('config-close-btn')).toBeInTheDocument();
+      });
+
       // Close via the panel's close button
       const closeBtn = screen.getByTestId('config-close-btn');
       fireEvent.click(closeBtn);
 
-      const panel = screen.getByTestId('configurations-panel');
-      expect(panel).toHaveAttribute('data-open', 'false');
+      await waitFor(() => {
+        expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
+      });
     });
 
-    it('should pass dataQualtyScan to ConfigurationsPanel', () => {
+    it('should pass dataQualtyScan to ConfigurationsPanel', async () => {
       render(<CurrentRules dataQualtyScan={mockDataQualityScan} />);
       const configButton = screen.getByRole('button', { name: /configurations/i });
       fireEvent.click(configButton);
 
-      expect(screen.getByTestId('scan-data')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('scan-data')).toBeInTheDocument();
+      });
     });
   });
 

@@ -7,6 +7,7 @@ type searchState = {
   searchFilters:any[];
   semanticSearch?: boolean;
   isSearchFiltersOpen: boolean;
+  isSideNavOpen: boolean;
   searchSubmitted: boolean;
 };
 
@@ -17,6 +18,7 @@ const initialState : searchState = {
   searchFilters:[],
   semanticSearch: true,
   isSearchFiltersOpen: true,
+  isSideNavOpen: true,
   searchSubmitted: false,
 };
 
@@ -42,12 +44,15 @@ export const searchSlice = createSlice({
     setSearchFiltersOpen: (state, action) => {
       state.isSearchFiltersOpen = action.payload;
     },
+    setSideNavOpen: (state, action) => {
+      state.isSideNavOpen = action.payload;
+    },
     setSearchSubmitted: (state, action) => {
       state.searchSubmitted = action.payload;
     },
   },
 });
 
-export const { setSearchResult, setSearchTerm, setSearchType, setSearchFilters, setSemanticSearch, setSearchFiltersOpen, setSearchSubmitted } = searchSlice.actions;
+export const { setSearchResult, setSearchTerm, setSearchType, setSearchFilters, setSemanticSearch, setSearchFiltersOpen, setSideNavOpen, setSearchSubmitted } = searchSlice.actions;
 
 export default searchSlice.reducer;

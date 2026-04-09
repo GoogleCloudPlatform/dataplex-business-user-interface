@@ -20,6 +20,8 @@ let mockResourcesTotalSize = 0;
 let mockResourcesRequestData: any = null;
 let mockRequestItemStore: any[] = [];
 let mockIsSearchFiltersOpen = false;
+let mockSearchSubmitted = true;
+let mockSearchFilters: any[] = [];
 
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
@@ -30,6 +32,8 @@ vi.mock("react-redux", () => ({
         searchType: mockSearchType,
         semanticSearch: mockSemanticSearch,
         isSearchFiltersOpen: mockIsSearchFiltersOpen,
+        searchSubmitted: mockSearchSubmitted,
+        searchFilters: mockSearchFilters,
       },
       resources: {
         items: mockResources,
@@ -132,18 +136,22 @@ vi.mock("../Common/ResourceViewer", () => ({
         >
           Toggle View
         </button>
-        <button
-          data-testid="select-type-filter-btn"
-          onClick={() => props.onTypeFilterChange("BigQuery Table")}
-        >
-          Select Type Filter
-        </button>
-        <button
-          data-testid="clear-type-filter-btn"
-          onClick={() => props.onTypeFilterChange(null)}
-        >
-          Clear Type Filter
-        </button>
+        {props.onTypeFilterChange && (
+          <button
+            data-testid="select-type-filter-btn"
+            onClick={() => props.onTypeFilterChange("BigQuery Table")}
+          >
+            Select Type Filter
+          </button>
+        )}
+        {props.onTypeFilterChange && (
+          <button
+            data-testid="clear-type-filter-btn"
+            onClick={() => props.onTypeFilterChange(null)}
+          >
+            Clear Type Filter
+          </button>
+        )}
         <button
           data-testid="change-filters-btn"
           onClick={() => props.onFiltersChange([{ name: "NewFilter", type: "new" }])}
@@ -211,6 +219,8 @@ describe("SearchPage", () => {
     mockResourcesRequestData = null;
     mockRequestItemStore = [];
     mockIsSearchFiltersOpen = false;
+    mockSearchSubmitted = true;
+    mockSearchFilters = [];
 
     // Reset captured props
     capturedFilterDropdownProps = null;
@@ -266,9 +276,8 @@ describe("SearchPage", () => {
       });
     });
 
-    it("renders with optional searchResult prop", () => {
-      const searchResult = [{ id: 1, name: "Result 1" }];
-      render(<SearchPage searchResult={searchResult} />);
+    it("renders without props", () => {
+      render(<SearchPage />);
 
       expect(screen.getByTestId("resource-viewer")).toBeInTheDocument();
     });
@@ -403,9 +412,12 @@ describe("SearchPage", () => {
 
   describe("Search Type Changes", () => {
     it("adds BigQuery filter when searchType is BigQuery", async () => {
-      mockSearchType = "BigQuery";
+      mockSearchType = "All";
+      const { rerender } = render(<SearchPage />);
 
-      render(<SearchPage />);
+      // Change searchType after mount to trigger the effect (first render is skipped by useRef)
+      mockSearchType = "BigQuery";
+      rerender(<SearchPage />);
 
       await waitFor(() => {
         expect(mockDispatch).toHaveBeenCalledWith(
@@ -417,9 +429,11 @@ describe("SearchPage", () => {
     });
 
     it("adds BigQuery filter when searchType is lowercase bigquery", async () => {
-      mockSearchType = "bigquery";
+      mockSearchType = "All";
+      const { rerender } = render(<SearchPage />);
 
-      render(<SearchPage />);
+      mockSearchType = "bigquery";
+      rerender(<SearchPage />);
 
       await waitFor(() => {
         expect(mockDispatch).toHaveBeenCalledWith(
@@ -431,15 +445,24 @@ describe("SearchPage", () => {
     });
 
     it("removes BigQuery filter when searchType changes to All", async () => {
-      // Start with BigQuery filter
-      mockSearchType = "BigQuery";
+      mockSearchType = "All";
       const { rerender } = render(<SearchPage />);
 
+      // First change to BigQuery
+      mockSearchType = "BigQuery";
+      rerender(<SearchPage />);
+
       await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalled();
+        expect(mockDispatch).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "search/setSearchFilters",
+          })
+        );
       });
 
-      // Change to All
+      mockDispatch.mockClear();
+
+      // Change back to All
       mockSearchType = "All";
       rerender(<SearchPage />);
 
@@ -449,13 +472,14 @@ describe("SearchPage", () => {
     });
 
     it("does not add duplicate BigQuery filter", async () => {
-      mockSearchType = "BigQuery";
-
-      // Render twice to simulate re-render
+      mockSearchType = "All";
       const { rerender } = render(<SearchPage />);
+
+      // Change to BigQuery
+      mockSearchType = "BigQuery";
       rerender(<SearchPage />);
 
-      // Should not add duplicate
+      // Count setSearchFilters calls
       const calls = mockDispatch.mock.calls.filter(
         (call) => call[0].type === "search/setSearchFilters"
       );
@@ -470,32 +494,13 @@ describe("SearchPage", () => {
   // ==========================================================================
 
   describe("Type Filter Changes", () => {
-    it("handles type filter selection from ResourceViewer", async () => {
+    it("does not pass selectedTypeFilter or onTypeFilterChange to ResourceViewer", async () => {
       render(<SearchPage />);
 
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
       await waitFor(() => {
-        // Filter should be updated
-        expect(capturedResourceViewerProps.selectedTypeFilter).toBeDefined();
-      });
-    });
-
-    it("handles type filter clearing from ResourceViewer", async () => {
-      render(<SearchPage />);
-
-      // First select
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
-      await waitFor(() => {
-        expect(capturedResourceViewerProps).toBeDefined();
-      });
-
-      // Then clear
-      fireEvent.click(screen.getByTestId("clear-type-filter-btn"));
-
-      await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalled();
+        // selectedTypeFilter and onTypeFilterChange should not be passed (multi-select is handled via onTypeAliasClick)
+        expect(capturedResourceViewerProps.selectedTypeFilter).toBeUndefined();
+        expect(capturedResourceViewerProps.onTypeFilterChange).toBeUndefined();
       });
     });
   });
@@ -1099,75 +1104,23 @@ describe("SearchPage", () => {
   });
 
   // ==========================================================================
-  // Console Log Tests
-  // ==========================================================================
-
-  describe("Console Logging", () => {
-    it("logs search result on filter change", async () => {
-      const searchResult = [{ id: 1, name: "Result" }];
-
-      render(<SearchPage searchResult={searchResult} />);
-
-      // Apply filter to trigger the effect
-      fireEvent.click(screen.getByTestId("apply-filter-btn"));
-
-      await waitFor(() => {
-        expect(console.log).toHaveBeenCalledWith("Search result:", searchResult);
-      });
-    });
-  });
-
-  // ==========================================================================
   // Type Aliases Filter Sync Tests
   // ==========================================================================
 
   describe("Type Aliases Filter Sync", () => {
-    it("adds typeAliases filter when type is selected", async () => {
+    it("passes onTypeAliasClick to ResourceViewer for multi-select", async () => {
       render(<SearchPage />);
 
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
       await waitFor(() => {
-        // Filter should be updated with typeAliases
-        expect(mockDispatch).toHaveBeenCalled();
+        expect(capturedResourceViewerProps.onTypeAliasClick).toBeDefined();
       });
     });
 
-    it("removes typeAliases filter when type is cleared", async () => {
+    it("does not pass onTypeFilterChange (single-select removed)", async () => {
       render(<SearchPage />);
 
-      // First select
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
       await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalled();
-      });
-
-      // Then clear
-      fireEvent.click(screen.getByTestId("clear-type-filter-btn"));
-
-      await waitFor(() => {
-        // Should update filters
-        expect(mockDispatch).toHaveBeenCalled();
-      });
-    });
-
-    it("keeps existing filter when same type is selected again", async () => {
-      render(<SearchPage />);
-
-      // First select a type filter
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
-      await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalled();
-      });
-
-      // Select the same type filter again (simulates already selected scenario)
-      fireEvent.click(screen.getByTestId("select-type-filter-btn"));
-
-      await waitFor(() => {
-        // Component should handle the already-selected case gracefully
-        expect(capturedResourceViewerProps).toBeDefined();
+        expect(capturedResourceViewerProps.onTypeFilterChange).toBeUndefined();
       });
     });
   });

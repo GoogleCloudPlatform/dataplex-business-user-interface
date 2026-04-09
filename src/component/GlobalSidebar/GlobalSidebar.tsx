@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import SidebarMenuItem from './SidebarMenuItem';
 import { useAccessRequest } from '../../contexts/AccessRequestContext';
 import './GlobalSidebar.css';
-import { fetchDataProductsList } from '../../features/dataProducts/dataProductsSlice';
-import { fetchGlossaries } from '../../features/glossaries/glossariesSlice';
+import { fetchDataProductsList, resetDataProductsUIState } from '../../features/dataProducts/dataProductsSlice';
+import { fetchGlossaries, resetGlossaryUIState } from '../../features/glossaries/glossariesSlice';
+import { resetBrowseUIState } from '../../features/resources/resourcesSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { type AppDispatch, type RootState } from '../../app/store';
 import { useAuth } from '../../auth/AuthProvider';
@@ -34,15 +35,18 @@ const GlobalSidebar: React.FC = () => {
   };
 
   const handleGlossariesClick = () => {
+    dispatch(resetGlossaryUIState());
     dispatch(fetchGlossaries({ id_token: user?.token }));
     navigate('/glossaries');
   };
 
   const handleAnnotationsClick = () => {
+    dispatch(resetBrowseUIState());
     navigate('/browse-by-annotation');
   };
 
   const handleDataProducts = () => {
+    dispatch(resetDataProductsUIState());
     dispatch(fetchDataProductsList({ id_token: user?.token }));
     navigate('/data-products');
   };

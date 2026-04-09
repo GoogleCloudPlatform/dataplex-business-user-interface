@@ -34,10 +34,11 @@ interface FilterTagProps {
   text: string; // text to be displayed on the button
   css?: React.CSSProperties; // Optional CSS properties for the button
   showCloseButton?: boolean; // Whether to show close button
-  icon?: string; // Optional SVG icon path to display before text
+  icon?: string | React.ReactNode; // Optional SVG icon path or React element to display before text
+  iconSize?: string; // Optional icon size (default '14px')
 }
 
-const FilterTag: React.FC<FilterTagProps> = ({ handleClick, handleClose, text, css, showCloseButton = false, icon}) => {
+const FilterTag: React.FC<FilterTagProps> = ({ handleClick, handleClose, text, css, showCloseButton = false, icon, iconSize = '14px'}) => {
     return (
         <Button 
             onClick={(e)=>{
@@ -105,7 +106,9 @@ const FilterTag: React.FC<FilterTagProps> = ({ handleClick, handleClose, text, c
                 </div>
             )}
             {icon && (
-                <img src={icon} alt="" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+                typeof icon === 'string'
+                  ? <img src={icon} alt="" style={{ width: iconSize, height: iconSize, flexShrink: 0 }} />
+                  : icon
             )}
             {text}
         </Button>

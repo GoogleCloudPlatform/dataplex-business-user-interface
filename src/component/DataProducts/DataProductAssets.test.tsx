@@ -1,6 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 // Mock @mui/x-data-grid to avoid CSS import issues
@@ -20,6 +19,7 @@ vi.mock('../Common/ResourceViewer', () => ({
     return (
       <div data-testid="resource-viewer">
         ResourceViewer Mock - {props.resources?.length || 0} resources
+        <div data-testid="rv-custom-filters">{props.customFilters}</div>
         <button
           data-testid="trigger-preview"
           onClick={() => props.onPreviewDataChange && props.onPreviewDataChange({ name: 'preview-asset' })}
@@ -229,7 +229,7 @@ describe('DataProductAssets', () => {
     it('should not render filter toggle or search in empty state', () => {
       renderComponent({ linkedAssets: [] });
 
-      expect(screen.queryByTestId('TuneIcon')).not.toBeInTheDocument();
+      expect(screen.queryByText('Filters')).not.toBeInTheDocument();
       expect(screen.queryByPlaceholderText('Filter assets by name or description')).not.toBeInTheDocument();
     });
   });
@@ -254,13 +254,13 @@ describe('DataProductAssets', () => {
     it('should render filter toggle button', () => {
       renderComponent();
 
-      expect(screen.getByTestId('TuneIcon')).toBeInTheDocument();
+      expect(screen.getByText('Filters')).toBeInTheDocument();
     });
 
-    it('should render filter list icon in search box', () => {
+    it('should render search icon in search box', () => {
       renderComponent();
 
-      expect(screen.getByTestId('GridFilterListIcon')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter assets by name or description')).toBeInTheDocument();
     });
 
     it('should pass correct props to ResourceViewer', () => {
@@ -270,11 +270,12 @@ describe('DataProductAssets', () => {
       expect(capturedResourceViewerProps.resources).toHaveLength(3);
       expect(capturedResourceViewerProps.resourcesStatus).toBe('succeeded');
       expect(capturedResourceViewerProps.id_token).toBe('test-token-123');
-      expect(capturedResourceViewerProps.viewMode).toBe('list');
+      expect(capturedResourceViewerProps.viewMode).toBe('table');
       expect(capturedResourceViewerProps.pageSize).toBe(20);
-      expect(capturedResourceViewerProps.showFilters).toBe(false);
-      expect(capturedResourceViewerProps.showSortBy).toBe(false);
-      expect(capturedResourceViewerProps.showResultsCount).toBe(true);
+      expect(capturedResourceViewerProps.showFilters).toBe(true);
+      expect(capturedResourceViewerProps.showSortBy).toBe(true);
+      expect(capturedResourceViewerProps.showResultsCount).toBe(false);
+      expect(capturedResourceViewerProps.hideMostRelevant).toBe(true);
     });
 
     it('should pass typeAliases to ResourceViewer', () => {
@@ -309,27 +310,25 @@ describe('DataProductAssets', () => {
       expect(mockOnSearchTermChange).toHaveBeenCalledWith('test search');
     });
 
-    it('should filter assets by displayName when searchTerm is provided', () => {
+    it('should display searchTerm in input without filtering results', () => {
       renderComponent({ searchTerm: 'customer' });
 
-      // Only the Customer Table should match
-      expect(capturedResourceViewerProps.resources).toHaveLength(1);
-      expect(capturedResourceViewerProps.resources[0].dataplexEntry.name).toBe('asset-1');
+      // searchTerm is just input text, doesn't filter — all assets shown
+      expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
-    it('should filter assets by description when searchTerm is provided', () => {
+    it('should not filter by description via searchTerm', () => {
       renderComponent({ searchTerm: 'order data' });
 
-      // Only the Orders Table should match
-      expect(capturedResourceViewerProps.resources).toHaveLength(1);
-      expect(capturedResourceViewerProps.resources[0].dataplexEntry.name).toBe('asset-2');
+      // searchTerm is just input text, doesn't filter — all assets shown
+      expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
-    it('should be case-insensitive when filtering', () => {
+    it('should not filter case-insensitively via searchTerm', () => {
       renderComponent({ searchTerm: 'CUSTOMER' });
 
-      expect(capturedResourceViewerProps.resources).toHaveLength(1);
-      expect(capturedResourceViewerProps.resources[0].dataplexEntry.entrySource.displayName).toBe('Customer Table');
+      // searchTerm is just input text, doesn't filter — all assets shown
+      expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
     it('should show all assets when searchTerm is empty', () => {
@@ -344,10 +343,11 @@ describe('DataProductAssets', () => {
       expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
-    it('should return empty results when no assets match search', () => {
+    it('should show all assets even with non-matching searchTerm', () => {
       renderComponent({ searchTerm: 'nonexistent-asset-xyz' });
 
-      expect(capturedResourceViewerProps.resources).toHaveLength(0);
+      // searchTerm is just input text, doesn't filter
+      expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
     it('should handle assets with missing displayName', () => {
@@ -395,7 +395,8 @@ describe('DataProductAssets', () => {
 
       renderComponent({ linkedAssets: assetsWithMissingEntrySource, searchTerm: 'something' });
 
-      expect(capturedResourceViewerProps.resources).toHaveLength(0);
+      // searchTerm is just input text, doesn't filter — asset is still shown
+      expect(capturedResourceViewerProps.resources).toHaveLength(1);
     });
   });
 
@@ -411,30 +412,23 @@ describe('DataProductAssets', () => {
       expect(screen.getByTestId('filter-dropdown')).toBeInTheDocument();
     });
 
-    it('should toggle filter panel when tune icon is clicked', async () => {
+    it('should toggle filter panel when filter button is clicked', async () => {
       renderComponent();
 
-      const tuneIcon = screen.getByTestId('TuneIcon').closest('div[class*="MuiBox-root"]');
-      expect(tuneIcon).toBeInTheDocument();
+      const filterButton = screen.getByText('Filters');
+      expect(filterButton).toBeInTheDocument();
 
       // Click to open
-      fireEvent.click(tuneIcon!);
+      fireEvent.click(filterButton);
 
       // Click again to close
-      fireEvent.click(tuneIcon!);
+      fireEvent.click(filterButton);
     });
 
-    it('should show tooltip on filter toggle button', async () => {
-      const user = userEvent.setup();
+    it('should render Filters text on filter button', () => {
       renderComponent();
 
-      const tuneIcon = screen.getByTestId('TuneIcon');
-      await user.hover(tuneIcon);
-
-      await waitFor(() => {
-        expect(screen.getByRole('tooltip')).toBeInTheDocument();
-        expect(screen.getByText('Toggle Filters')).toBeInTheDocument();
-      });
+      expect(screen.getByText('Filters')).toBeInTheDocument();
     });
 
     it('should pass correct props to FilterDropdown', () => {
@@ -738,16 +732,15 @@ describe('DataProductAssets', () => {
       expect(capturedResourceViewerProps.resources).toHaveLength(3);
     });
 
-    it('should combine search term with filters', () => {
+    it('should apply dropdown filters with searchTerm as input text only', () => {
       renderComponent({ searchTerm: 'customer' });
 
       // Add system filter
       const addSystemFilterBtn = screen.getByTestId('add-system-filter');
       fireEvent.click(addSystemFilterBtn);
 
-      // Should only show Customer Table (matches both search and filter)
-      expect(capturedResourceViewerProps.resources).toHaveLength(1);
-      expect(capturedResourceViewerProps.resources[0].dataplexEntry.entrySource.displayName).toBe('Customer Table');
+      // searchTerm doesn't filter, only dropdown filter applies (2 BigQuery assets)
+      expect(capturedResourceViewerProps.resources).toHaveLength(2);
     });
   });
 
@@ -769,8 +762,8 @@ describe('DataProductAssets', () => {
       renderComponent();
 
       // Open filter panel first
-      const tuneIcon = screen.getByTestId('TuneIcon').closest('div[class*="MuiBox-root"]');
-      fireEvent.click(tuneIcon!);
+      const filterButton = screen.getByText('Filters');
+      fireEvent.click(filterButton);
 
       // Trigger preview
       const previewBtn = screen.getByTestId('trigger-preview');
@@ -811,8 +804,8 @@ describe('DataProductAssets', () => {
     it('should change view mode when triggered', () => {
       renderComponent();
 
-      // Initially list view
-      expect(capturedResourceViewerProps.viewMode).toBe('list');
+      // Initially table view
+      expect(capturedResourceViewerProps.viewMode).toBe('table');
 
       // Change to table view
       const changeViewBtn = screen.getByTestId('change-view-mode');
@@ -860,10 +853,10 @@ describe('DataProductAssets', () => {
         }
       ];
 
-      // This would cause the component to render but filtering would handle null
+      // searchTerm is just input text, doesn't filter — asset is still shown
       renderComponent({ linkedAssets: assetsWithNullEntry, searchTerm: 'test' });
 
-      expect(capturedResourceViewerProps.resources).toHaveLength(0);
+      expect(capturedResourceViewerProps.resources).toHaveLength(1);
     });
 
     it('should handle assets with all fields missing', () => {
@@ -889,8 +882,8 @@ describe('DataProductAssets', () => {
         />
       );
 
-      // Filter should still be applied along with search
-      expect(capturedResourceViewerProps.resources).toHaveLength(1);
+      // Filter should still be applied (searchTerm is just input text, doesn't filter)
+      expect(capturedResourceViewerProps.resources).toHaveLength(2);
     });
 
     it('should handle rapid filter changes', () => {

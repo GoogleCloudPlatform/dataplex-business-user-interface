@@ -113,7 +113,7 @@ const AdminPanel = () => {
     "Cloud Pub/Sub",
     "Cloud SQL",
     "Dataform",
-    "Dataplex Universal Catalog",
+    "Knowledge Catalog",
     "Dataproc Metastore",
     "Spanner",
     "Vertex AI",
@@ -128,7 +128,7 @@ const AdminPanel = () => {
     "Cloud Pub/Sub": ["Topics", "Subscriptions", "Schemas", "Snapshots"],
     "Cloud SQL" :["Instance","Database","Table","View"],
     "Dataform" : ["Repository","Code asset"],
-    "Dataplex Universal Catalog": ["Lakes", "Zones", "Assets", "Tasks", "Data Quality"],
+    "Knowledge Catalog": ["Lakes", "Zones", "Assets", "Tasks", "Data Quality"],
     "Dataproc Metastore": ["Databases", "Tables", "Functions", "Partitions"],
     "Spanner": ["Databases", "Tables", "Indexes", "Backups"],
     "Vertex AI": ["Models", "Endpoints", "Training Jobs", "Datasets"],
@@ -175,10 +175,12 @@ const AdminPanel = () => {
     });
 
     // Build nested structures keyed by selected items with their selected sub-items
+    const PRODUCT_API_NAMES: Record<string, string> = { "Knowledge Catalog": "Dataplex Universal Catalog" };
     const assetsObj: Record<string, string[]> = {};
     products.forEach((product) => {
       const sp = selectedAssetsByProduct[product] || [];
-      assetsObj[product] = sp;
+      const apiProduct = PRODUCT_API_NAMES[product] || product;
+      assetsObj[apiProduct] = sp;
     });
     setSelectedAssetsByProduct(assetsObj);
 
@@ -189,16 +191,18 @@ const AdminPanel = () => {
     });
     setSelectedAspectNamesByType(aspectNamesObj);
 
+    const apiProducts = products.map((p) => PRODUCT_API_NAMES[p] || p);
+
     console.log('Aspect Names Array: ', aspectNamesObj);
     console.log('Aspect Type: ', aspectType);
     console.log('Assets: ', assetsObj);
-    console.log('Products: ', products);
+    console.log('Products: ', apiProducts);
 
     axios.post(URLS.API_URL+ URLS.ADMIN_CONFIGURE, {
         aspectName: aspectNamesObj,
         aspectType: aspectType,
         assets: assetsObj,
-        products: products
+        products: apiProducts
       },
       {
         headers: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -6,12 +6,14 @@ import {
   List,
   Tabs,
   Tab,
-  Button,
+  IconButton,
+  Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import NothingImage from "../../assets/images/nothing-image.png";
 
-import { ArrowBack } from "@mui/icons-material";
-import { type GlossaryItem, type FilterChip } from "./GlossaryDataType";
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted } from "@mui/icons-material";
+import { type GlossaryItem, type FilterChip, type FilterFieldType, FILTER_FIELD_LABELS } from "./GlossaryDataType";
 import PreviewAnnotation from "../Annotation/PreviewAnnotation";
 import AnnotationFilter from "../Annotation/AnnotationFilter";
 import ResourcePreview from "../Common/ResourcePreview";
@@ -26,10 +28,15 @@ import {
   filterGlossaries,
   setActiveFilters,
   clearFilters,
+  setGlossarySelectedId,
+  setGlossaryExpandedIds,
+  setGlossaryTabValue,
 } from "../../features/glossaries/glossariesSlice";
 import { getProjects } from "../../features/projects/projectsSlice";
+import { setSideNavOpen } from "../../features/search/searchSlice";
 import { useAuth } from "../../auth/AuthProvider";
 import ShimmerLoader from "../Shimmer/ShimmerLoader";
+import GlossariesPageSkeleton from "./GlossariesPageSkeleton";
 import {
   extractGlossaryId,
   normalizeId,
@@ -40,15 +47,15 @@ import {
   collectAncestorIdsOfMatches,
 } from "../../utils/glossaryUtils";
 import { getIcon } from "./glossaryUIHelpers";
+import { GLOSSARY_COLORS } from "../../constants/glossaryIcons";
+import ThemedIconContainer from "../Common/ThemedIconContainer";
 import SidebarItem from "./SidebarItem";
 import GlossariesCategoriesTerms from "./GlossariesCategoriesTerms";
 import GlossariesSynonyms from "./GlossariesSynonyms";
 import GlossariesLinkedAssets from "./GlossariesLinkedAssets";
-import GlossaryFilterInput from "./GlossaryFilterInput";
+import FilterBar, { FilterBarChips } from "../Common/FilterBar";
+import type { ActiveFilter } from "../Common/FilterBar";
 import DetailPageOverview from "../DetailPageOverview/DetailPageOverview";
-import DetailPageOverviewSkeleton from "../DetailPageOverview/DetailPageOverviewSkeleton";
-import GlossariesCategoriesTermsSkeleton from "./GlossariesCategoriesTermsSkeleton";
-import GlossariesSynonymsSkeleton from "./GlossariesSynonymsSkeleton";
 
 /**
  * Transforms a GlossaryItem into the entry format expected by DetailPageOverview.
@@ -142,6 +149,31 @@ const transformGlossaryToEntry = (item: GlossaryItem) => {
  * Glossaries page layout including the sidebar, main content tabs, and asset preview panels.
  */
 
+const LABEL_TO_FIELD: Record<string, FilterFieldType> = {
+  'Name': 'name',
+  'Parent': 'parent',
+  'Synonym': 'synonym',
+  'Contact': 'contact',
+  'Labels': 'labels',
+  'Aspect': 'aspect',
+};
+
+const chipToActiveFilter = (chip: FilterChip): ActiveFilter => ({
+  id: chip.id,
+  property: chip.showFieldLabel === false ? '' : FILTER_FIELD_LABELS[chip.field],
+  values: [chip.value],
+  isOr: chip.connector === 'OR',
+});
+
+const activeFilterToChip = (filter: ActiveFilter): FilterChip => ({
+  id: filter.id || `filter-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+  field: LABEL_TO_FIELD[filter.property] || 'name',
+  value: filter.values[0] || '',
+  displayLabel: filter.property ? `${filter.property}: ${filter.values[0]}` : filter.values[0],
+  connector: filter.isOr ? 'OR' : undefined,
+  showFieldLabel: !!filter.property,
+});
+
 const Glossaries = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
@@ -156,9 +188,59 @@ const Glossaries = () => {
   } = useSelector((state: any) => state.glossaries);
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
 
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [tabValue, setTabValue] = useState(0);
+  const reduxSelectedId = useSelector((state: any) => state.glossaries.selectedId) as string;
+  const reduxExpandedIds = useSelector((state: any) => state.glossaries.expandedIds) as string[];
+  const reduxTabValue = useSelector((state: any) => state.glossaries.tabValue) as number;
+
+  const [selectedId, _setSelectedId] = useState<string>(reduxSelectedId);
+  const [expandedIds, _setExpandedIds] = useState<Set<string>>(new Set(reduxExpandedIds));
+  const [tabValue, _setTabValue] = useState(reduxTabValue);
+
+  // Stable wrapper functions that sync local state to Redux
+  const setSelectedId = useCallback((id: string) => {
+    _setSelectedId(id);
+    dispatch(setGlossarySelectedId(id));
+  }, [dispatch]);
+  const setExpandedIds = useCallback((ids: Set<string>) => {
+    _setExpandedIds(ids);
+    dispatch(setGlossaryExpandedIds(Array.from(ids)));
+  }, [dispatch]);
+  const setTabValue = useCallback((val: number) => {
+    _setTabValue(val);
+    dispatch(setGlossaryTabValue(val));
+  }, [dispatch]);
+  const [glossaryFilterText, setGlossaryFilterText] = useState('');
+
+  const handleFilterBarChange = useCallback((newFilters: ActiveFilter[]) => {
+    const chips = newFilters.map(activeFilterToChip);
+    dispatch(setActiveFilters(chips));
+    if (chips.length > 0 && user?.token) {
+      dispatch(filterGlossaries({ filters: chips, id_token: user.token }));
+    } else {
+      dispatch(clearFilters());
+    }
+  }, [dispatch, user?.token]);
+
+  const handleRemoveFilterChip = useCallback((filter: ActiveFilter) => {
+    const remaining = activeFilters.filter((f: FilterChip) => f.id !== filter.id);
+    dispatch(setActiveFilters(remaining));
+    if (remaining.length > 0 && user?.token) {
+      dispatch(filterGlossaries({ filters: remaining, id_token: user.token }));
+    } else {
+      dispatch(clearFilters());
+    }
+  }, [dispatch, activeFilters, user?.token]);
+
+  const handleRemoveOrConnector = useCallback((filter: ActiveFilter) => {
+    const updated = activeFilters.map((f: FilterChip) =>
+      f.id === filter.id ? { ...f, connector: undefined } : f
+    );
+    dispatch(setActiveFilters(updated));
+    if (updated.length > 0 && user?.token) {
+      dispatch(filterGlossaries({ filters: updated, id_token: user.token }));
+    }
+  }, [dispatch, activeFilters, user?.token]);
+
   const [contentSearchTerm, setContentSearchTerm] = useState("");
   const [relationFilter, setRelationFilter] = useState<
     "all" | "synonym" | "related"
@@ -172,12 +254,19 @@ const Glossaries = () => {
   const [isAssetPreviewOpen, setIsAssetPreviewOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [sortBy, setSortBy] = useState<"name" | "lastModified">("lastModified");
-  const fetchedParentIds = React.useRef(new Set<string>());
+  const fetchedParentIds = React.useRef(new Set<string>(
+    glossaryItems
+      .filter((item: GlossaryItem) => item.children && item.children.length > 0)
+      .map((item: GlossaryItem) => item.id)
+  ));
   const manualSelectionId = React.useRef<string | null>(null);
   const wasSearching = React.useRef(false);
   const initialFilterExpansionSet = React.useRef(false);
   const [isSidebarLoading, setIsSidebarLoading] = useState(false);
   const [isContentLoading, setIsContentLoading] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const isSidebarOpen = useSelector((state: any) => state.search.isSideNavOpen);
+  const isSmallScreen = useMediaQuery('(max-width: 1280px)');
 
   // Use filtered tree when filters are active, otherwise use all glossary items
   const displayGlossaries = useMemo(() => {
@@ -217,10 +306,10 @@ const Glossaries = () => {
     }
   }, [glossaryItems, selectedId, dispatch, user?.token]);
 
-  // Clear filters when navigating away from Glossaries
+  // Reset sidebar when navigating away from Glossaries
   useEffect(() => {
     return () => {
-      dispatch(clearFilters());
+      dispatch(setSideNavOpen(true));
     };
   }, [dispatch]);
 
@@ -266,6 +355,12 @@ const Glossaries = () => {
     if (!selectedId) return null;
     return findItem(glossaryItems, selectedId);
   }, [selectedId, glossaryItems]);
+
+  // Reset description expanded state when selected item changes
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [selectedId]);
+
 
   const breadcrumbs = useMemo(() => {
     if (!selectedId) return [];
@@ -435,18 +530,12 @@ const Glossaries = () => {
 
   // --- Filter & Sort ---
   const filteredCategories = useMemo(() => {
-    const filtered = categories.filter((c) =>
-      c.displayName.toLowerCase().includes(contentSearchTerm.toLowerCase())
-    );
-    return sortItems(filtered);
-  }, [categories, contentSearchTerm, sortOrder]);
+    return sortItems([...categories]);
+  }, [categories, sortOrder]);
 
   const filteredTerms = useMemo(() => {
-    const filtered = terms.filter((t) =>
-      t.displayName.toLowerCase().includes(contentSearchTerm.toLowerCase())
-    );
-    return sortItems(filtered);
-  }, [terms, contentSearchTerm, sortOrder]);
+    return sortItems([...terms]);
+  }, [terms, sortOrder]);
 
   const hasVisibleAspects = useMemo(() => {
     const aspects = selectedItem?.aspects;
@@ -574,71 +663,85 @@ const Glossaries = () => {
     <Box
       sx={{
         display: "flex",
-        justifyContent: "center",
         alignItems: "flex-start",
         px: 0,
-        pb: 2,
+        pb: 0,
         pt: 0,
-        backgroundColor: "#F8FAFD",
+        backgroundColor: "#fff",
         height: "calc(100vh - 72px)",
         width: "100%",
         overflow: "hidden",
       }}
     >
-      {/* SIDEBAR CARD */}
+      {/* SIDEBAR CARD - Fixed Position */}
       <Paper
         elevation={0}
         sx={{
-          width: "18%",
-          minWidth: "240px",
-          height: "calc(100vh - 80px)",
-          borderRadius: "24px",
-          backgroundColor: "#fff",
-          border: "transparent",
-          mr: "2%",
+          position: "fixed",
+          left: isSidebarOpen ? "96px" : "-252px",
+          top: 0,
+          width: "252px",
+          height: "100vh",
+          backgroundColor: "#F8FAFD",
           display: "flex",
           flexDirection: "column",
-          flexShrink: 0,
           overflow: "hidden",
-          py: "20px",
-          gap: "8px",
+          overflowY: "auto",
+          scrollbarWidth: "none",
+          borderRadius: 0,
+          zIndex: 1100,
+          transition: "left 0.3s ease-in-out",
         }}
       >
-        <Box sx={{ mb: 1 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontFamily: "Google Sans Text",
-              fontSize: "16px",
-              fontWeight: 500,
-              lineHeight: "24px",
-              color: "#000000",
-              mb: 2,
-              px: 2.5,
-            }}
-          >
-            Business Glossaries
-          </Typography>
-          <GlossaryFilterInput
-            filters={activeFilters}
-            onFiltersChange={(newFilters: FilterChip[]) => {
-              dispatch(setActiveFilters(newFilters));
-              if (newFilters.length > 0 && user?.token) {
-                dispatch(
-                  filterGlossaries({
-                    filters: newFilters,
-                    id_token: user.token,
-                  })
-                );
-              } else {
-                dispatch(clearFilters());
-              }
-            }}
-            isLoading={filterStatus === "loading"}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          backgroundColor: "#F8FAFD",
+          padding: "24px 20px 0 20px",
+          boxSizing: "border-box",
+        }}>
+          <Typography sx={{
+            fontWeight: 500,
+            fontSize: "16px",
+            lineHeight: "24px",
+            color: "#1F1F1F",
+            fontFamily: '"Google Sans", sans-serif',
+          }}>Business Glossaries</Typography>
+        </div>
+        <Box sx={{ pt: '12px', pb: '8px', px: '20px' }}>
+          <FilterBar
+            filterText={glossaryFilterText}
+            onFilterTextChange={setGlossaryFilterText}
+            propertyNames={[
+              { name: 'Name', mode: 'text' as const },
+              { name: 'Parent', mode: 'text' as const },
+              { name: 'Synonym', mode: 'text' as const },
+              { name: 'Contact', mode: 'text' as const },
+              { name: 'Labels', mode: 'text' as const },
+              { name: 'Aspect', mode: 'text' as const },
+            ]}
+            activeFilters={activeFilters.map(chipToActiveFilter)}
+            onActiveFiltersChange={handleFilterBarChange}
+            defaultProperty="Name"
             placeholder="Filter Glossaries"
+            marginLeft="0px"
+            isPreview
+            hideChips
+            showTextInFilterMenu
+          />
+          <FilterBarChips
+            activeFilters={activeFilters.map(chipToActiveFilter)}
+            onRemoveFilter={handleRemoveFilterChip}
+            onRemoveOrConnector={handleRemoveOrConnector}
+            marginLeft="0px"
           />
         </Box>
-        <List sx={{ overflowY: "auto", flex: 1, pt: 0, px: 0 }}>
+        <List sx={{ overflowY: "auto", flex: 1, pt: 0, px: 0, scrollbarWidth: "none" }}>
           {shouldShowSidebarShimmer ? (
             <Box sx={{ px: 2, pt: 1 }}>
               <ShimmerLoader count={6} type="simple-list" />
@@ -671,97 +774,184 @@ const Glossaries = () => {
         </List>
       </Paper>
 
-      {/* MAIN CONTENT CARD */}
+      {/* MAIN CONTENT CARD - Shifted right for fixed sidebar */}
       <Paper
         elevation={0}
         sx={{
-          flex: 1,
-          height: "calc(100vh - 80px)",
-          borderRadius: "24px",
+          marginLeft: isSidebarOpen ? "252px" : "0px",
+          width: isSidebarOpen ? "calc(100% - 252px)" : "100%",
+          height: "calc(100vh - 72px)",
+          borderRadius: "0px",
           backgroundColor: "#fff",
-          border: "transparent",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           position: "relative",
+          transition: "margin-left 0.3s ease-in-out, width 0.3s ease-in-out",
         }}
       >
+        {(status === "loading" && !selectedItem) || isContentLoading ? (
+          <GlossariesPageSkeleton />
+        ) : (
+        <>
         {/* HEADER SECTION */}
         <Box
           sx={{
-            height: "102px",
-            borderBottom: "1px solid #DADCE0",
-            position: "relative",
             flexShrink: 0,
           }}
         >
+          {/* Sections Toggle Button */}
+          <Box sx={{ padding: "12px 20px 0px" }}>
+            <span
+              style={{
+                boxSizing: "border-box",
+                display: "inline-flex",
+                flexDirection: "row",
+                alignItems: "center",
+                padding: "8px 13px",
+                gap: "8px",
+                height: "32px",
+                border: isSidebarOpen ? "none" : "1px solid #0E4DCA",
+                borderRadius: "59px",
+                background: isSidebarOpen ? "#0E4DCA" : "none",
+                color: isSidebarOpen ? "#EDF2FC" : "#0E4DCA",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newState = !isSidebarOpen;
+                dispatch(setSideNavOpen(newState));
+                if (isSmallScreen && newState) {
+                  setAssetPreviewData(null);
+                  setIsAssetPreviewOpen(false);
+                }
+              }}
+            >
+              {isSidebarOpen ? <Close style={{ width: "16px", height: "16px", flexShrink: 0 }} /> : <FormatListBulleted style={{ width: "16px", height: "16px", flexShrink: 0 }} />}
+              <span style={{
+                fontFamily: '"Google Sans", sans-serif',
+                fontWeight: 500,
+                fontSize: "12px",
+                lineHeight: "16px",
+                letterSpacing: "0.1px",
+                whiteSpace: "nowrap",
+              }}>Sections</span>
+            </span>
+          </Box>
+
           {/* Breadcrumbs/Title Row */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1,
-              position: "absolute",
-              top: "20px",
-              left: "20px",
+              gap: "20px",
+              padding: "20px 20px 0px",
             }}
           >
-            {status === "loading" && !selectedItem ? (
-              // Title Shimmer: Used only on initial load when title is unknown
-              <Box sx={{ width: "300px" }}>
-                <ShimmerLoader count={1} type="header" />
-              </Box>
-            ) : (
+            {(
               <>
                 {breadcrumbs.length > 1 && (
-                  <Button
-                    sx={{ minWidth: "auto", p: 0.5, mr: 0.5, color: "#5f6368" }}
+                  <IconButton
+                    sx={{ p: '4px', mr: 0.5, width: '40px', height: '40px', borderRadius: '50%', color: '#0B57D0', transition: 'background-color 0.2s', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}
                     onClick={() => {
                       setSelectedId(breadcrumbs[breadcrumbs.length - 2].id);
                       setTabValue(0);
                     }}
                   >
-                    <ArrowBack fontSize="small" />
-                  </Button>
+                    <ArrowBack style={{ fontSize: "24px" }} />
+                  </IconButton>
                 )}
-                <Box
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <ThemedIconContainer iconColor={GLOSSARY_COLORS[selectedItem?.type || "term"]}>
                   {getIcon(selectedItem?.type || "term", "medium")}
-                </Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontFamily: '"Google Sans", sans-serif',
-                    fontWeight: 500,
-                    fontSize: "18px",
-                    lineHeight: "24px",
-                    color: "#1F1F1F",
-                  }}
-                >
-                  {selectedItem?.displayName}
-                </Typography>
+                </ThemedIconContainer>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+                    <Tooltip title={selectedItem?.displayName || ''} arrow placement="top">
+                      <label style={{
+                        fontFamily: '"Google Sans", sans-serif',
+                        color: "#1F1F1F",
+                        fontSize: "28px",
+                        fontWeight: "400",
+                        lineHeight: "36px",
+                        maxWidth: "500px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {selectedItem?.displayName}
+                      </label>
+                    </Tooltip>
+                  </div>
+                </div>
               </>
             )}
           </Box>
 
+          {/* Description Section */}
+          {selectedItem && (
+            <div style={{ padding: "16px 20px 0px", maxWidth: "800px" }}>
+              {selectedItem.description ? (
+                <>
+                  <div style={{
+                    fontFamily: '"Google Sans", sans-serif',
+                    fontSize: "14px",
+                    lineHeight: "20px",
+                    color: "#575757",
+                    fontWeight: 400,
+                    maxHeight: descriptionExpanded ? "none" : "60px",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}>
+                    {selectedItem.description}
+                  </div>
+                  {selectedItem.description.length > 200 && (
+                    <button
+                      onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "6px 0px",
+                        color: "#0B57D0",
+                        fontFamily: '"Google Sans", sans-serif',
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        lineHeight: "20px",
+                      }}
+                    >
+                      {descriptionExpanded ? <KeyboardArrowUp sx={{ fontSize: "20px" }} /> : <KeyboardArrowDown sx={{ fontSize: "20px" }} />}
+                      {descriptionExpanded ? 'Show less' : 'Show more'}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div style={{
+                  fontFamily: '"Google Sans", sans-serif',
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  color: "#575757",
+                  fontWeight: 400,
+                  fontStyle: "italic",
+                }}>
+                  No description provided for this glossary item.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tabs */}
-          {(status === "loading" && !selectedItem) ||
-          isContentLoading ||
-          (selectedItem && !selectedItem.aspects) ||
+          {(selectedItem && !selectedItem.aspects) ||
           (selectedItem?.type === "term" && !selectedItem.relations) ? (
             // Tabs Shimmer: Horizontal row of placeholders to prevent layout jump
             <Box
               sx={{
-                position: "absolute",
-                bottom: "8px",
-                left: "20px",
+                paddingBottom: "8px",
+                paddingLeft: "36px",
                 display: "flex",
                 gap: "40px",
               }}
@@ -771,144 +961,119 @@ const Glossaries = () => {
               </Box>
             </Box>
           ) : (
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons={false}
+            <Box
               sx={{
-                position: "absolute",
-                bottom: 0,
-                left: "20px",
-                right: "20px",
-                minHeight: "44px",
-                height: "44px",
-                "& .MuiTabs-scrollableX": {
-                  overflowX: "auto",
-                  "::-webkit-scrollbar": { display: "none" },
+                paddingLeft: "1.75rem",
+                position: "relative",
+                "& .MuiTabs-root": {
+                  minHeight: "48px",
+                },
+                "& .MuiTab-root": {
+                  fontFamily: '"Product Sans Regular", sans-serif',
+                  fontSize: "14px",
+                  color: "#575757",
+                  textTransform: "none",
+                  minHeight: "48px",
+                  padding: "12px 20px 16px",
+                  "&.Mui-selected": {
+                    color: "#0E4DCA",
+                  },
+                  "&.Mui-disabled": { color: "#BDBDBD" },
                 },
                 "& .MuiTabs-indicator": {
-                  backgroundColor: "#0E4DCA",
-                  height: "3px",
-                  borderTopLeftRadius: "2.5px",
-                  borderTopRightRadius: "2.5px",
-                  bottom: 0,
-                },
-                "& .MuiTabs-flexContainer": {
-                  gap: "40px",
+                  backgroundColor: "transparent",
+                  "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    left: "20px",
+                    right: "20px",
+                    bottom: "-2px",
+                    height: "5px",
+                    backgroundColor: "white",
+                    borderTop: "3px solid #0E4DCA",
+                    borderRadius: "2.5px 2.5px 0 0",
+                  },
                 },
               }}
             >
-              {[
-                { label: "Overview", hide: false },
-                // Show Categories for Glossary & Category types
-                { label: "Categories", hide: isTerm },
-                // Show Terms for Glossary & Category types
-                { label: "Terms", hide: isTerm },
-                // Show Linked Assets only for Terms
-                { label: "Linked Assets", hide: !isTerm },
-                // Show Synonyms only for Terms
-                { label: "Synonyms & Related Terms", hide: !isTerm },
-                // Show Aspects only for Terms
-                { label: "Aspects", hide: !isTerm },
-              ].map((tab, index) => {
-                if (tab.hide) return null;
-                return (
-                  <Tab
-                    key={index}
-                    value={index}
-                    label={tab.label}
-                    disableRipple
-                    sx={{
-                      textTransform: "none",
-                      fontFamily: '"Google Sans Text", sans-serif',
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      lineHeight: "20px",
-                      minWidth: "auto",
-                      padding: "8px 0 0 0",
-                      color: "#575757",
-                      "&.Mui-selected": { color: "#0E4DCA" },
-                      "&.Mui-disabled": { color: "#BDBDBD" },
-                      alignItems: "flex-start",
-                      justifyContent: "flex-start",
-                    }}
-                  />
-                );
-              })}
-            </Tabs>
+              <Tabs
+                value={tabValue}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons={false}
+                aria-label="glossary tabs"
+                TabIndicatorProps={{
+                  children: <span className="indicator" />,
+                }}
+              >
+                {[
+                  { label: "Overview", hide: false },
+                  { label: "Categories", hide: isTerm },
+                  { label: "Terms", hide: isTerm },
+                  { label: "Linked Assets", hide: !isTerm },
+                  { label: "Synonyms & Related Terms", hide: !isTerm },
+                  { label: "Aspects", hide: !isTerm },
+                ].map((tab, index) => {
+                  if (tab.hide) return null;
+                  return (
+                    <Tab
+                      key={index}
+                      value={index}
+                      label={tab.label}
+                    />
+                  );
+                })}
+              </Tabs>
+            </Box>
           )}
+          <Box sx={{ mx: "20px", borderBottom: "1px solid #DADCE0" }} />
         </Box>
 
         {/* CONTENT BODY */}
-        {(status === "loading" && !selectedItem) ? (
-          <Box
-            sx={{
-              p: "20px",
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-            }}
-          >
-            <DetailPageOverviewSkeleton />
-          </Box>
-        ) : selectedItem ? (
-          <Box sx={{ p: "20px", overflowY: "hidden", flex: 1 }}>
+        {selectedItem ? (
+          <Box sx={{ p: "0px 20px 20px 20px", pt: tabValue !== 0 ? "20px" : "0px", overflowY: "hidden", flex: 1 }}>
             {tabValue === 0 && (
-              isContentLoading ? (
-                <DetailPageOverviewSkeleton />
-              ) : (
-                <Box
-                  sx={{
-                    height: "100%",
-                    overflowY: "auto",
-                    minHeight: 0,
-                  }}
-                >
-                  <DetailPageOverview
-                    entry={transformGlossaryToEntry(selectedItem)}
-                    css={{ width: "100%" }}
-                    accessDenied={accessDeniedItemId === selectedId}
-                  />
-                </Box>
-              )
+              <Box
+                sx={{
+                  height: "100%",
+                  overflowY: "auto",
+                  minHeight: 0,
+                }}
+              >
+                <DetailPageOverview
+                  entry={transformGlossaryToEntry(selectedItem)}
+                  css={{ width: "100%" }}
+                  accessDenied={accessDeniedItemId === selectedId}
+                />
+              </Box>
             )}
 
             {!isTerm && tabValue === 1 && (
-              isContentLoading ? (
-                <GlossariesCategoriesTermsSkeleton />
-              ) : (
-                <GlossariesCategoriesTerms
-                  mode="categories"
-                  items={filteredCategories}
-                  searchTerm={contentSearchTerm}
-                  onSearchTermChange={setContentSearchTerm}
-                  sortBy={sortBy}
-                  sortOrder={sortOrder}
-                  onSortByChange={setSortBy}
-                  onSortOrderToggle={handleSortDirectionToggle}
-                  onItemClick={handleNavigate}
-                />
-              )
+              <GlossariesCategoriesTerms
+                mode="categories"
+                items={filteredCategories}
+                searchTerm={contentSearchTerm}
+                onSearchTermChange={setContentSearchTerm}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortByChange={setSortBy}
+                onSortOrderToggle={handleSortDirectionToggle}
+                onItemClick={handleNavigate}
+              />
             )}
 
             {!isTerm && tabValue === 2 && (
-              isContentLoading ? (
-                <GlossariesCategoriesTermsSkeleton />
-              ) : (
-                <GlossariesCategoriesTerms
-                  mode="terms"
-                  items={filteredTerms}
-                  searchTerm={contentSearchTerm}
-                  onSearchTermChange={setContentSearchTerm}
-                  sortBy={sortBy}
-                  sortOrder={sortOrder}
-                  onSortByChange={setSortBy}
-                  onSortOrderToggle={handleSortDirectionToggle}
-                  onItemClick={handleNavigate}
-                />
-              )
+              <GlossariesCategoriesTerms
+                mode="terms"
+                items={filteredTerms}
+                searchTerm={contentSearchTerm}
+                onSearchTermChange={setContentSearchTerm}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortByChange={setSortBy}
+                onSortOrderToggle={handleSortDirectionToggle}
+                onItemClick={handleNavigate}
+              />
             )}
             {/* TAB 3: LINKED ASSETS */}
             {isTerm && tabValue === 3 && (
@@ -920,26 +1085,27 @@ const Glossaries = () => {
                 onAssetPreviewChange={(data) => {
                   setAssetPreviewData(data);
                   setIsAssetPreviewOpen(!!data);
+                  if (isSmallScreen && data) {
+                    dispatch(setSideNavOpen(false));
+                  }
                 }}
+                isSidebarOpen={isSidebarOpen}
+                onSidebarToggle={(open) => dispatch(setSideNavOpen(open))}
               />
             )}
             {isTerm && tabValue === 4 && (
-              isContentLoading ? (
-                <GlossariesSynonymsSkeleton />
-              ) : (
-                <GlossariesSynonyms
-                  relations={relations}
-                  searchTerm={contentSearchTerm}
-                  onSearchTermChange={setContentSearchTerm}
-                  relationFilter={relationFilter}
-                  onRelationFilterChange={setRelationFilter}
-                  sortBy={sortBy}
-                  sortOrder={sortOrder}
-                  onSortByChange={setSortBy}
-                  onSortOrderToggle={handleSortDirectionToggle}
-                  onItemClick={handleNavigate}
-                />
-              )
+              <GlossariesSynonyms
+                relations={relations}
+                searchTerm={contentSearchTerm}
+                onSearchTermChange={setContentSearchTerm}
+                relationFilter={relationFilter}
+                onRelationFilterChange={setRelationFilter}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSortByChange={setSortBy}
+                onSortOrderToggle={handleSortDirectionToggle}
+                onItemClick={handleNavigate}
+              />
             )}
             {/* TAB 5: ASPECTS */}
             {isTerm && tabValue === 5 && (
@@ -947,9 +1113,6 @@ const Glossaries = () => {
                 {hasVisibleAspects ? (
                   <Box
                     sx={{
-                      border: "1px solid #e0e0e0",
-                      borderRadius: "8px",
-                      background: "#ffffff",
                       overflow: "hidden",
                       maxHeight: "100%",
                       display: "flex",
@@ -957,15 +1120,7 @@ const Glossaries = () => {
                     }}
                   >
                     {/* Aspect Filter Component */}
-                    <Box
-                      sx={{
-                        flexShrink: 0,
-                        "& > div": {
-                          marginTop: "0px !important",
-                          border: "none",
-                        },
-                      }}
-                    >
+                    <Box sx={{ flexShrink: 0 }}>
                       <AnnotationFilter
                         entry={selectedItem}
                         onFilteredEntryChange={setFilteredAnnotationEntry}
@@ -983,7 +1138,6 @@ const Glossaries = () => {
                           margin: 0,
                           background: "transparent",
                           borderRadius: "0px",
-                          borderTop: "1px solid #E0E0E0",
                           height: "auto",
                           overflow: "visible",
                         }}
@@ -1029,6 +1183,8 @@ const Glossaries = () => {
             </Box>
           </Box>
         )}
+        </>
+        )}
       </Paper>
       {/* 3. RESOURCE PREVIEW CARD */}
       {isTerm && tabValue === 3 && (
@@ -1038,17 +1194,18 @@ const Glossaries = () => {
             width: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
             minWidth: isAssetPreviewOpen ? "clamp(300px, 22vw, 360px)" : "0px",
 
-            height: "calc(100vh - 80px)",
-            borderRadius: "24px",
+            height: "calc(100vh - 100px)",
+            borderRadius: "0px",
             backgroundColor: "#fff",
             border: "transparent",
             display: "flex",
             flexDirection: "column",
-            overflow: "visible",
+            overflow: "hidden",
             flexShrink: 0,
             transition:
               "width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out, margin-left 0.3s ease-in-out",
-            marginLeft: isAssetPreviewOpen ? "2%" : 0,
+            marginLeft: isAssetPreviewOpen ? "2px" : 0,
+            marginRight: isAssetPreviewOpen ? "16px" : 0,
             opacity: isAssetPreviewOpen ? 1 : 0,
             borderWidth: isAssetPreviewOpen ? undefined : 0,
           }}

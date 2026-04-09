@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Alert, Box, Grid, Tooltip, IconButton, Typography, Skeleton, Tab, Tabs } from '@mui/material';
 import { Close, LockOutlined } from '@mui/icons-material';
 import './ResourcePreview.css';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchEntry } from '../../features/entry/entrySlice';
+import { fetchEntry, clearHistory } from '../../features/entry/entrySlice';
 import PreviewSchema from '../Schema/PreviewSchema';
 import PreviewAnnotation from '../Annotation/PreviewAnnotation';
 import SchemaFilter from '../Schema/SchemaFilter';
@@ -12,8 +13,9 @@ import { useNavigate } from 'react-router-dom';
 import SubmitAccess from '../SearchPage/SubmitAccess';
 import NotificationBar from '../SearchPage/NotificationBar';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
+import PreviewAnnotationSkeleton from '../Annotation/PreviewAnnotationSkeleton';
 import type { AppDispatch } from '../../app/store';
-import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink, getFormattedDateTimePartsByDateTime } from '../../utils/resourceUtils';
+import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, generateLookerStudioLink, getFormattedDateTimePartsByDateTime, extractProjectNumberFromEntryName, resolveProjectDisplayName } from '../../utils/resourceUtils';
 // import { useFavorite } from '../../hooks/useFavorite';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePreviewEntry } from '../../hooks/usePreviewEntry';
@@ -123,6 +125,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   const reduxEntry = useSelector((state: any) => state.entry.items);
   const reduxEntryStatus = useSelector((state: any) => state.entry.status);
   const reduxEntryError = useSelector((state: any) => state.entry.error);
+  const projectsList = useSelector((state: any) => state.projects.items);
 
   // Isolated preview hook (used in 'isolated' mode)
   const {
@@ -152,7 +155,13 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
     ? isolatedError
     : reduxEntryError;
   const number = entry?.entryType?.split('/')[1];
-  const contacts = entry?.aspects?.[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || [];
+  const rawContacts = entry?.aspects?.[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || [];
+  const contacts = rawContacts.filter((c: { structValue?: { fields?: { name?: { stringValue?: string }; id?: { stringValue?: string } } } }) => {
+    const fields = c?.structValue?.fields;
+    const name = fields?.name?.stringValue || '';
+    const id = fields?.id?.stringValue || '';
+    return name.trim() !== '' || id.trim() !== '';
+  });
   const schemaData = entry?.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
   const hasAnnotations = entry?.aspects ? Object.keys(entry.aspects).some(key => hasValidAnnotationData(entry.aspects[key])) : false;
 
@@ -160,6 +169,24 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   const { date: creationDate, time: creationTime } = getFormattedDateTimePartsByDateTime(previewData?.createTime);
   const { date: updateDate, time: updateTime } = getFormattedDateTimePartsByDateTime(previewData?.updateTime);
 
+
+  const projectDisplayName = useMemo(() => {
+    const fqn = previewData?.fullyQualifiedName || '';
+    const fromFqn = (fqn.split(':').pop() || '').split('.')[0];
+    if (fromFqn) return fromFqn;
+
+    const projectNumber =
+      extractProjectNumberFromEntryName(previewData?.name) ||
+      extractProjectNumberFromEntryName(previewData?.parentEntry);
+
+    if (projectNumber) {
+      const resolved = resolveProjectDisplayName(projectNumber, projectsList);
+      if (resolved) return resolved;
+      return projectNumber;
+    }
+
+    return '-';
+  }, [previewData?.fullyQualifiedName, previewData?.name, previewData?.parentEntry, projectsList]);
 
   const isTable = previewData?.name ? getEntryType(previewData.name, '/') == 'Tables' : false;
   const aspectsTabIndex = isTable ? 2 : 1;
@@ -173,6 +200,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
     if (onViewDetails) {
       onViewDetails(entry);
     } else {
+      dispatch(clearHistory());
       navigate('/view-details');
     }
   };
@@ -306,32 +334,18 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
   let annotationTab;
 
   if (entryStatus === 'loading') {
-    annotationTab = schema = (
-      <Grid
-        container
-        spacing={0}
-        direction="column"
-        alignItems="center"
-        justifyContent="center"
-        sx={{ 
-          minHeight: '50vh',
-        }}
-      >
-        <div style={{ fontSize: "1rem", color: mode === 'dark' ? '#9aa0a6' : "#575757", fontWeight: "500", marginTop: "1.25rem", fontFamily: "sans-serif", }}>
-          <ShimmerLoader type="list" count={3} />
-        </div>
-      </Grid>
+    schema = <ShimmerLoader type="preview-schema" count={5} />;
+    annotationTab = (
+      <Box sx={{ padding: '16px 0' }}>
+        <PreviewAnnotationSkeleton />
+      </Box>
     );
   } else if (entryStatus === 'succeeded') {
     schema = <PreviewSchema entry={filteredSchemaEntry || entry} sx={{ width: "100%", borderTopLeftRadius: '0px', borderTopRightRadius: '0px' }} />;
     annotationTab = <PreviewAnnotation entry={filteredAnnotationEntry || entry} css={{
       width: "100%",
-      border: mode === 'dark' ? '1px solid #3c4043' : '1px solid #E0E0E0',
-      borderRadius: "8px",
       backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
       overflow: "hidden",
-      borderTopLeftRadius: '0px',
-      borderTopRightRadius: '0px'
     }} isTopComponent={false}
     expandedItems={expandedAnnotations}
     setExpandedItems={setExpandedAnnotations}
@@ -600,7 +614,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
             },
             '& .MuiTab-root': {
               fontFamily: '"Product Sans Regular", sans-serif',
-              fontSize: '14px',
+              fontSize: 'var(--tab-font-size)',
               color: mode === 'dark' ? '#dedfe0' : '#575757',
               textTransform: 'none',
               minHeight: '44px',
@@ -675,9 +689,9 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                     <Skeleton variant="text" sx={{ fontSize: 'var(--desc-text-size)', width: '70%', ...(mode === 'dark' ? { backgroundColor: '#3c4043' } : {}) }} />
                   </div>
                   {/* Row skeletons */}
-                  {['Created', 'Last modified', 'Location', 'Last run', 'Contact(s)', 'Parent', 'Project'].map((label) => (
+                  {['Created', 'Last modified', 'Location', 'Contact(s)', 'Parent', 'Project'].map((label) => (
                     <div key={label} className="preview-overview-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
-                      <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px', minWidth: 'auto' }}>{label}</span>
+                      <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)', minWidth: 'auto' }}>{label}</span>
                       <Skeleton variant="text" sx={{ fontSize: 'var(--value-font-size)', width: '60%', flex: 1, ...(mode === 'dark' ? { backgroundColor: '#3c4043' } : {}) }} />
                     </div>
                   ))}
@@ -708,44 +722,36 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                   </div>
 
                   {/* Created */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', paddingTop: '20px', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Created</span>
-                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', paddingTop: '20px', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Created</span>
+                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word' }}>
                       {creationDate} {creationTime}
                     </span>
                   </div>
 
                   {/* Last modified */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Last modified</span>
-                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Last modified</span>
+                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word' }}>
                       {updateDate} {updateTime}
                     </span>
                   </div>
 
                   {/* Location */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Location</span>
-                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Location</span>
+                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word' }}>
                       {previewData.entrySource.location || '-'}
                     </span>
                   </div>
 
-                  {/* Last run */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Last run</span>
-                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {previewData.entrySource.lastRunTime || '-'}
-                    </span>
-                  </div>
-
                   {/* Contact(s) */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Contact(s)</span>
-                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Contact(s)</span>
+                    <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word', minWidth: 0 }}>
                       {entryStatus === 'succeeded' && contacts.length > 0 ? (
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', overflow: 'hidden', minWidth: 0 }}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getDisplayName(contacts[0])}</span>
+                        <span style={{ display: 'inline' }}>
+                          <span>{getDisplayName(contacts[0])}</span>
                           {contacts.length > 1 && (
                             <Tooltip
                               title={
@@ -758,7 +764,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                                 </Box>
                               }
                             >
-                              <span style={{ fontWeight: 500, color: mode === 'dark' ? '#8ab4f8' : '#0E4DCA', cursor: 'pointer' }}>
+                              <span style={{ fontWeight: 500, color: mode === 'dark' ? '#8ab4f8' : '#0E4DCA', cursor: 'pointer', marginLeft: '4px' }}>
                                 +{contacts.length - 1}
                               </span>
                             </Tooltip>
@@ -769,21 +775,21 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                   </div>
 
                   {/* Parent */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Parent</span>
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Parent</span>
                     <Tooltip title={getName(previewData.parentEntry, '/') || '-'} arrow>
-                      <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word' }}>
                         {getName(previewData.parentEntry, '/') || '-'}
                       </span>
                     </Tooltip>
                   </div>
 
                   {/* Project */}
-                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'flex-start', padding: 'var(--row-padding)', gap: '30px' }}>
-                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: '70px' }}>Project</span>
-                    <Tooltip title={((previewData?.fullyQualifiedName || '').split(':').pop() || '').split('.')[0] || '-'} arrow>
-                      <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {((previewData?.fullyQualifiedName || '').split(':').pop() || '').split('.')[0] || '-'}
+                  <div className="preview-overview-row" style={{ display: 'flex', alignItems: 'baseline', padding: 'var(--row-padding)', gap: 'var(--row-gap)' }}>
+                    <span style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--label-font-size)', fontWeight: 500, color: mode === 'dark' ? '#dedfe0' : '#5F6368', lineHeight: 'var(--label-line-height)', flexShrink: 0, width: 'var(--label-width)' }}>Project</span>
+                    <Tooltip title={projectDisplayName} arrow>
+                      <span className="preview-overview-value" style={{ fontFamily: '"Google Sans", sans-serif', fontSize: 'var(--value-font-size)', fontWeight: 400, color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', lineHeight: 'var(--value-line-height)', flex: 1, wordBreak: 'break-word' }}>
+                        {projectDisplayName}
                       </span>
                     </Tooltip>
                   </div>
@@ -818,13 +824,14 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
                 {entryStatus === 'succeeded' ? (
                   hasAnnotations ? (
                     <div>
-                      <AnnotationFilter
-                        entry={entry}
-                        onFilteredEntryChange={setFilteredAnnotationEntry}
-                        onCollapseAll={handleAnnotationCollapseAll}
-                        onExpandAll={handleAnnotationExpandAll}
-                      />
-                      {annotationTab}
+                        <AnnotationFilter
+                          entry={entry}
+                          onFilteredEntryChange={setFilteredAnnotationEntry}
+                          onCollapseAll={handleAnnotationCollapseAll}
+                          onExpandAll={handleAnnotationExpandAll}
+                          isPreview={true}
+                        />
+                        {annotationTab}
                     </div>
                   ) : (
                     <div style={{padding:"var(--empty-content-padding)", textAlign: "center", fontSize: "var(--empty-content-font-size)", color: mode === 'dark' ? '#9aa0a6' : "#575757"}}>
@@ -861,44 +868,50 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
         {preview}
       </div>
 
-      {/* Backdrop Overlay */}
-      {isSubmitAccessOpen && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1200,
-            cursor: 'pointer',
-            animation: 'fadeIn 0.3s ease-in-out',
-            '@keyframes fadeIn': {
-              from: { opacity: 0 },
-              to: { opacity: 1 }
-            }
-          }}
-          onClick={handleCloseSubmitAccess}
-        />
+      {/* Portal: Backdrop + Submit Access + Notification rendered at body level to escape parent stacking context */}
+      {createPortal(
+        <>
+          {/* Backdrop Overlay */}
+          {isSubmitAccessOpen && (
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: 1200,
+                cursor: 'pointer',
+                animation: 'fadeIn 0.3s ease-in-out',
+                '@keyframes fadeIn': {
+                  from: { opacity: 0 },
+                  to: { opacity: 1 }
+                }
+              }}
+              onClick={handleCloseSubmitAccess}
+            />
+          )}
+
+          {/* Submit Access Panel */}
+          {previewData && (<SubmitAccess
+            isOpen={isSubmitAccessOpen}
+            onClose={handleCloseSubmitAccess}
+            assetName={previewData?.entrySource?.displayName?.length > 0 ? previewData?.entrySource?.displayName : getName(previewData.name || '', '/')}
+            entry={entry}
+            onSubmitSuccess={handleSubmitSuccess}
+            previewData={previewData ?? null}
+          />)}
+
+          {/* Notification Bar */}
+          <NotificationBar
+            isVisible={isNotificationVisible}
+            onClose={handleCloseNotification}
+            message={notificationMessage}
+          />
+        </>,
+        document.body
       )}
-
-      {/* Submit Access Panel */}
-      {previewData && (<SubmitAccess
-        isOpen={isSubmitAccessOpen}
-        onClose={handleCloseSubmitAccess}
-        assetName={previewData?.entrySource?.displayName?.length > 0 ? previewData?.entrySource?.displayName : getName(previewData.name || '', '/')}
-        entry={entry}
-        onSubmitSuccess={handleSubmitSuccess}
-        previewData={previewData ?? null}
-      />)}
-
-      {/* Notification Bar */}
-      <NotificationBar
-        isVisible={isNotificationVisible}
-        onClose={handleCloseNotification}
-        message={notificationMessage}
-      />
     </>
   );
 };

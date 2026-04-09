@@ -95,6 +95,28 @@ vi.mock('../../components/Auth/SessionWarningModal', () => ({
   ),
 }));
 
+vi.mock('../../components/Auth/NoAccessModal', () => ({
+  NoAccessModal: () => <div data-testid="no-access-modal" />,
+}));
+
+vi.mock('../../contexts/NoAccessContext', () => ({
+  NoAccessProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: vi.fn(),
+    dismissNoAccess: vi.fn(),
+  }),
+}));
+
+vi.mock('../../auth/AuthProvider', () => ({
+  useAuth: () => ({ logout: vi.fn(), user: null, updateUser: vi.fn() }),
+}));
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+}));
+
 describe('SessionExpirationWrapper', () => {
   // Default mock return values
   const defaultSessionExpirationReturn = {

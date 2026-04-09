@@ -166,12 +166,20 @@ vi.mock('../../utils/resourceUtils', () => ({
     return { date: '1/1/2022', time: '12:00 AM' };
   }),
   generateLookerStudioLink: vi.fn((entry: any) => entry ? 'https://lookerstudio.google.com/test' : ''),
-  generateBigQueryLink: vi.fn((entry: any) => entry ? 'https://console.cloud.google.com/bigquery?project=test' : '')
+  generateBigQueryLink: vi.fn((entry: any) => entry ? 'https://console.cloud.google.com/bigquery?project=test' : ''),
+  extractProjectNumberFromEntryName: vi.fn((entryName?: string) => {
+    if (!entryName) return '';
+    const segments = entryName.split('/');
+    if (segments.length >= 2 && segments[0] === 'projects') return segments[1];
+    return '';
+  }),
+  resolveProjectDisplayName: vi.fn(() => '')
 }));
 
 // Mock Redux slice
 vi.mock('../../features/entry/entrySlice', () => ({
-  fetchEntry: vi.fn((args) => ({ type: 'fetchEntry', payload: args }))
+  fetchEntry: vi.fn((args) => ({ type: 'fetchEntry', payload: args })),
+  clearHistory: vi.fn(() => ({ type: 'entry/clearHistory' })),
 }));
 
 // Mock MUI icons
@@ -263,7 +271,8 @@ describe('ResourcePreview', () => {
           status: 'succeeded',
           error: null
         },
-        user: { mode: 'light' }
+        user: { mode: 'light' },
+        projects: { items: [] }
       };
       return selector(state);
     });
@@ -453,7 +462,8 @@ describe('ResourcePreview', () => {
             status: 'failed',
             error: { details: '403 PERMISSION_DENIED' }
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -674,12 +684,6 @@ describe('ResourcePreview', () => {
       expect(screen.getByText('US')).toBeInTheDocument();
     });
 
-    it('displays last run time as dash when not available', () => {
-      renderResourcePreview({ previewData: mockPreviewData });
-
-      expect(screen.getByText('Last run')).toBeInTheDocument();
-    });
-
     it('displays contacts when available', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
@@ -708,7 +712,8 @@ describe('ResourcePreview', () => {
             status: 'succeeded',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -758,7 +763,8 @@ describe('ResourcePreview', () => {
             status: 'succeeded',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -839,7 +845,8 @@ describe('ResourcePreview', () => {
             status: 'loading',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -861,12 +868,12 @@ describe('ResourcePreview', () => {
       expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
     });
 
-    it('shows shimmer loader in aspects tab during loading', () => {
+    it('shows skeleton loader in aspects tab during loading', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       fireEvent.click(screen.getByText('Aspects'));
 
-      expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
+      expect(screen.getByTestId('preview-annotation-skeleton')).toBeInTheDocument();
     });
 
     it('disables view details button during loading', () => {
@@ -888,7 +895,8 @@ describe('ResourcePreview', () => {
             status: 'failed',
             error: { details: '403 Forbidden' }
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -908,7 +916,8 @@ describe('ResourcePreview', () => {
             status: 'failed',
             error: { details: 'PERMISSION_DENIED' }
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -928,7 +937,8 @@ describe('ResourcePreview', () => {
             status: 'failed',
             error: { message: 'Network error' }
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -948,7 +958,8 @@ describe('ResourcePreview', () => {
             status: 'failed',
             error: { details: 'UNAUTHENTICATED' }
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -1147,7 +1158,8 @@ describe('ResourcePreview', () => {
             status: 'succeeded',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -1186,14 +1198,17 @@ describe('ResourcePreview', () => {
             status: 'succeeded',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
 
       renderResourcePreview({ previewData: mockPreviewData });
 
-      expect(screen.getByText('--')).toBeInTheDocument();
+      // Empty contact names are filtered out, so contacts section shows dash fallback
+      const contactsSection = screen.getByText('Contact(s)').parentElement;
+      expect(contactsSection).toHaveTextContent('-');
     });
 
     it('handles malformed contact data gracefully', () => {
@@ -1225,15 +1240,17 @@ describe('ResourcePreview', () => {
             status: 'succeeded',
             error: null
           },
-          user: { mode: 'light' }
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
 
       renderResourcePreview({ previewData: mockPreviewData });
 
-      // Should show fallback "--" for malformed data
-      expect(screen.getByText('--')).toBeInTheDocument();
+      // Malformed contacts are filtered out, so contacts section shows dash fallback
+      const contactsSection = screen.getByText('Contact(s)').parentElement;
+      expect(contactsSection).toHaveTextContent('-');
     });
   });
 });
