@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Skeleton } from '@mui/material';
+import { Box, Divider, Grid, Skeleton } from '@mui/material';
 
 /**
  * @file DetailPageOverviewSkeleton.tsx
@@ -7,152 +7,170 @@ import { Box, Grid, Skeleton } from '@mui/material';
  *
  * @description
  * This component displays a skeleton loading state that mimics the
- * DetailPageOverview layout. It uses a 9:3 grid ratio with accordion-like
- * skeleton boxes on the left (Details, Documentation) and right sidebar
- * (Contacts, Info, Usage Metrics, Labels).
+ * DetailPageOverview card-based layout. It uses a 9:3 grid ratio with
+ * card skeletons on the left (Table Info, Documentation) and right sidebar
+ * (Contacts, Usage Metrics, Timestamps, Labels).
  */
 
-const AccordionSkeleton: React.FC<{
-  rows?: number;
-  showAvatar?: boolean;
-  showChips?: boolean;
-}> = ({ rows = 4, showAvatar = false, showChips = false }) => (
+const CardSkeleton: React.FC<{
+  headerWidth?: number;
+  children: React.ReactNode;
+}> = ({ headerWidth = 120, children }) => (
   <Box
     sx={{
       border: '1px solid #DADCE0',
-      borderRadius: '8px',
-      mb: 2,
+      borderRadius: '12px',
+      marginTop: '10px',
       overflow: 'hidden',
+      backgroundColor: '#FFFFFF',
     }}
   >
-    {/* Accordion Header */}
+    {/* Card Header */}
     <Box
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
-        p: 2,
-        borderBottom: '1px solid #DADCE0',
+        gap: '12px',
+        padding: '16px 20px',
       }}
     >
-      <Skeleton variant="circular" width={24} height={24} />
-      <Skeleton variant="text" width={120} height={24} />
+      <Skeleton variant="rounded" width={32} height={32} sx={{ borderRadius: '6px', flexShrink: 0 }} />
+      <Skeleton variant="text" width={headerWidth} height={24} />
     </Box>
-    {/* Accordion Content */}
-    <Box sx={{ p: 2 }}>
-      {showAvatar ? (
-        // Contact-style rows with avatar
-        [1, 2].map((i) => (
-          <Box
-            key={i}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              mb: i < 2 ? 2 : 0,
-            }}
-          >
-            <Skeleton variant="circular" width={40} height={40} />
-            <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" width="60%" height={20} />
-              <Skeleton variant="text" width="40%" height={16} />
-            </Box>
-          </Box>
-        ))
-      ) : showChips ? (
-        // Chip-style content for labels
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton
-              key={i}
-              variant="rounded"
-              width={80 + i * 10}
-              height={24}
-              sx={{ borderRadius: '12px' }}
-            />
-          ))}
-        </Box>
-      ) : (
-        // Standard field rows
-        [...Array(rows)].map((_, i) => (
-          <Box
-            key={i}
-            sx={{
-              display: 'flex',
-              gap: 2,
-              mb: i < rows - 1 ? 2 : 0,
-            }}
-          >
-            <Skeleton variant="text" width={100} height={20} />
-            <Skeleton variant="text" width="60%" height={20} />
-          </Box>
-        ))
-      )}
-    </Box>
-  </Box>
-);
-
-const DocumentationSkeleton: React.FC = () => (
-  <Box
-    sx={{
-      border: '1px solid #DADCE0',
-      borderRadius: '8px',
-      overflow: 'hidden',
-    }}
-  >
-    {/* Accordion Header */}
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        p: 2,
-        borderBottom: '1px solid #DADCE0',
-      }}
-    >
-      <Skeleton variant="circular" width={24} height={24} />
-      <Skeleton variant="text" width={140} height={24} />
-    </Box>
-    {/* Documentation Content */}
-    <Box sx={{ p: 2 }}>
-      <Skeleton variant="text" width="100%" height={20} />
-      <Skeleton variant="text" width="95%" height={20} />
-      <Skeleton variant="text" width="90%" height={20} />
-      <Skeleton variant="text" width="85%" height={20} />
-      <Skeleton variant="text" width="70%" height={20} />
+    <Divider sx={{ width: '100%', borderColor: '#DADCE0' }} />
+    {/* Card Content */}
+    <Box sx={{ padding: '16px 20px' }}>
+      {children}
     </Box>
   </Box>
 );
 
 const DetailPageOverviewSkeleton: React.FC = () => {
   return (
-    <Box sx={{ p: 0 }}>
-      <Grid container spacing={2}>
-        {/* Left Panel - 9 columns */}
-        <Grid size={9}>
-          {/* Details Accordion Skeleton */}
-          <AccordionSkeleton rows={5} />
+    <Grid container spacing={0}>
+      {/* Left Panel - 9 columns */}
+      <Grid size={9} sx={{ padding: '10px 0px 10px 0px' }}>
+        {/* Table Info Card */}
+        <CardSkeleton headerWidth={100}>
+          {/* Schema tab skeleton */}
+          <Box sx={{ display: 'flex', gap: '16px', mb: 2 }}>
+            <Skeleton variant="text" width={60} height={20} />
+            <Skeleton variant="text" width={80} height={20} />
+          </Box>
+          {/* Table rows */}
+          {[...Array(6)].map((_, i) => (
+            <Box key={i} sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
+              <Skeleton variant="text" width={120} height={18} />
+              <Skeleton variant="text" width="40%" height={18} />
+              <Skeleton variant="text" width={80} height={18} />
+            </Box>
+          ))}
+        </CardSkeleton>
 
-          {/* Documentation Accordion Skeleton */}
-          <DocumentationSkeleton />
-        </Grid>
-
-        {/* Right Sidebar - 3 columns */}
-        <Grid size={3}>
-          {/* Contacts Accordion Skeleton */}
-          <AccordionSkeleton showAvatar />
-
-          {/* Info Accordion Skeleton */}
-          <AccordionSkeleton rows={2} />
-
-          {/* Usage Metrics Accordion Skeleton */}
-          <AccordionSkeleton rows={3} />
-
-          {/* Labels Accordion Skeleton */}
-          <AccordionSkeleton showChips />
-        </Grid>
+        {/* Documentation Card */}
+        <CardSkeleton headerWidth={140}>
+          <Skeleton variant="text" width="100%" height={18} />
+          <Skeleton variant="text" width="95%" height={18} />
+          <Skeleton variant="text" width="90%" height={18} />
+          <Skeleton variant="text" width="85%" height={18} />
+          <Skeleton variant="text" width="70%" height={18} />
+        </CardSkeleton>
       </Grid>
-    </Box>
+
+      {/* Right Sidebar - 3 columns */}
+      <Grid size={3} sx={{ padding: '10px 0px 10px 10px' }}>
+        {/* Contacts Card */}
+        <CardSkeleton headerWidth={90}>
+          {[1, 2].map((i) => (
+            <Box
+              key={i}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px 0px',
+                borderBottom: i < 2 ? '1px solid #DADCE0' : 'none',
+              }}
+            >
+              <Skeleton variant="circular" width={32} height={32} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="50%" height={16} />
+                <Skeleton variant="text" width="70%" height={14} />
+              </Box>
+            </Box>
+          ))}
+        </CardSkeleton>
+
+        {/* Usage Metrics Card */}
+        <CardSkeleton headerWidth={130}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width={80} height={12} />
+              <Skeleton variant="text" width={50} height={40} />
+              <Skeleton variant="text" width={70} height={12} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Skeleton variant="text" width={80} height={12} />
+              <Skeleton variant="text" width={40} height={40} />
+              <Skeleton variant="text" width={50} height={12} />
+            </Box>
+          </Box>
+        </CardSkeleton>
+
+        {/* Timestamps Card */}
+        <CardSkeleton headerWidth={110}>
+          {['Created', 'Last modified'].map((_, i) => (
+            <Box
+              key={i}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0px',
+                borderBottom: i < 1 ? '1px solid #DADCE0' : 'none',
+              }}
+            >
+              <Skeleton variant="text" width={80} height={14} />
+              <Skeleton variant="text" width={120} height={14} />
+            </Box>
+          ))}
+        </CardSkeleton>
+
+        {/* Additional Info Card */}
+        <CardSkeleton headerWidth={120}>
+          {[0, 1, 2].map((i) => (
+            <Box
+              key={i}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 0px',
+                borderBottom: i < 2 ? '1px solid #DADCE0' : 'none',
+              }}
+            >
+              <Skeleton variant="text" width={70} height={14} />
+              <Skeleton variant="text" width={100} height={14} />
+            </Box>
+          ))}
+        </CardSkeleton>
+
+        {/* Labels Card */}
+        <CardSkeleton headerWidth={70}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton
+                key={i}
+                variant="rounded"
+                width={70 + i * 10}
+                height={20}
+                sx={{ borderRadius: '8px' }}
+              />
+            ))}
+          </Box>
+        </CardSkeleton>
+      </Grid>
+    </Grid>
   );
 };
 

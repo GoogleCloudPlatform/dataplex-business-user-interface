@@ -134,7 +134,7 @@ vi.mock('../SearchPage/NotificationBar', () => ({
       <div data-testid="notification-bar">
         {message}
         <button data-testid="close-notification" onClick={onClose}>Close</button>
-        <button data-testid="undo-notification" onClick={onUndo}>Undo</button>
+        {onUndo && <button data-testid="undo-notification" onClick={onUndo}>Undo</button>}
       </div>
     ) : null;
   }
@@ -166,17 +166,26 @@ vi.mock('../../utils/resourceUtils', () => ({
     return { date: '1/1/2022', time: '12:00 AM' };
   }),
   generateLookerStudioLink: vi.fn((entry: any) => entry ? 'https://lookerstudio.google.com/test' : ''),
-  generateBigQueryLink: vi.fn((entry: any) => entry ? 'https://console.cloud.google.com/bigquery?project=test' : '')
+  generateBigQueryLink: vi.fn((entry: any) => entry ? 'https://console.cloud.google.com/bigquery?project=test' : ''),
+  extractProjectNumberFromEntryName: vi.fn((entryName?: string) => {
+    if (!entryName) return '';
+    const segments = entryName.split('/');
+    if (segments.length >= 2 && segments[0] === 'projects') return segments[1];
+    return '';
+  }),
+  resolveProjectDisplayName: vi.fn(() => '')
 }));
 
 // Mock Redux slice
 vi.mock('../../features/entry/entrySlice', () => ({
-  fetchEntry: vi.fn((args) => ({ type: 'fetchEntry', payload: args }))
+  fetchEntry: vi.fn((args) => ({ type: 'fetchEntry', payload: args })),
+  clearHistory: vi.fn(() => ({ type: 'entry/clearHistory' })),
 }));
 
 // Mock MUI icons
 vi.mock('@mui/icons-material', () => ({
-  Close: () => <div data-testid="CloseIcon">Close</div>
+  Close: () => <div data-testid="CloseIcon">Close</div>,
+  LockOutlined: () => <div data-testid="LockOutlinedIcon">Lock</div>
 }));
 
 describe('ResourcePreview', () => {
@@ -261,7 +270,9 @@ describe('ResourcePreview', () => {
           items: mockEntry,
           status: 'succeeded',
           error: null
-        }
+        },
+        user: { mode: 'light' },
+        projects: { items: [] }
       };
       return selector(state);
     });
@@ -308,7 +319,6 @@ describe('ResourcePreview', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       expect(screen.getByText('test-table')).toBeInTheDocument();
-      expect(screen.getByText('BigQuery')).toBeInTheDocument();
       expect(screen.getByText('View Details')).toBeInTheDocument();
       expect(screen.getByText('Request Access')).toBeInTheDocument();
     });
@@ -327,14 +337,13 @@ describe('ResourcePreview', () => {
       expect(screen.getByText('My Custom Display Name')).toBeInTheDocument();
     });
 
-    it('displays correct tags for BigQuery system', () => {
+    it('renders BigQuery icon for BigQuery system', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
-      const tags = screen.getAllByTestId('tag');
-      expect(tags[0]).toHaveTextContent('BigQuery');
+      expect(screen.getByAltText('Open in BigQuery')).toBeInTheDocument();
     });
 
-    it('displays correct tags for non-BigQuery systems', () => {
+    it('does not render BigQuery icon for non-BigQuery systems', () => {
       const customPreviewData = {
         ...mockPreviewData,
         entrySource: {
@@ -345,42 +354,7 @@ describe('ResourcePreview', () => {
 
       renderResourcePreview({ previewData: customPreviewData });
 
-      const tags = screen.getAllByTestId('tag');
-      expect(tags[0]).toHaveTextContent('cloud storage');
-    });
-
-    it('displays Custom tag when system is not provided', () => {
-      const customPreviewData = {
-        ...mockPreviewData,
-        entrySource: {
-          ...mockPreviewData.entrySource,
-          system: null
-        }
-      };
-
-      renderResourcePreview({ previewData: customPreviewData });
-
-      const tags = screen.getAllByTestId('tag');
-      expect(tags[0]).toHaveTextContent('Custom');
-    });
-
-    it('extracts entry type from entryType with dash separator', () => {
-      renderResourcePreview({ previewData: mockPreviewData });
-
-      const tags = screen.getAllByTestId('tag');
-      expect(tags[1]).toHaveTextContent('table');
-    });
-
-    it('extracts entry type from name when no dash in entryType', () => {
-      const customPreviewData = {
-        ...mockPreviewData,
-        entryType: 'tables'
-      };
-
-      renderResourcePreview({ previewData: customPreviewData });
-
-      const tags = screen.getAllByTestId('tag');
-      expect(tags[1]).toHaveTextContent('entries');
+      expect(screen.queryByAltText('Open in BigQuery')).not.toBeInTheDocument();
     });
   });
 
@@ -389,7 +363,7 @@ describe('ResourcePreview', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       expect(screen.getByAltText('Open in BigQuery')).toBeInTheDocument();
-      expect(screen.getByAltText('Open in Looker')).toBeInTheDocument();
+      expect(screen.getByAltText('Explore with Looker Studio')).toBeInTheDocument();
     });
 
     it('does not show BigQuery/Looker icons for non-BigQuery systems', () => {
@@ -404,7 +378,7 @@ describe('ResourcePreview', () => {
       renderResourcePreview({ previewData: customPreviewData });
 
       expect(screen.queryByAltText('Open in BigQuery')).not.toBeInTheDocument();
-      expect(screen.queryByAltText('Open in Looker')).not.toBeInTheDocument();
+      expect(screen.queryByAltText('Explore with Looker Studio')).not.toBeInTheDocument();
     });
 
     it('opens BigQuery link when clicked', () => {
@@ -428,7 +402,7 @@ describe('ResourcePreview', () => {
 
       renderResourcePreview({ previewData: mockPreviewData });
 
-      const lookerButton = screen.getByAltText('Open in Looker');
+      const lookerButton = screen.getByAltText('Explore with Looker Studio');
       fireEvent.click(lookerButton.parentElement!);
 
       expect(mockOpen).toHaveBeenCalledWith(
@@ -487,7 +461,9 @@ describe('ResourcePreview', () => {
             items: mockEntry,
             status: 'failed',
             error: { details: '403 PERMISSION_DENIED' }
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -609,7 +585,7 @@ describe('ResourcePreview', () => {
       expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
     });
 
-    it('closes notification when undo clicked', async () => {
+    it('does not show undo button in request access notification', async () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       // Open modal and submit
@@ -620,9 +596,7 @@ describe('ResourcePreview', () => {
         expect(screen.getByTestId('notification-bar')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('undo-notification'));
-
-      expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('undo-notification')).not.toBeInTheDocument();
     });
   });
 
@@ -696,10 +670,10 @@ describe('ResourcePreview', () => {
     it('displays creation and modification times', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
-      expect(screen.getByText('Creation Time')).toBeInTheDocument();
-      expect(screen.getByText('Last Modification Time')).toBeInTheDocument();
+      expect(screen.getByText('Created')).toBeInTheDocument();
+      expect(screen.getByText('Last modified')).toBeInTheDocument();
       // Verify the date/time sections exist by checking labels are present
-      const creationTimeSection = screen.getByText('Creation Time').parentElement;
+      const creationTimeSection = screen.getByText('Created').parentElement;
       expect(creationTimeSection).toBeInTheDocument();
     });
 
@@ -710,16 +684,10 @@ describe('ResourcePreview', () => {
       expect(screen.getByText('US')).toBeInTheDocument();
     });
 
-    it('displays last run time as dash when not available', () => {
-      renderResourcePreview({ previewData: mockPreviewData });
-
-      expect(screen.getByText('Last Run Time')).toBeInTheDocument();
-    });
-
     it('displays contacts when available', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
-      expect(screen.getByText('Contacts')).toBeInTheDocument();
+      expect(screen.getByText('Contact(s)')).toBeInTheDocument();
       expect(screen.getByText('john@example.com')).toBeInTheDocument();
     });
 
@@ -743,7 +711,9 @@ describe('ResourcePreview', () => {
             items: entryWithoutContacts,
             status: 'succeeded',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -751,7 +721,7 @@ describe('ResourcePreview', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       // The contacts section should show dash
-      const contactsSection = screen.getByText('Contacts').parentElement;
+      const contactsSection = screen.getByText('Contact(s)').parentElement;
       expect(contactsSection).toBeInTheDocument();
     });
 
@@ -792,7 +762,9 @@ describe('ResourcePreview', () => {
             items: entryWithEmptySchema,
             status: 'succeeded',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -872,7 +844,9 @@ describe('ResourcePreview', () => {
             items: null,
             status: 'loading',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -894,12 +868,12 @@ describe('ResourcePreview', () => {
       expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
     });
 
-    it('shows shimmer loader in aspects tab during loading', () => {
+    it('shows skeleton loader in aspects tab during loading', () => {
       renderResourcePreview({ previewData: mockPreviewData });
 
       fireEvent.click(screen.getByText('Aspects'));
 
-      expect(screen.getByTestId('shimmer-loader')).toBeInTheDocument();
+      expect(screen.getByTestId('preview-annotation-skeleton')).toBeInTheDocument();
     });
 
     it('disables view details button during loading', () => {
@@ -920,7 +894,9 @@ describe('ResourcePreview', () => {
             items: null,
             status: 'failed',
             error: { details: '403 Forbidden' }
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -939,7 +915,9 @@ describe('ResourcePreview', () => {
             items: null,
             status: 'failed',
             error: { details: 'PERMISSION_DENIED' }
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -958,7 +936,9 @@ describe('ResourcePreview', () => {
             items: null,
             status: 'failed',
             error: { message: 'Network error' }
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -977,7 +957,9 @@ describe('ResourcePreview', () => {
             items: null,
             status: 'failed',
             error: { details: 'UNAUTHENTICATED' }
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -1020,7 +1002,7 @@ describe('ResourcePreview', () => {
 
       renderResourcePreview({ previewData: mockPreviewData, demoMode: true });
 
-      const lookerButton = screen.getByAltText('Open in Looker');
+      const lookerButton = screen.getByAltText('Explore with Looker Studio');
       fireEvent.click(lookerButton.parentElement!);
 
       expect(mockOpen).not.toHaveBeenCalled();
@@ -1175,7 +1157,9 @@ describe('ResourcePreview', () => {
             items: entryWithSimpleContactName,
             status: 'succeeded',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
@@ -1213,14 +1197,18 @@ describe('ResourcePreview', () => {
             items: entryWithEmptyContact,
             status: 'succeeded',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
 
       renderResourcePreview({ previewData: mockPreviewData });
 
-      expect(screen.getByText('--')).toBeInTheDocument();
+      // Empty contact names are filtered out, so contacts section shows dash fallback
+      const contactsSection = screen.getByText('Contact(s)').parentElement;
+      expect(contactsSection).toHaveTextContent('-');
     });
 
     it('handles malformed contact data gracefully', () => {
@@ -1251,15 +1239,18 @@ describe('ResourcePreview', () => {
             items: entryWithMalformedContact,
             status: 'succeeded',
             error: null
-          }
+          },
+          user: { mode: 'light' },
+          projects: { items: [] }
         };
         return selector(state);
       });
 
       renderResourcePreview({ previewData: mockPreviewData });
 
-      // Should show fallback "--" for malformed data
-      expect(screen.getByText('--')).toBeInTheDocument();
+      // Malformed contacts are filtered out, so contacts section shows dash fallback
+      const contactsSection = screen.getByText('Contact(s)').parentElement;
+      expect(contactsSection).toHaveTextContent('-');
     });
   });
 });

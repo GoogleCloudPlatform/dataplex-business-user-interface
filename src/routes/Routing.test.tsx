@@ -417,7 +417,7 @@ describe('Routing', () => {
 
       expect(screen.getByText('For help contact over these email')).toBeInTheDocument();
       expect(screen.getByText('Admin/Support Contact Email')).toBeInTheDocument();
-      expect(screen.getByText('Dataplex Business Inteface Support')).toBeInTheDocument();
+      expect(screen.getByText('Knowledge Catalog Business Interface Support')).toBeInTheDocument();
       expect(screen.getByText('dataplex-interface-feedback@google.com')).toBeInTheDocument();
     });
   });

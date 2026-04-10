@@ -178,10 +178,21 @@ export const useSessionManagement = (
     if (!enabled || !user) return;
 
     if (document.visibilityState === 'visible') {
-      // Tab became visible - check token expiration
-      checkTokenExpiration();
+      // If modal is already open, recalculate remaining time from localStorage
+      // since browsers throttle/pause setInterval in hidden tabs
+      if (isModalOpenRef.current) {
+        const timeUntilExpiry = getTimeUntilExpiry();
+        if (timeUntilExpiry <= 0) {
+          handleSessionExpired();
+        } else {
+          const secondsRemaining = Math.floor(timeUntilExpiry / 1000);
+          startCountdown(secondsRemaining);
+        }
+      } else {
+        checkTokenExpiration();
+      }
     }
-  }, [enabled, user, checkTokenExpiration]);
+  }, [enabled, user, getTimeUntilExpiry, handleSessionExpired, startCountdown, checkTokenExpiration]);
 
   /**
    * Handle "Stay Logged In" button click

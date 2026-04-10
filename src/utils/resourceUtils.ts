@@ -1,3 +1,93 @@
+import BucketIcon from '../assets/svg/bucket_icon.svg';
+import ClusterIcon from '../assets/svg/cluster_icon.svg';
+import CodeAssetIcon from '../assets/svg/code_asset_icon.svg';
+import ConnectionIcon from '../assets/svg/connection_icon.svg';
+import DashboardIcon from '../assets/svg/dashboard_icon.svg';
+import DashboardElementIcon from '../assets/svg/dashboard_element_icon.svg';
+import DataExchangeIcon from '../assets/svg/data_exchange_icon.svg';
+import DataStreamIcon from '../assets/svg/data_stream_icon.svg';
+import DatabaseIcon from '../assets/svg/database_icon.svg';
+import DatabaseSchemaIcon from '../assets/svg/database_schema_icon.svg';
+import DatasetIcon from '../assets/svg/dataset_icon.svg';
+import ExploreIcon from '../assets/svg/explore_icon.svg';
+import FeatureGroupIcon from '../assets/svg/feature_group_icon.svg';
+import FeatureOnlineStoreIcon from '../assets/svg/feature_online_store_icon.svg';
+import ViewIcon from '../assets/svg/view_icon.svg';
+import FilesetIcon from '../assets/svg/fileset_icon.svg';
+import FolderIcon from '../assets/svg/folder_icon.svg';
+import FunctionIcon from '../assets/svg/function_icon.svg';
+
+import ListingIcon from '../assets/svg/listing_icon.svg';
+import LookIcon from '../assets/svg/look_icon.svg';
+import ModelIcon from '../assets/svg/model_icon.svg';
+import RepositoriesIcon from '../assets/svg/repositories_icon.svg';
+import GenericIcon from '../assets/svg/generic_icon.svg';
+import SchedulerIcon from '../assets/svg/scheduler_icon.svg';
+import TableIcon from '../assets/svg/table_icon.svg';
+
+export const getAssetIcon = (assetName: string) => {
+  switch (assetName) {
+    case 'Bucket':
+      return BucketIcon;
+    case 'Cluster':
+      return ClusterIcon;
+    case 'Code asset':
+      return CodeAssetIcon;
+    case 'Connection':
+      return ConnectionIcon;
+    case 'Dashboard':
+      return DashboardIcon;
+    case 'Dashboard element':
+      return DashboardElementIcon;
+    case 'Data exchange':
+      return DataExchangeIcon;
+    case 'Exchange':
+      return DataExchangeIcon;
+    case 'Data source connection':
+      return ConnectionIcon;
+    case 'Data stream':
+      return DataStreamIcon;
+    case 'Database':
+      return DatabaseIcon;
+    case 'Database schema':
+      return DatabaseSchemaIcon;
+    case 'Dataset':
+      return DatasetIcon;
+    case 'Explore':
+      return ExploreIcon;
+    case 'Feature group':
+      return FeatureGroupIcon;
+    case 'Feature online store':
+      return FeatureOnlineStoreIcon;
+    case 'Feature view':
+      return ViewIcon;
+    case 'Fileset':
+      return FilesetIcon;
+    case 'Folder':
+      return FolderIcon;
+    case 'Function':
+      return FunctionIcon;
+case 'Listing':
+      return ListingIcon;
+    case 'Look':
+      return LookIcon;
+    case 'Model':
+      return ModelIcon;
+    case 'Repository':
+      return RepositoriesIcon;
+    case 'View':
+      return ViewIcon;
+    case 'Resource':
+      return GenericIcon;
+    case 'Routine':
+      return SchedulerIcon;
+    case 'Table':
+      return TableIcon;
+    default:
+      return GenericIcon;
+  }
+};
+
 export const getName = (namePath: string = '', separator: string = '') => {
   const segments: string[] = namePath.split(separator);
   return (segments[segments.length - 1]);
@@ -37,11 +127,11 @@ export const getFormattedDateTimeParts = (timestamp: any) => {
     year: "numeric",
   }).format(myDate);
 
-  const time = new Intl.DateTimeFormat('en-US', { 
+  const time = new Intl.DateTimeFormat('en-US', {
     hour: "numeric",
     minute: "2-digit",
-    second: "2-digit", 
-    hour12: true 
+    second: "2-digit",
+    hour12: true
   }).format(myDate);
 
   return { date, time }; 
@@ -51,7 +141,7 @@ export const getFormattedDateTimePartsByDateTime = (dateTime: any) => {
   if (!dateTime) {
     return { date: '-', time: '' };
   }
-  
+
   let timeValue = dateTime;
   if (typeof dateTime === 'object' && dateTime !== null && 'seconds' in dateTime) {
     timeValue = Number(dateTime.seconds) * 1000;
@@ -63,17 +153,17 @@ export const getFormattedDateTimePartsByDateTime = (dateTime: any) => {
     return { date: '-', time: '' };
   }
 
-  const date = new Intl.DateTimeFormat('en-US', { 
-    month: "short", 
-    day: "numeric", 
+  const date = new Intl.DateTimeFormat('en-US', {
+    month: "long",
+    day: "numeric",
     year: "numeric",
   }).format(myDate);
 
-  const time = new Intl.DateTimeFormat('en-US', { 
+  const time = new Intl.DateTimeFormat('en-US', {
     hour: "numeric",
     minute: "2-digit",
-    second: "2-digit", 
-    hour12: true 
+    second: "2-digit",
+    hour12: true
   }).format(myDate);
 
   return { date, time }; 
@@ -139,8 +229,10 @@ export const hasValidAnnotationData = (aspectData: any): boolean => {
     if (item && typeof item === 'object' && 'kind' in item) {
        return (item.kind === 'stringValue' && item.stringValue) ||
               (item.kind === 'numberValue' && item.numberValue !== undefined) ||
-              (item.kind === 'boolValue') || 
-              (item.kind === "listValue" && item.listValue?.values?.length > 0);
+              (item.kind === 'boolValue') ||
+              (item.kind === "listValue" && item.listValue?.values?.length > 0) ||
+              (item.kind === 'structValue' && item.structValue?.fields &&
+               Object.keys(item.structValue.fields).length > 0);
     }
 
     return item !== null && item !== undefined && typeof item !== 'object';
@@ -168,4 +260,31 @@ const signatures:any = {
 
 export const getMimeType = (base64:string)=>{
     for(const sign in signatures)if(base64.startsWith(sign))  return signatures[sign];
+};
+
+export const normalizeSystemName = (system: string | undefined | null): string => {
+  if (!system) return '-';
+  const lower = system.toLowerCase();
+  if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog';
+  if (lower === 'bigquery') return 'BigQuery';
+  return system;
+};
+
+export const extractProjectNumberFromEntryName = (entryName: string | undefined): string => {
+  if (!entryName) return '';
+  const segments = entryName.split('/');
+  if (segments.length >= 2 && segments[0] === 'projects') {
+    return segments[1];
+  }
+  return '';
+};
+
+export const resolveProjectDisplayName = (
+  projectNumber: string,
+  projectsList: Array<{ projectId: string; name: string; displayName?: string }>
+): string => {
+  if (!projectNumber || !projectsList?.length) return '';
+  const match = projectsList.find((p: any) => p.name === `projects/${projectNumber}`);
+  if (!match) return '';
+  return match.projectId || match.displayName || '';
 };

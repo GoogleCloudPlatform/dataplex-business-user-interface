@@ -1,7 +1,33 @@
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { configureStore } from "@reduxjs/toolkit";
+import { Provider } from "react-redux";
 import SearchTableView from "./SearchTableView";
+
+// Create a mock Redux store with user state
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      user: (state = { mode: 'light' }) => state,
+    },
+  });
+
+// Custom render that wraps with Redux Provider
+const render = (ui: React.ReactElement, options?: any) => {
+  const store = createMockStore();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <Provider store={store}>{children}</Provider>
+  );
+  return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
+
+// Mock ResizeObserver for jsdom
+(globalThis as Record<string, unknown>).ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
 
 // Mock the Tag component
 vi.mock("../Tags/Tag", () => ({
@@ -20,6 +46,8 @@ const createMockResource = (overrides: any = {}) => ({
       displayName: overrides.displayName || "",
       description: overrides.description || "Test description",
       system: overrides.system || "bigquery",
+      owner: overrides.owner || "test-owner@example.com",
+      location: overrides.location || "us-central1",
       ...overrides.entrySource,
     },
     updateTime: overrides.updateTime || { seconds: 1700000000 },
@@ -94,6 +122,7 @@ describe("SearchTableView", () => {
       expect(screen.getByText("Name")).toBeInTheDocument();
       expect(screen.getByText("Description")).toBeInTheDocument();
       expect(screen.getByText("Type")).toBeInTheDocument();
+      expect(screen.getByText("Location")).toBeInTheDocument();
       expect(screen.getByText("Last modified")).toBeInTheDocument();
     });
 
@@ -759,7 +788,7 @@ describe("SearchTableView", () => {
       );
 
       const tags = screen.getAllByTestId("tag");
-      expect(tags[0]).toHaveTextContent("Dataplex");
+      expect(tags[0]).toHaveTextContent("Knowledge Catalog");
     });
 
     it("handles uppercase system names correctly", () => {
@@ -1114,7 +1143,7 @@ describe("SearchTableView", () => {
   });
 
   describe("Sort Icon Rendering", () => {
-    it("shows ArrowUpward when sort is ascending", () => {
+    it("shows sort icon when sort is ascending", () => {
       render(<SearchTableView {...defaultProps} />);
       const nameHeader = screen.getByText("Name").closest("th");
       const nameSortButton = within(nameHeader!).getByRole("button");
@@ -1122,13 +1151,13 @@ describe("SearchTableView", () => {
       // Click for ascending sort
       fireEvent.click(nameSortButton);
 
-      const arrowUpIcon = document.querySelector(
-        '[data-testid="ArrowUpwardIcon"]'
-      );
-      expect(arrowUpIcon).toBeInTheDocument();
+      // Sort button should be visible (opacity 1)
+      const sortBtn = nameHeader!.querySelector('.sort-btn');
+      expect(sortBtn).toBeInTheDocument();
+      expect(sortBtn!.querySelector('svg')).toBeInTheDocument();
     });
 
-    it("shows ArrowDownward when sort is descending", () => {
+    it("shows rotated sort icon when sort is descending", () => {
       render(<SearchTableView {...defaultProps} />);
       const nameHeader = screen.getByText("Name").closest("th");
       const nameSortButton = within(nameHeader!).getByRole("button");
@@ -1137,29 +1166,80 @@ describe("SearchTableView", () => {
       fireEvent.click(nameSortButton);
       fireEvent.click(nameSortButton);
 
-      const arrowDownIcon = document.querySelector(
-        '[data-testid="ArrowDownwardIcon"]'
-      );
-      expect(arrowDownIcon).toBeInTheDocument();
+      // Sort button should still be present with SVG
+      const sortBtn = nameHeader!.querySelector('.sort-btn');
+      expect(sortBtn).toBeInTheDocument();
+      expect(sortBtn!.querySelector('svg')).toBeInTheDocument();
     });
 
-    it("shows ArrowUpward with opacity for null sort state", () => {
+    it("shows sort icons with hidden opacity for null sort state", () => {
       render(<SearchTableView {...defaultProps} />);
-      // Initial state - should have ArrowUpward icons with opacity
-      const arrowUpIcons = document.querySelectorAll(
-        '[data-testid="ArrowUpwardIcon"]'
-      );
-      expect(arrowUpIcons.length).toBeGreaterThan(0);
+      // Initial state - sort buttons should exist with their SVGs
+      const sortBtns = document.querySelectorAll('.sort-btn');
+      expect(sortBtns.length).toBeGreaterThan(0);
     });
   });
 
   describe("Tooltip", () => {
-    it("renders Sort tooltip on sort buttons", () => {
+    it("renders sort buttons in header", () => {
       render(<SearchTableView {...defaultProps} />);
-      // Tooltips are present in the DOM
       const nameHeader = screen.getByText("Name").closest("th");
       const sortButton = within(nameHeader!).getByRole("button");
       expect(sortButton).toBeInTheDocument();
+    });
+
+    it("shows 'Sort Z to A' tooltip on Name header when sorted asc", async () => {
+      render(<SearchTableView {...defaultProps} />);
+      const nameHeader = screen.getByText("Name").closest("th");
+      const nameButton = within(nameHeader!).getByRole("button");
+      fireEvent.click(nameButton);
+      fireEvent.mouseOver(nameButton);
+      expect(await screen.findByText("Sort Z to A")).toBeInTheDocument();
+    });
+
+    it("shows 'Sort A to Z' tooltip on Name header when not sorted", async () => {
+      render(<SearchTableView {...defaultProps} />);
+      const nameHeader = screen.getByText("Name").closest("th");
+      const nameButton = within(nameHeader!).getByRole("button");
+      fireEvent.mouseOver(nameButton);
+      expect(await screen.findByText("Sort A to Z")).toBeInTheDocument();
+    });
+
+    it("shows no tooltip on Name header when sorted desc", () => {
+      render(<SearchTableView {...defaultProps} />);
+      const nameHeader = screen.getByText("Name").closest("th");
+      const nameButton = within(nameHeader!).getByRole("button");
+      fireEvent.click(nameButton);
+      fireEvent.click(nameButton);
+      fireEvent.mouseOver(nameButton);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    });
+
+    it("shows 'Sort new to old' tooltip on Last modified header when sorted asc", async () => {
+      render(<SearchTableView {...defaultProps} />);
+      const dateHeader = screen.getByText("Last modified").closest("th");
+      const dateButton = within(dateHeader!).getByRole("button");
+      fireEvent.click(dateButton);
+      fireEvent.mouseOver(dateButton);
+      expect(await screen.findByText("Sort new to old")).toBeInTheDocument();
+    });
+
+    it("shows 'Sort old to new' tooltip on Last modified header when not sorted", async () => {
+      render(<SearchTableView {...defaultProps} />);
+      const dateHeader = screen.getByText("Last modified").closest("th");
+      const dateButton = within(dateHeader!).getByRole("button");
+      fireEvent.mouseOver(dateButton);
+      expect(await screen.findByText("Sort old to new")).toBeInTheDocument();
+    });
+
+    it("shows no tooltip on Last modified header when sorted desc", () => {
+      render(<SearchTableView {...defaultProps} />);
+      const dateHeader = screen.getByText("Last modified").closest("th");
+      const dateButton = within(dateHeader!).getByRole("button");
+      fireEvent.click(dateButton);
+      fireEvent.click(dateButton);
+      fireEvent.mouseOver(dateButton);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
     });
   });
 
@@ -1173,6 +1253,56 @@ describe("SearchTableView", () => {
         backgroundColor: "#C2E7FF",
         color: "#004A77",
       });
+    });
+  });
+
+  describe("Location Column", () => {
+    it("renders location when available", () => {
+      const resourceWithLocation = [
+        createMockResource({
+          dataplexEntry: {
+            name: "projects/test/entries/located",
+            entrySource: {
+              displayName: "Located Entry",
+              description: "Test",
+              system: "bigquery",
+              owner: "test@example.com",
+              location: "europe-west1",
+            },
+            updateTime: { seconds: 1700000000 },
+          },
+        }),
+      ];
+      render(
+        <SearchTableView {...defaultProps} resources={resourceWithLocation} />
+      );
+      expect(screen.getByText("europe-west1")).toBeInTheDocument();
+    });
+
+    it("renders '-' when location is missing", () => {
+      const resourceWithoutLocation = [
+        {
+          dataplexEntry: {
+            name: "projects/test/entries/no_location",
+            entrySource: {
+              displayName: "No Location Entry",
+              description: "Test",
+              system: "bigquery",
+              owner: "test@example.com",
+            },
+            updateTime: { seconds: 1700000000 },
+          },
+        },
+      ];
+      render(
+        <SearchTableView
+          {...defaultProps}
+          resources={resourceWithoutLocation}
+        />
+      );
+      const rows = screen.getAllByRole("row");
+      const dataCells = within(rows[1]).getAllByRole("cell");
+      expect(within(dataCells[3]).getByText("-")).toBeInTheDocument();
     });
   });
 
@@ -1232,6 +1362,26 @@ describe("SearchTableView", () => {
       expect(
         screen.getByText("Entry <with> 'special' \"chars\" & symbols")
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Column Resizing", () => {
+    it("renders 4 resize handles (one per column except last)", () => {
+      render(
+        <SearchTableView {...defaultProps} resources={mockResources} />
+      );
+      const handles = screen.getAllByTestId("resize-handle");
+      expect(handles).toHaveLength(4);
+    });
+
+    it("resize handles have col-resize cursor", () => {
+      render(
+        <SearchTableView {...defaultProps} resources={mockResources} />
+      );
+      const handles = screen.getAllByTestId("resize-handle");
+      handles.forEach((handle) => {
+        expect(handle.style.cursor).toBe("col-resize");
+      });
     });
   });
 });

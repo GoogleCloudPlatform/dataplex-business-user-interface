@@ -17,9 +17,9 @@ const getAspectName = (name: string) => {
 // Thunk for searching resources based on a search term
 export const searchResourcesByTerm = createAsyncThunk('resources/searchResourcesByTerm', async (requestData: any , { rejectWithValue }) => {
   // If the search term is empty, we are returning an empty list.
-  if (!requestData.term) {
-    return [];
-  }
+  // if (!requestData.term) {
+  //   return [];
+  // }
 
   // If the term is not empty, we will perform a search.
   try {
@@ -39,7 +39,7 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
       //   searchString += `title:${requestData.term}|tags:${requestData.term}|fully_qualified_name:${requestData.term}|`;
       //   searchString += `category:${requestData.term}|displayName:${requestData.term}`;
       // }
-      searchString = requestData.term;
+      searchString = requestData.term?.trim() ?? '';
       if( requestData.filters && requestData.filters.length > 0) {
         let aspectType = '';
         let system = '';
@@ -74,7 +74,9 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
             // }
           }
           if(filter.type === 'system') {
-            system += (system != '' ? '|' : '') + `${filter.name.replaceAll(' ', '_').replace('/','').toUpperCase()}`;
+            const PRODUCT_API_NAMES: Record<string, string> = { "Knowledge Catalog": "Dataplex Universal Catalog" };
+            const apiName = PRODUCT_API_NAMES[filter.name] || filter.name;
+            system += (system != '' ? '|' : '') + `${apiName.replaceAll(' ', '_').replace('/','').toUpperCase()}`;
           }
           if(filter.type === 'typeAliases') {
             const filterName = filter.name.toLowerCase();
@@ -105,9 +107,9 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         //  )
 
         searchString += aspectType != '' ? ((searchString != '' ? ' ' : '') + `(${aspectType})`) : '';
-        searchString += system != '' ? (' ' + `(system=(${system}))`) : '';
-        searchString += typeAliases != '' ? (' ' + `(type=(${typeAliases}))`) : '';
-        searchString += project != '' ? (' ' + `(project=(${project}))`) : '';
+        searchString += system != '' ? ((searchString != '' ? ' ' : '') + `(system=(${system}))`) : '';
+        searchString += typeAliases != '' ? ((searchString != '' ? ' ' : '') + `(type=(${typeAliases}))`) : '';
+        searchString += project != '' ? ((searchString != '' ? ' ' : '') + `(projectid=(${project}))`) : '';
         searchString += semanticSearchFlags != '' ? ((searchString != '' ? ' ' : '') + `${semanticSearchFlags}`) : '';
         // Non-semantic search separator logic (commented out — kept for future re-enabling)
         // searchString += system != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(system=(${system}))`) : '';
@@ -254,6 +256,12 @@ type ResourcesState = {
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: any | string | undefined | unknown | null;
   entryListError: any | string | undefined | unknown | null;
+  // Browse by Annotation UI state preserved across navigation
+  browseSelectedItemName: string | null;
+  browseSelectedSubItem: any | null;
+  browseTabValue: number;
+  browseDynamicAnnotationsData: any[];
+  browseSubTypesWithCache: Record<string, boolean>;
 };
 
 const initialState: ResourcesState = {
@@ -270,6 +278,11 @@ const initialState: ResourcesState = {
   status: 'idle',
   error: null,
   entryListError: null,
+  browseSelectedItemName: null,
+  browseSelectedSubItem: null,
+  browseTabValue: 0,
+  browseDynamicAnnotationsData: [],
+  browseSubTypesWithCache: {},
 };
 
 // createSlice generates actions and reducers for a slice of the Redux state.
@@ -309,6 +322,28 @@ export const resourcesSlice = createSlice({
     },
     removeAspectBrowseCacheEntry: (state, action) => {
       delete state.aspectBrowseCache[action.payload];
+    },
+    setBrowseSelectedItemName: (state, action) => {
+      state.browseSelectedItemName = action.payload;
+    },
+    setBrowseSelectedSubItem: (state, action) => {
+      state.browseSelectedSubItem = action.payload;
+    },
+    setBrowseTabValue: (state, action) => {
+      state.browseTabValue = action.payload;
+    },
+    setBrowseDynamicAnnotationsData: (state, action) => {
+      state.browseDynamicAnnotationsData = action.payload;
+    },
+    setBrowseSubTypesWithCache: (state, action) => {
+      state.browseSubTypesWithCache = action.payload;
+    },
+    resetBrowseUIState: (state) => {
+      state.browseSelectedItemName = null;
+      state.browseSelectedSubItem = null;
+      state.browseTabValue = 0;
+      state.browseDynamicAnnotationsData = [];
+      state.browseSubTypesWithCache = {};
     },
   }, // No synchronous reducers needed for this slice
   // The `extraReducers` field lets the slice handle actions defined elsewhere,
@@ -367,6 +402,6 @@ export const resourcesSlice = createSlice({
   },
 });
 
-export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData, setAspectBrowseCache, clearAspectBrowseCache, removeAspectBrowseCacheEntry } = resourcesSlice.actions;
+export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData, setAspectBrowseCache, clearAspectBrowseCache, removeAspectBrowseCacheEntry, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache, resetBrowseUIState } = resourcesSlice.actions;
 
 export default resourcesSlice.reducer;

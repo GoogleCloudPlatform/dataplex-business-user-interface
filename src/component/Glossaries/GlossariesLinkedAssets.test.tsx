@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import GlossariesLinkedAssets from './GlossariesLinkedAssets';
 
 // Mock ResourceViewer component
@@ -18,6 +17,8 @@ vi.mock('../Common/ResourceViewer', () => ({
     showFilters,
     showSortBy,
     showResultsCount,
+    hideMostRelevant,
+    customFilters,
   }) => (
     <div data-testid="resource-viewer">
       <span data-testid="resources-count">{resources?.length ?? 0}</span>
@@ -28,7 +29,9 @@ vi.mock('../Common/ResourceViewer', () => ({
       <span data-testid="show-filters">{String(showFilters)}</span>
       <span data-testid="show-sort-by">{String(showSortBy)}</span>
       <span data-testid="show-results-count">{String(showResultsCount)}</span>
+      <span data-testid="hide-most-relevant">{String(hideMostRelevant)}</span>
       <span data-testid="preview-data">{previewData ? 'has-preview' : 'no-preview'}</span>
+      <div data-testid="custom-filters">{customFilters}</div>
       <button
         data-testid="trigger-preview"
         onClick={() => onPreviewDataChange({ id: 'preview-1', name: 'Preview Asset' })}
@@ -224,10 +227,10 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByPlaceholderText('Filter linked assets by name or description')).toBeInTheDocument();
     });
 
-    it('renders filter toggle button with aria-label', () => {
+    it('renders filter toggle button with Filters text', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      expect(screen.getByLabelText('Toggle Filters')).toBeInTheDocument();
+      expect(screen.getByText('Filters')).toBeInTheDocument();
     });
 
     it('passes correct props to ResourceViewer', () => {
@@ -238,9 +241,10 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByTestId('total-size')).toHaveTextContent('3');
       expect(screen.getByTestId('view-mode')).toHaveTextContent('list');
       expect(screen.getByTestId('page-size')).toHaveTextContent('20');
-      expect(screen.getByTestId('show-filters')).toHaveTextContent('false');
+      expect(screen.getByTestId('show-filters')).toHaveTextContent('true');
       expect(screen.getByTestId('show-sort-by')).toHaveTextContent('true');
-      expect(screen.getByTestId('show-results-count')).toHaveTextContent('true');
+      expect(screen.getByTestId('show-results-count')).toHaveTextContent('false');
+      expect(screen.getByTestId('hide-most-relevant')).toHaveTextContent('true');
     });
 
     it('renders FilterDropdown with correct props', () => {
@@ -260,26 +264,27 @@ describe('GlossariesLinkedAssets', () => {
       expect(searchInput).toHaveValue('test search');
     });
 
-    it('calls onSearchTermChange when typing in search', async () => {
-      const user = userEvent.setup();
+    it('calls onSearchTermChange when typing in search', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
       const searchInput = screen.getByPlaceholderText('Filter linked assets by name or description');
-      await user.type(searchInput, 'a');
+      fireEvent.change(searchInput, { target: { value: 'a' } });
 
       expect(mockOnSearchTermChange).toHaveBeenCalled();
     });
 
-    it('filters assets by display name', () => {
+    it('displays all assets when searchTerm is set (filtering is chip-based)', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="Asset 1" />);
 
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
+      // searchTerm is displayed in input but does not drive filtering
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
-    it('filters assets by description', () => {
+    it('displays searchTerm for description in input without filtering', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="Another description" />);
 
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
+      // searchTerm is displayed in input but does not drive filtering
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
     it('filters are case insensitive', () => {
@@ -288,10 +293,11 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
-    it('returns no results when search term does not match', () => {
+    it('shows all results regardless of search term (filtering is chip-based)', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="nonexistent" />);
 
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('0');
+      // searchTerm does not drive filtering, all assets are shown
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
     it('handles whitespace-only search term', () => {
@@ -338,7 +344,7 @@ describe('GlossariesLinkedAssets', () => {
     it('filter toggle button is clickable', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      const toggleButton = screen.getByLabelText('Toggle Filters');
+      const toggleButton = screen.getByText('Filters');
       expect(toggleButton).toBeInTheDocument();
 
       // Click should not throw
@@ -348,7 +354,7 @@ describe('GlossariesLinkedAssets', () => {
     it('toggles filter panel state when button is clicked', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      const toggleButton = screen.getByLabelText('Toggle Filters');
+      const toggleButton = screen.getByText('Filters');
 
       // Toggle on
       fireEvent.click(toggleButton);
@@ -575,13 +581,13 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
-    it('combines search with filters', () => {
+    it('combines search term with dropdown filters', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="Asset 1" />);
 
       fireEvent.click(screen.getByTestId('add-system-filter'));
 
-      // Search for "Asset 1" + BigQuery filter = 1 result
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
+      // searchTerm doesn't filter, only dropdown filter applies (BigQuery = 2 results)
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('2');
     });
   });
 
@@ -598,7 +604,7 @@ describe('GlossariesLinkedAssets', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
       // Open filter panel
-      fireEvent.click(screen.getByLabelText('Toggle Filters'));
+      fireEvent.click(screen.getByText('Filters'));
 
       // Trigger preview (which sets isFilterOpen to false)
       fireEvent.click(screen.getByTestId('trigger-preview'));
@@ -692,8 +698,8 @@ describe('GlossariesLinkedAssets', () => {
 
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={nullAssets} searchTerm="test" />);
 
-      // Should handle gracefully and show 0 results
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('0');
+      // searchTerm does not drive filtering, all assets are shown
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('2');
     });
 
     it('handles filter on assets with undefined aspects', () => {
@@ -720,7 +726,7 @@ describe('GlossariesLinkedAssets', () => {
     it('filter toggle button is interactive', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      const toggleButton = screen.getByLabelText('Toggle Filters');
+      const toggleButton = screen.getByText('Filters');
       expect(toggleButton).toBeInTheDocument();
 
       // Multiple toggles should work
@@ -747,10 +753,10 @@ describe('GlossariesLinkedAssets', () => {
   });
 
   describe('Resource Viewer Configuration', () => {
-    it('passes showFilters as false to ResourceViewer', () => {
+    it('passes showFilters as true to ResourceViewer', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      expect(screen.getByTestId('show-filters')).toHaveTextContent('false');
+      expect(screen.getByTestId('show-filters')).toHaveTextContent('true');
     });
 
     it('passes showSortBy as true to ResourceViewer', () => {
@@ -759,10 +765,10 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByTestId('show-sort-by')).toHaveTextContent('true');
     });
 
-    it('passes showResultsCount as true to ResourceViewer', () => {
+    it('passes showResultsCount as false to ResourceViewer', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
-      expect(screen.getByTestId('show-results-count')).toHaveTextContent('true');
+      expect(screen.getByTestId('show-results-count')).toHaveTextContent('false');
     });
   });
 
@@ -770,9 +776,9 @@ describe('GlossariesLinkedAssets', () => {
     it('shows correct total size after filtering', () => {
       render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="Asset 1" />);
 
-      // Both resources count and total size should reflect filtered count
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
-      expect(screen.getByTestId('total-size')).toHaveTextContent('1');
+      // searchTerm does not drive filtering, all assets are shown
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
+      expect(screen.getByTestId('total-size')).toHaveTextContent('3');
     });
 
     it('shows all items when no filters applied', () => {
@@ -795,14 +801,15 @@ describe('GlossariesLinkedAssets', () => {
       expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
     });
 
-    it('recalculates filtered assets when searchTerm changes', () => {
+    it('does not filter assets when searchTerm changes (filtering is chip-based)', () => {
       const { rerender } = render(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} />);
 
       expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
 
+      // searchTerm does not drive filtering, count remains the same
       rerender(<GlossariesLinkedAssets {...defaultProps} linkedAssets={mockAssets} searchTerm="Asset 1" />);
 
-      expect(screen.getByTestId('resources-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('resources-count')).toHaveTextContent('3');
     });
 
     it('recalculates filtered assets when filters change', () => {

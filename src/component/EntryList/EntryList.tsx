@@ -275,6 +275,25 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
     return sortDirection === 'asc' ? <ArrowUpward sx={{ fontSize: '16px', color: '#575757' }} /> : <ArrowDownward sx={{ fontSize: '16px', color: '#575757' }} />;
   };
 
+  if (!loading && !fetchFailed && entryData.length === 0) {
+    return (
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        minHeight: '200px',
+        opacity: 1,
+        gap: 2,
+      }}>
+        <Typography variant="body1" color="text.secondary">
+          No entries available
+        </Typography>
+      </Box>
+    );
+  }
+
   return !loading ? !fetchFailed ? (
     <Box sx={{
       flex: 1,
@@ -282,7 +301,6 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
       borderRadius: '8px',
       // borderBottom: '1px solid #DADCE0',
       overflow: 'hidden',
-      marginTop: '1.25rem'
     }}>
       {/* Filter Bar */}
       <Box sx={{
@@ -522,15 +540,35 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData.map((row, index) => (
+            {filteredData.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} sx={{ borderBottom: 'none' }}>
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    minHeight: '200px',
+                    opacity: 1,
+                    gap: 2,
+                  }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No entries match your search or filter criteria
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredData.map((row, index) => (
               <TableRow key={row.id} sx={{ height: '36px', maxHeight: '36px', boxSizing: 'border-box' }}>
                 <TableCell sx={{
-                  padding: '8px 16px', 
+                  padding: '8px 16px',
                   borderBottom: index < filteredData.length - 1 ? '1px solid #DADCE0' : 'none',
                   verticalAlign: 'top'
                 }}>
-                  <Typography 
-                  onClick={() => 
+                  <Typography
+                  onClick={() =>
                     //window.open(`#/resource/${encodeURIComponent(row.full_name)}`, '_blank')
                     handleSelectEntry(row.full_name)
                   }
@@ -580,7 +618,8 @@ const EntryList: React.FC<EntryListProps> = ({ entry }) => {
                   </Typography>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>

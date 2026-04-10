@@ -212,6 +212,9 @@ const getInitialState = () => ({
   error: null,
   filterError: null,
   accessDeniedItemId: null,
+  selectedId: "",
+  expandedIds: [] as string[],
+  tabValue: 0,
 });
 
 // ==========================================================================

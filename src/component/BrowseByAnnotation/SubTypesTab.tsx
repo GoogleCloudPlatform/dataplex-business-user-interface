@@ -1,42 +1,31 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
-  InputBase,
   Card,
   CardContent,
-  Button,
   Menu,
   MenuItem,
-  IconButton,
   Chip,
   Tooltip,
-  ClickAwayListener,
-  MenuList,
   CircularProgress,
 } from "@mui/material";
-import { Search, ExpandMore, Sort, Close } from "@mui/icons-material";
+import { ExpandMore } from "@mui/icons-material";
 import AnnotationSubitemIcon from '../../assets/svg/annotation-subitem.svg';
+import ThemedIconContainer from '../Common/ThemedIconContainer';
 import TypeIcon from '../../assets/svg/type-icon.svg';
+import FilterBar from '../Common/FilterBar';
+import type { ActiveFilter, PropertyConfig } from '../Common/FilterBar';
 
 // Helper function to format type display
 const formatTypeDisplay = (type: string, stringType?: string): string => {
-  // Handle string type with various stringType values
   if (type === 'string') {
-    if (stringType === 'richText') {
-      return 'Text (Rich Text)';
-    }
-    if (stringType === 'resource') {
-      return 'Text (Resource)';
-    }
-    if (stringType === 'url') {
-      return 'Text (URL)';
-    }
-    // Plain text (empty or no stringType)
+    if (stringType === 'richText') return 'Text (Rich Text)';
+    if (stringType === 'resource') return 'Text (Resource)';
+    if (stringType === 'url') return 'Text (URL)';
     return 'Text';
   }
 
-  // Handle other types with proper display names
   const typeDisplayMap: Record<string, string> = {
     'bool': 'Boolean',
     'int': 'Integer',
@@ -51,25 +40,6 @@ const formatTypeDisplay = (type: string, stringType?: string): string => {
   return typeDisplayMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
 };
 
-// Filter types
-type FilterFieldType = 'name' | 'description' | 'type';
-
-interface FilterChip {
-  id: string;
-  field: FilterFieldType;
-  value: string;
-  displayLabel: string;
-  isOr?: boolean; // If true, this filter is OR'd with previous filters
-}
-
-const FILTER_FIELD_LABELS: Record<FilterFieldType, string> = {
-  name: 'Name',
-  description: 'Description',
-  type: 'Type',
-};
-
-const VALID_FILTER_FIELDS: FilterFieldType[] = ['name', 'description', 'type'];
-
 interface SubTypesTabProps {
   items: any[];
   searchTerm: string;
@@ -81,6 +51,12 @@ interface SubTypesTabProps {
   onItemClick: (item: any) => void;
 }
 
+const FILTER_PROPERTIES: PropertyConfig[] = [
+  { name: 'Name', mode: 'text' },
+  { name: 'Description', mode: 'text' },
+  { name: 'Type', mode: 'dropdown' },
+];
+
 const SubTypesTab: React.FC<SubTypesTabProps> = ({
   items,
   sortBy,
@@ -90,20 +66,10 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
   onItemClick,
 }) => {
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const [filterText, setFilterText] = useState('');
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
-  // Filter state
-  const [filters, setFilters] = useState<FilterChip[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedField, setSelectedField] = useState<FilterFieldType | null>(null);
-  const [isOrMode, setIsOrMode] = useState(false); // Track if next filter should be OR
-  const inputRef = useRef<HTMLInputElement>(null);
-  const justSelectedRef = useRef(false);
-
-  const hasFilters = filters.length > 0;
-
-  const handleSortClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
     setSortAnchorEl(event.currentTarget);
   };
 
@@ -118,134 +84,37 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
     handleSortClose();
   };
 
-  // Filter handlers
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-    if (e.target.value) {
-      setShowDropdown(false);
+  // Get unique type values for dropdown
+  const getPropertyValues = (property: string): string[] => {
+    if (property === 'Type') {
+      const types = new Set<string>();
+      items.forEach((item) => {
+        const formatted = formatTypeDisplay(item.type || 'string', item.stringType);
+        types.add(formatted);
+      });
+      return Array.from(types).sort();
     }
-  };
-
-  const handleFieldSelect = (e: React.MouseEvent, field: FilterFieldType) => {
-    e.stopPropagation();
-    justSelectedRef.current = true;
-    setSelectedField(field);
-    setShowDropdown(false);
-    inputRef.current?.focus();
-  };
-
-  const handleOrSelect = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    justSelectedRef.current = true;
-    setIsOrMode(true);
-    // Keep dropdown open to show field options
-    setShowDropdown(true);
-    inputRef.current?.focus();
-  };
-
-  const handleClickAway = () => {
-    setShowDropdown(false);
-  };
-
-  const handleFocus = () => {
-    setIsFocused(true);
-    if (justSelectedRef.current) {
-      justSelectedRef.current = false;
-      return;
-    }
-    // Show dropdown immediately on focus when no input value
-    if (!inputValue && !selectedField) {
-      setShowDropdown(true);
-    }
-  };
-
-  const handleInputClick = () => {
-    // Show dropdown immediately on click when no input value
-    if (!inputValue && !selectedField) {
-      setShowDropdown(true);
-    }
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      const value = inputValue.trim();
-
-      if (e.key === "Enter" || e.key === ",") {
-        e.preventDefault();
-
-        if (!value) return;
-
-        // Create filter chip
-        const field = selectedField || 'name';
-        const newChip: FilterChip = {
-          id: `${field}-${Date.now()}`,
-          field,
-          value,
-          displayLabel: `${FILTER_FIELD_LABELS[field]}: ${value}`,
-          isOr: isOrMode && filters.length > 0, // Only set isOr if there are existing filters
-        };
-
-        setFilters([...filters, newChip]);
-        setInputValue("");
-        setSelectedField(null);
-        setIsOrMode(false); // Reset OR mode after adding filter
-      } else if (e.key === "Backspace" && !inputValue) {
-        if (selectedField) {
-          setSelectedField(null);
-          setShowDropdown(true);
-        } else if (isOrMode) {
-          setIsOrMode(false);
-          setShowDropdown(true);
-        } else if (filters.length > 0) {
-          setFilters(filters.slice(0, -1));
-          setShowDropdown(true);
-        }
-      } else if (e.key === "Escape") {
-        setSelectedField(null);
-        setIsOrMode(false);
-        setShowDropdown(false);
-      }
-    },
-    [inputValue, filters, selectedField, isOrMode]
-  );
-
-  const handleRemoveChip = useCallback(
-    (chipId: string) => {
-      setFilters(filters.filter((f) => f.id !== chipId));
-    },
-    [filters]
-  );
-
-  const getPlaceholder = () => {
-    if (selectedField) {
-      return `Enter ${FILTER_FIELD_LABELS[selectedField]} value...`;
-    }
-    if (isOrMode) {
-      return "Select field for OR filter...";
-    }
-    if (hasFilters) {
-      return "Add filter...";
-    }
-    return "Filter Sub Types";
+    return [];
   };
 
   // Helper function to check if an item matches a single filter
-  const matchesFilter = (item: { displayName?: string; title?: string; description?: string; type?: string }, filter: FilterChip): boolean => {
-    const searchValue = filter.value.toLowerCase();
-    switch (filter.field) {
-      case 'name':
-        return (item.displayName || item.title || '').toLowerCase().includes(searchValue);
-      case 'description':
-        return (item.description || '').toLowerCase().includes(searchValue);
-      case 'type':
-        return (item.type || 'string').toLowerCase().includes(searchValue);
-      default:
-        return true;
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const matchesFilter = (item: any, filter: ActiveFilter): boolean => {
+    return filter.values.some(value => {
+      const lower = value.toLowerCase();
+      switch (filter.property) {
+        case 'Name':
+          return (item.displayName || item.title || '').toLowerCase().includes(lower);
+        case 'Description':
+          return (item.description || '').toLowerCase().includes(lower);
+        case 'Type': {
+          const formatted = formatTypeDisplay(item.type || 'string', item.stringType);
+          return formatted === value;
+        }
+        default:
+          return true;
+      }
+    });
   };
 
   // Filter and sort items
@@ -253,14 +122,12 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
     let filtered = items;
 
     // Apply filter chips with AND/OR logic
-    // Logic: Group consecutive AND filters, then OR between groups
-    // Example: [A, B, C(or), D, E(or), F] = (A AND B) OR (C AND D) OR (E AND F)
-    if (filters.length > 0) {
+    if (activeFilters.length > 0) {
       // Split filters into groups separated by OR
-      const filterGroups: FilterChip[][] = [];
-      let currentGroup: FilterChip[] = [];
+      const filterGroups: ActiveFilter[][] = [];
+      let currentGroup: ActiveFilter[] = [];
 
-      filters.forEach((filter) => {
+      activeFilters.forEach((filter) => {
         if (filter.isOr && currentGroup.length > 0) {
           filterGroups.push(currentGroup);
           currentGroup = [filter];
@@ -273,9 +140,7 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
       }
 
       filtered = items.filter((item) => {
-        // Item matches if ANY group matches (OR between groups)
         return filterGroups.some((group) => {
-          // Within a group, ALL filters must match (AND within group)
           return group.every((filter) => matchesFilter(item, filter));
         });
       });
@@ -301,7 +166,9 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
     });
 
     return sorted;
-  }, [items, filters, sortBy, sortOrder]);
+  }, [items, activeFilters, sortBy, sortOrder]);
+
+  const hasFilters = activeFilters.length > 0 || filterText.trim().length > 0;
 
   return (
     <Box sx={{ height: "100%" }}>
@@ -312,7 +179,7 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
           height: "100%",
         }}
       >
-        {/* Header Section (Search/Sort) */}
+        {/* Header Section (Filter/Sort) */}
         <Box
           sx={{
             display: "flex",
@@ -322,331 +189,118 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
             flexShrink: 0,
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-            }}
-          >
-            {/* Filter Input with Dropdown */}
-            <ClickAwayListener onClickAway={handleClickAway}>
-              <Box sx={{ position: "relative" }}>
-                <Box
-                  sx={{
+          <FilterBar
+            filterText={filterText}
+            onFilterTextChange={setFilterText}
+            propertyNames={FILTER_PROPERTIES}
+            getPropertyValues={getPropertyValues}
+            activeFilters={activeFilters}
+            onActiveFiltersChange={setActiveFilters}
+            marginLeft="0px"
+            placeholder="Filter Sub Types"
+            endContent={
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <Typography
+                  component="span"
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
                     display: "flex",
                     alignItems: "center",
-                    backgroundColor: "#fff",
-                    border: isFocused || hasFilters || selectedField ? "1px solid #0E4DCA" : "1px solid #DADCE0",
-                    borderRadius: "54px",
-                    px: 1.5,
-                    py: 0.5,
-                    height: "32px",
-                    width: "309px",
-                    boxSizing: "border-box",
-                    transition: "border-color 0.2s ease",
-                    "&:hover": {
-                      borderColor: "#0E4DCA",
-                    },
+                    cursor: "pointer",
+                    color: "#1F1F1F",
+                    whiteSpace: "nowrap",
+                    fontFamily: '"Google Sans Text", sans-serif',
                   }}
-                  onClick={() => inputRef.current?.focus()}
+                  onClick={handleSortClick}
                 >
-                  <Search sx={{ color: "#575757", mr: 1, fontSize: 20 }} />
-                  {isOrMode && (
-                    <Box
-                      component="span"
-                      sx={{
-                        fontFamily: "'Google Sans', sans-serif",
-                        fontWeight: 500,
-                        fontSize: "11px",
-                        lineHeight: "16px",
-                        color: "#FFFFFF",
-                        backgroundColor: "#0B57D0",
-                        borderRadius: "4px",
-                        px: 0.75,
-                        py: 0.25,
-                        mr: 0.5,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      OR
-                    </Box>
-                  )}
-                  {selectedField && (
-                    <Box
-                      component="span"
-                      sx={{
-                        fontFamily: "'Google Sans', sans-serif",
-                        fontWeight: 500,
-                        fontSize: "12px",
-                        lineHeight: "16px",
-                        color: "#1F1F1F",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {FILTER_FIELD_LABELS[selectedField]}:
-                    </Box>
-                  )}
-                  <InputBase
-                    inputRef={inputRef}
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    onClick={handleInputClick}
-                    placeholder={getPlaceholder()}
-                    sx={{
-                      flex: 1,
-                      fontFamily: "Google Sans Text",
-                      fontSize: "12px",
-                      fontWeight: 500,
-                      color: "#1F1F1F",
-                      letterSpacing: "0.1px",
-                      ml: selectedField ? 0.5 : 0,
-                      "& input::placeholder": {
-                        color: "#5E5E5E",
-                        opacity: 1,
-                      },
-                    }}
-                  />
-                </Box>
-
-                {/* Filter Field Dropdown */}
-                {showDropdown && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: "35px",
-                      left: 0,
-                      right: 0,
-                      backgroundColor: "#FFFFFF",
-                      boxShadow: "0px 4px 8px 3px rgba(60, 64, 67, 0.15), 0px 1px 3px rgba(60, 64, 67, 0.3)",
-                      borderRadius: "8px",
-                      zIndex: 1000,
-                    }}
-                  >
-                    <MenuList dense sx={{ py: 1 }}>
-                      {/* Show OR option when filters already exist */}
-                      {hasFilters && (
-                        <MenuItem
-                          onClick={handleOrSelect}
-                          sx={{
-                            fontFamily: "'Product Sans', sans-serif",
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            color: "#0B57D0",
-                            py: 0.5,
-                            px: 1.5,
-                            borderBottom: "1px solid #E0E0E0",
-                            mb: 0.5,
-                          }}
-                        >
-                          OR
-                        </MenuItem>
-                      )}
-                      {VALID_FILTER_FIELDS.map((field) => (
-                        <MenuItem
-                          key={field}
-                          onClick={(e) => handleFieldSelect(e, field)}
-                          sx={{
-                            fontFamily: "'Product Sans', sans-serif",
-                            fontSize: "12px",
-                            color: "#1F1F1F",
-                            py: 0.5,
-                            px: 1.5,
-                          }}
-                        >
-                          {FILTER_FIELD_LABELS[field]}
-                        </MenuItem>
-                      ))}
-                    </MenuList>
-                  </Box>
-                )}
-              </Box>
-            </ClickAwayListener>
-
-            {/* Sort Controls */}
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <IconButton
-                onClick={onSortOrderToggle}
-                sx={{ p: 0.5, mr: 0.5, color: "#1F1F1F" }}
-              >
-                <Sort
-                  sx={{
-                    fontSize: 16,
-                    transform: sortOrder === "asc" ? "scaleY(-1)" : "none",
-                  }}
-                />
-              </IconButton>
-
-              <Button
-                onClick={handleSortClick}
-                endIcon={
                   <ExpandMore
                     sx={{
-                      color: "#1F1F1F",
-                      fontSize: 20,
-                      transform: sortAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s",
+                      fontSize: '20px',
+                      color: '#575757',
+                      transform: sortAnchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s ease',
                     }}
                   />
-                }
-                sx={{
-                  textTransform: "none",
-                  color: "#1F1F1F",
-                  fontFamily: "Product Sans",
-                  fontSize: "12px",
-                  fontWeight: 400,
-                  padding: 0,
-                  minWidth: "auto",
-                  "&:hover": { background: "transparent" },
-                }}
-              >
-                Sort by: {sortBy === "name" ? "Name" : sortBy === "assets" ? "Assets" : "Type"}
-              </Button>
-            </Box>
-            <Menu
-              anchorEl={sortAnchorEl}
-              open={Boolean(sortAnchorEl)}
-              onClose={handleSortClose}
-              MenuListProps={{ dense: true, sx: { py: 0.5 } }}
-              PaperProps={{
-                sx: {
-                  borderRadius: "8px",
-                  boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
-                },
-              }}
-            >
-              <MenuItem
-                onClick={() => handleSortSelect("name")}
-                sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
-              >
-                Name
-              </MenuItem>
-              <MenuItem
-                onClick={() => handleSortSelect("assets")}
-                sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
-              >
-                Assets
-              </MenuItem>
-              <MenuItem
-                onClick={() => handleSortSelect("type")}
-                sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
-              >
-                Type
-              </MenuItem>
-            </Menu>
-          </Box>
-
-          {/* Filter Chips */}
-          {hasFilters && (
-            <Box
+                  {sortBy === "name" ? "Name" : sortBy === "assets" ? "Assets" : "Type"}
+                </Typography>
+                <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
+                  <span
+                    data-testid="sort-order-toggle"
+                    onClick={onSortOrderToggle}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out',
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill="#C2E7FF"/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill="#004A77"/>
+                    </svg>
+                  </span>
+                </Tooltip>
+              </div>
+            }
+          />
+          <Menu
+            anchorEl={sortAnchorEl}
+            open={Boolean(sortAnchorEl)}
+            onClose={handleSortClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            PaperProps={{
+              style: {
+                marginTop: '4px',
+                borderRadius: '8px',
+                boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                minWidth: '140px',
+              },
+            }}
+          >
+            <MenuItem
+              onClick={() => handleSortSelect("name")}
               sx={{
-                display: "flex",
-                flexDirection: "row",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: "8px",
+                fontSize: "12px",
+                fontFamily: "Google Sans",
+                fontWeight: sortBy === "name" ? "500" : "400",
+                color: sortBy === "name" ? "#0B57D0" : "#1F1F1F",
+                backgroundColor: sortBy === "name" ? "#F8FAFD" : "transparent",
+                '&:hover': { backgroundColor: '#F1F3F4' },
               }}
             >
-              {filters.map((chip, index) => {
-                const colonIndex = chip.displayLabel.indexOf(":");
-                const fieldLabel = colonIndex !== -1 ? chip.displayLabel.slice(0, colonIndex + 1) : "";
-                const valueLabel = colonIndex !== -1 ? chip.displayLabel.slice(colonIndex + 1).trim() : chip.displayLabel;
-
-                return (
-                  <React.Fragment key={chip.id}>
-                    {/* Show OR separator before OR chips */}
-                    {chip.isOr && index > 0 && (
-                      <Typography
-                        sx={{
-                          fontFamily: "'Google Sans', sans-serif",
-                          fontWeight: 500,
-                          fontSize: "11px",
-                          lineHeight: "16px",
-                          color: "#0B57D0",
-                          px: 0.5,
-                        }}
-                      >
-                        OR
-                      </Typography>
-                    )}
-                    <Tooltip title={chip.displayLabel} arrow>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          backgroundColor: "#E7F0FE",
-                          borderRadius: "25px",
-                          padding: "2px 3px 2px 8px",
-                          gap: "4px",
-                          maxWidth: "100%",
-                          overflow: "hidden",
-                          minWidth: 0,
-                        }}
-                      >
-                        {fieldLabel && (
-                          <Typography
-                            sx={{
-                              fontFamily: "'Google Sans', sans-serif",
-                              fontWeight: 500,
-                              fontSize: "11px",
-                              lineHeight: "16px",
-                              letterSpacing: "0.1px",
-                              color: "#0B57D0",
-                              whiteSpace: "nowrap",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {fieldLabel}
-                          </Typography>
-                        )}
-                        <Typography
-                          sx={{
-                            fontFamily: "'Google Sans', sans-serif",
-                            fontWeight: 700,
-                            fontSize: "11px",
-                            lineHeight: "16px",
-                            letterSpacing: "0.1px",
-                            color: "#0B57D0",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            minWidth: 0,
-                          }}
-                        >
-                          {valueLabel}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemoveChip(chip.id)}
-                          sx={{
-                            width: 14,
-                            height: 14,
-                            backgroundColor: "#0B57D0",
-                            borderRadius: "50%",
-                            padding: 0,
-                            flexShrink: 0,
-                            "&:hover": {
-                              backgroundColor: "#0842A0",
-                            },
-                          }}
-                        >
-                          <Close
-                            sx={{
-                              fontSize: 10,
-                              color: "#FFFFFF",
-                            }}
-                          />
-                        </IconButton>
-                      </Box>
-                    </Tooltip>
-                  </React.Fragment>
-                );
-              })}
-            </Box>
-          )}
+              Name
+            </MenuItem>
+            <MenuItem
+              onClick={() => handleSortSelect("assets")}
+              sx={{
+                fontSize: "12px",
+                fontFamily: "Google Sans",
+                fontWeight: sortBy === "assets" ? "500" : "400",
+                color: sortBy === "assets" ? "#0B57D0" : "#1F1F1F",
+                backgroundColor: sortBy === "assets" ? "#F8FAFD" : "transparent",
+                '&:hover': { backgroundColor: '#F1F3F4' },
+              }}
+            >
+              Assets
+            </MenuItem>
+            <MenuItem
+              onClick={() => handleSortSelect("type")}
+              sx={{
+                fontSize: "12px",
+                fontFamily: "Google Sans",
+                fontWeight: sortBy === "type" ? "500" : "400",
+                color: sortBy === "type" ? "#0B57D0" : "#1F1F1F",
+                backgroundColor: sortBy === "type" ? "#F8FAFD" : "transparent",
+                '&:hover': { backgroundColor: '#F1F3F4' },
+              }}
+            >
+              Type
+            </MenuItem>
+          </Menu>
         </Box>
 
         {/* Conditional Body: Empty State OR Grid */}
@@ -690,6 +344,7 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
                 sx={{
                   borderRadius: "16px",
                   height: "134px",
+                  overflow: "hidden",
                   cursor: "pointer",
                   transition: "box-shadow 0.2s, border-color 0.2s, transform 0.2s",
                   display: "flex",
@@ -719,11 +374,13 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
                       mb: 1,
                     }}
                   >
-                    <img
-                      src={AnnotationSubitemIcon}
-                      alt=""
-                      style={{ width: '18px', height: '18px', flexShrink: 0 }}
-                    />
+                    <ThemedIconContainer iconColor="#F9AB00" size="small">
+                      <img
+                        src={AnnotationSubitemIcon}
+                        alt=""
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                    </ThemedIconContainer>
                     <Tooltip
                       title={item.displayName || item.title}
                       placement="top"
@@ -735,9 +392,10 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
                         noWrap
                         sx={{
                           fontFamily: "Google Sans",
-                          fontSize: "18px",
-                          fontWeight: 400,
+                          fontSize: "16px",
+                          fontWeight: 500,
                           lineHeight: "24px",
+                          letterSpacing: "0.15px",
                           color: "#1F1F1F",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -757,13 +415,9 @@ const SubTypesTab: React.FC<SubTypesTabProps> = ({
                       fontWeight: 400,
                       lineHeight: "20px",
                       color: "#575757",
-                      flex: 1,
-                      display: "-webkit-box",
-                      WebkitBoxOrient: "vertical",
-                      WebkitLineClamp: 2,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      wordBreak: "break-word",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {item.description || "No description"}

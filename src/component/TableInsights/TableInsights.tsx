@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box } from '@mui/material';
+import { Box, Drawer } from '@mui/material';
 import type { AppDispatch } from '../../app/store';
 import {
   fetchInsights,
@@ -128,31 +128,26 @@ const TableInsights: React.FC<TableInsightsProps> = ({ entry, scanName }) => {
         </Box>
       </Box>
 
-      {/* Dark overlay when preview panel is open */}
-      {isPreviewOpen && (
-        <Box
-          onClick={handleClosePreview}
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000,
-            cursor: 'pointer',
-          }}
-        />
-      )}
-
       {/* Preview Panel */}
-      <TableInsightsPreviewPanel
-        isOpen={isPreviewOpen}
-        currentDescription={previewData?.currentDescription || '-'}
-        geminiDescription={previewData?.geminiDescription || '-'}
-        columnDescriptions={previewData?.columnDescriptions || []}
+      <Drawer
+        anchor="right"
+        open={isPreviewOpen}
         onClose={handleClosePreview}
-      />
+        PaperProps={{
+          sx: {
+            width: '38.25rem',
+            backgroundColor: '#ffffff',
+            boxShadow: '-0.25rem 0rem 0.5rem rgba(0, 0, 0, 0.1)',
+          }
+        }}
+      >
+        <TableInsightsPreviewPanel
+          currentDescription={previewData?.currentDescription || '-'}
+          geminiDescription={previewData?.geminiDescription || '-'}
+          columnDescriptions={previewData?.columnDescriptions || []}
+          onClose={handleClosePreview}
+        />
+      </Drawer>
     </>
   );
 };

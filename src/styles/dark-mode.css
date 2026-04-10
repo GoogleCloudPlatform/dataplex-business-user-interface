@@ -17,11 +17,19 @@ html[data-theme="dark"] .menu-label {
   color: #c4c7c5;
 }
 
+html[data-theme="dark"] .sidebar-icon {
+  color: #c4c7c5;
+}
+
 html[data-theme="dark"] .sidebar-menu-item.active .menu-icon-container {
   background-color: #004a77;
 }
 
 html[data-theme="dark"] .sidebar-menu-item.active .menu-label {
+  color: #8ab4f8;
+}
+
+html[data-theme="dark"] .sidebar-menu-item.active .sidebar-icon {
   color: #8ab4f8;
 }
 
@@ -127,7 +135,279 @@ html[data-theme="dark"] .MuiPopover-paper .MuiDivider-root {
   border-color: #3c4043;
 }
 
-/* --- Dataplex Logo (img tag, inverted to white for dark mode) --- */
-html[data-theme="dark"] .app-layout img[alt="Dataplex Universal Catalog"] {
+/* --- Knowledge Catalog Logo (img tag, inverted to white for dark mode) --- */
+html[data-theme="dark"] .app-layout img[alt="Knowledge Catalog"] {
   filter: brightness(0) invert(1) brightness(0.85);
+}
+
+/* ==========================================================================
+   Navbar SearchBar (variant="navbar") — Dark Mode
+   ========================================================================== */
+
+html[data-theme="dark"] #search-bar.navbar-variant {
+  background: #282a2c !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant > .MuiSvgIcon-root {
+  color: #9aa0a6 !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant .MuiTextField-root {
+  background: #282a2c !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant .MuiOutlinedInput-root input {
+  color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant .animated-placeholder {
+  color: #7c7f82;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant.dropdown-open {
+  background: #282a2c !important;
+}
+
+html[data-theme="dark"] #search-bar.navbar-variant.dropdown-open::after {
+  background: #282a2c;
+  border-left-color: #3c4043;
+}
+
+/* Navbar autocomplete dropdown */
+html[data-theme="dark"] .navbar-dropdown {
+  background-color: #282a2c !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .navbar-dropdown .MuiAutocomplete-listbox li,
+html[data-theme="dark"] .navbar-dropdown .recent-search-item {
+  color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] .navbar-dropdown .MuiAutocomplete-listbox li:hover,
+html[data-theme="dark"] .navbar-dropdown .MuiAutocomplete-listbox li.Mui-focused,
+html[data-theme="dark"] .navbar-dropdown .recent-search-item:hover {
+  background-color: #3c4043 !important;
+}
+
+/* Cancel button SVG in dark mode */
+html[data-theme="dark"] input[type="search"]::-webkit-search-cancel-button {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%239aa0a6" d="M8 6.586L3.707 2.293a1 1 0 00-1.414 1.414L6.586 8l-4.293 4.293a1 1 0 001.414 1.414L8 9.414l4.293 4.293a1 1 0 001.414-1.414L9.414 8l4.293-4.293a1 1 0 00-1.414-1.414L8 6.586z"/></svg>') no-repeat center;
+}
+
+/* ==========================================================================
+   Search Page — Dark Mode
+   ========================================================================== */
+
+html[data-theme="dark"] .search-page-bg {
+  background-color: #131314 !important;
+}
+
+/* Filter panel sidebar background */
+html[data-theme="dark"] .filter-panel-container {
+  background-color: #282a2c !important;
+}
+
+/* ==========================================================================
+   Filter Dropdown — Dark Mode
+   ========================================================================== */
+
+/* Accordion summary hover */
+html[data-theme="dark"] .filter-panel-container .MuiAccordionSummary-root:hover {
+  background-color: rgba(138, 180, 248, 0.16) !important;
+}
+
+/* Expand icon */
+html[data-theme="dark"] .filter-panel-container .MuiAccordionSummary-expandIconWrapper .MuiSvgIcon-root {
+  color: #9aa0a6 !important;
+}
+
+/* Filter section SVG icons — invert for dark mode */
+html[data-theme="dark"] .filter-panel-container .MuiAccordionSummary-root img {
+  filter: brightness(0) invert(0.75);
+}
+
+/* Checkbox item row hover */
+html[data-theme="dark"] .filter-panel-container .MuiAccordionDetails-root .MuiBox-root:hover {
+  background-color: #3c4043 !important;
+}
+
+/* Product/Asset icons in checkbox rows — invert for dark mode */
+html[data-theme="dark"] .filter-panel-container .MuiFormControlLabel-root img {
+  filter: brightness(0) invert(0.75);
+}
+
+/* ==========================================================================
+   Search Results — Dark Mode (Card View, Table View, Resource Preview)
+   ========================================================================== */
+
+/* Asset icons in card view — invert for dark mode */
+html[data-theme="dark"] .entriesHoverEffect img {
+  filter: brightness(0) invert(0.75);
+}
+
+/* BigQuery & Looker icons in card hover actions — white for dark mode */
+html[data-theme="dark"] .entriesHoverEffect .hover-actions img {
+  filter: brightness(0) invert(1);
+}
+
+/* BigQuery & Looker icons in resource preview — white for dark mode */
+html[data-theme="dark"] .preview-cta-row img {
+  filter: brightness(0) invert(1);
+}
+
+/* SVG icons in card view — match global sidebar inactive (#c4c7c5) */
+html[data-theme="dark"] .entriesHoverEffect svg path[fill="#575757"] {
+  fill: #c4c7c5;
+}
+
+/* SVG icons + asset icon on selected card — match global sidebar active (#8ab4f8) */
+html[data-theme="dark"] .entriesHoverEffect.selected svg path[fill="#575757"] {
+  fill: #8ab4f8;
+}
+
+html[data-theme="dark"] .entriesHoverEffect.selected img {
+  filter: brightness(0) saturate(100%) invert(65%) sepia(50%) saturate(800%) hue-rotate(190deg) brightness(105%) contrast(95%);
+}
+
+/* Asset tag chips — invert colors on card/row hover or select */
+html[data-theme="dark"] .entriesHoverEffect:hover .asset-tag,
+html[data-theme="dark"] .entriesHoverEffect.selected .asset-tag {
+  background-color: #80ceff !important;
+  color: #004a76 !important;
+}
+
+html[data-theme="dark"] .MuiTableRow-root:hover .asset-tag,
+html[data-theme="dark"] .MuiTableRow-root.row-selected .asset-tag {
+  background-color: #80ceff !important;
+  color: #004a76 !important;
+}
+
+/* Request Access button — white text/icon on card hover (exclude View Details text) */
+html[data-theme="dark"] .entriesHoverEffect:hover .hover-actions span:not(.view-details-text),
+html[data-theme="dark"] .entriesHoverEffect:hover .hover-actions .MuiSvgIcon-root {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .entriesHoverEffect:hover .hover-actions .MuiBox-root {
+  border-color: #ffffff !important;
+}
+
+/* Selected state — text color #c0e5fe for card and table (excludes .asset-tag chips) */
+html[data-theme="dark"] .entriesHoverEffect.selected p,
+html[data-theme="dark"] .entriesHoverEffect.selected span:not(.asset-tag),
+html[data-theme="dark"] .entriesHoverEffect.selected .MuiTypography-root:not(.asset-tag) {
+  color: #c0e5fe !important;
+}
+
+html[data-theme="dark"] .MuiTableRow-root.row-selected .MuiTableCell-root,
+html[data-theme="dark"] .MuiTableRow-root.row-selected .MuiTableCell-root .MuiTypography-root:not(.asset-tag),
+html[data-theme="dark"] .MuiTableRow-root.row-selected .MuiTableCell-root span:not(.asset-tag) {
+  color: #c0e5fe !important;
+}
+
+/* Selected + hover — bg #185683, text #c1e6ff (excludes .asset-tag chips) */
+html[data-theme="dark"] .entriesHoverEffect.selected:hover {
+  background-color: #185683 !important;
+}
+
+html[data-theme="dark"] .entriesHoverEffect.selected:hover p,
+html[data-theme="dark"] .entriesHoverEffect.selected:hover span:not(.asset-tag),
+html[data-theme="dark"] .entriesHoverEffect.selected:hover .MuiTypography-root:not(.asset-tag) {
+  color: #c1e6ff !important;
+}
+
+html[data-theme="dark"] .MuiTableRow-root.row-selected:hover .MuiTableCell-root .MuiTypography-root:not(.asset-tag),
+html[data-theme="dark"] .MuiTableRow-root.row-selected:hover .MuiTableCell-root span:not(.asset-tag) {
+  color: #c1e6ff !important;
+}
+
+/* MUI Tooltip popper in dark mode */
+html[data-theme="dark"] .MuiTooltip-tooltip {
+  background-color: #3c4043 !important;
+  color: #e3e3e3 !important;
+}
+
+html[data-theme="dark"] .MuiTooltip-arrow::before {
+  background-color: #3c4043 !important;
+}
+
+/* ==========================================================================
+   Login Page (LoginV2) — Dark Mode
+   ========================================================================== */
+
+html[data-theme="dark"] .loginv2-page {
+  background-color: #1e1f20;
+}
+
+html[data-theme="dark"] .loginv2-card {
+  background-color: #131314;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .loginv2-logo {
+  filter: brightness(0) invert(1) brightness(0.85);
+}
+
+html[data-theme="dark"] .loginv2-heading {
+  color: #e3e3e3;
+}
+
+html[data-theme="dark"] .loginv2-body {
+  color: #9aa0a6;
+}
+
+html[data-theme="dark"] .loginv2-get-started {
+  color: #9aa0a6;
+}
+
+html[data-theme="dark"] .loginv2-signin-heading {
+  color: #e3e3e3;
+}
+
+html[data-theme="dark"] .loginv2-button {
+  background-color: #ffffff;
+  border-color: #ffffff;
+}
+
+html[data-theme="dark"] .loginv2-button:hover {
+  background-color: #e8eaed;
+}
+
+html[data-theme="dark"] .loginv2-button:active {
+  background-color: #dadce0;
+}
+
+html[data-theme="dark"] .loginv2-button-text {
+  color: #1f1f1f;
+}
+
+html[data-theme="dark"] .loginv2-loading-text {
+  color: #9aa0a6;
+}
+
+/* Right panel — subtle darker tint to separate from left */
+html[data-theme="dark"] .loginv2-right {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Orb 1 (center) — deep blue to indigo/violet, boosted opacity */
+html[data-theme="dark"] .loginv2-gradient-orb-1 {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.5) 0%, rgba(138, 180, 248, 0.35) 40%, rgba(167, 139, 250, 0.45) 70%, rgba(124, 77, 255, 0.4) 100%);
+  opacity: 0.55;
+  filter: blur(60px);
+}
+
+/* Orb 2 (top right) — teal-cyan to blue */
+html[data-theme="dark"] .loginv2-gradient-orb-2 {
+  background: linear-gradient(88.85deg, rgba(56, 189, 248, 0.4) 20%, rgba(59, 130, 246, 0.45) 50%, rgba(99, 102, 241, 0.35) 80%);
+  opacity: 0.5;
+  filter: blur(70px);
+}
+
+/* Orb 3 (bottom left) — purple-magenta to deep blue */
+html[data-theme="dark"] .loginv2-gradient-orb-3 {
+  background: linear-gradient(139deg, rgba(139, 92, 246, 0.45) 15%, rgba(192, 132, 252, 0.3) 40%, rgba(59, 130, 246, 0.4) 70%);
+  opacity: 0.45;
+  filter: blur(70px);
 }

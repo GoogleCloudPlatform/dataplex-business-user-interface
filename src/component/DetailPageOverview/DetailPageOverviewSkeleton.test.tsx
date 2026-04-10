@@ -120,8 +120,8 @@ describe("DetailPageOverviewSkeleton", () => {
     it("renders header with circular icon skeleton", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const circularSkeletons = getCircularSkeletons(container);
-      // Multiple accordion headers each have circular icon
-      expect(circularSkeletons.length).toBeGreaterThanOrEqual(6);
+      // Contact avatars use circular skeletons (card headers now use rounded)
+      expect(circularSkeletons.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -153,9 +153,8 @@ describe("DetailPageOverviewSkeleton", () => {
     it("renders avatar skeletons for contacts section", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const circularSkeletons = getCircularSkeletons(container);
-      // Contacts section has 2 avatar circles (40x40) plus header icon (24x24)
-      // Other sections have header icons too
-      expect(circularSkeletons.length).toBeGreaterThanOrEqual(8);
+      // Contacts section has 2 avatar circles (32x32), card headers use rounded
+      expect(circularSkeletons.length).toBeGreaterThanOrEqual(2);
     });
 
     it("renders contact rows with name and email placeholders", () => {
@@ -200,15 +199,15 @@ describe("DetailPageOverviewSkeleton", () => {
     it("renders chip-style skeletons for labels", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const roundedSkeletons = getRoundedSkeletons(container);
-      // Labels section has 4 chips
-      expect(roundedSkeletons.length).toBe(4);
+      // Labels section has 4 chips + 7 card header icon boxes = 11 rounded
+      expect(roundedSkeletons.length).toBe(11);
     });
 
     it("renders chips with varying widths", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const roundedSkeletons = getRoundedSkeletons(container);
-      // Chips have widths: 90, 100, 110, 120 (80 + i * 10 where i = 1,2,3,4)
-      expect(roundedSkeletons.length).toBe(4);
+      // 7 card header icons (32x32) + 4 label chips
+      expect(roundedSkeletons.length).toBe(11);
     });
 
     it("renders rounded chips with border-radius", () => {
@@ -257,29 +256,30 @@ describe("DetailPageOverviewSkeleton", () => {
       const allSkeletons = getSkeletonElements(container);
       // Total expected:
       // Left Panel:
-      //   - Details: 1 header icon + 1 header text + 5 rows * 2 = 12
+      //   - Table Info: 1 header icon + 1 header text + 2 tabs + 6 rows * 3 = 22
       //   - Documentation: 1 header icon + 1 header text + 5 text lines = 7
       // Right Sidebar:
       //   - Contacts: 1 header icon + 1 header text + 2 * (avatar + 2 text) = 8
-      //   - Info: 1 header icon + 1 header text + 2 rows * 2 = 6
-      //   - Usage: 1 header icon + 1 header text + 3 rows * 2 = 8
+      //   - Usage Metrics: 1 header icon + 1 header text + 6 text = 8
+      //   - Timestamps: 1 header icon + 1 header text + 3 rows * 2 = 8
+      //   - Additional Info: 1 header icon + 1 header text + 3 rows * 2 = 8
       //   - Labels: 1 header icon + 1 header text + 4 chips = 6
-      // Total: 12 + 7 + 8 + 6 + 8 + 6 = 47
-      expect(allSkeletons.length).toBeGreaterThanOrEqual(40);
+      // Total: 22 + 7 + 8 + 8 + 8 + 8 + 6 = 67
+      expect(allSkeletons.length).toBeGreaterThanOrEqual(50);
     });
 
     it("renders expected number of circular skeletons", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const circularSkeletons = getCircularSkeletons(container);
-      // 6 accordion headers (24x24 icons) + 2 contact avatars (40x40) = 8
-      expect(circularSkeletons.length).toBe(8);
+      // 2 contact avatars (32x32) - card headers now use rounded
+      expect(circularSkeletons.length).toBe(2);
     });
 
     it("renders expected number of rounded skeletons", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const roundedSkeletons = getRoundedSkeletons(container);
-      // 4 label chips
-      expect(roundedSkeletons.length).toBe(4);
+      // 7 card header icons + 4 label chips = 11
+      expect(roundedSkeletons.length).toBe(11);
     });
   });
 
@@ -320,7 +320,7 @@ describe("DetailPageOverviewSkeleton", () => {
   // ==========================================================================
 
   describe("Component Structure", () => {
-    it("renders all six accordion skeleton sections", () => {
+    it("renders all seven accordion skeleton sections", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       // Count boxes that have border styling (accordion containers)
       const allBoxes = container.querySelectorAll('[class*="MuiBox-root"]');
@@ -335,12 +335,12 @@ describe("DetailPageOverviewSkeleton", () => {
       expect(gridItems.length).toBeGreaterThanOrEqual(2);
     });
 
-    it("renders right sidebar sections (Contacts + Info + Usage + Labels)", () => {
+    it("renders right sidebar sections (Contacts + Usage + Timestamps + Additional Info + Labels)", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       // Right sidebar has 4 accordion sections
       const circularSkeletons = getCircularSkeletons(container);
-      // 4 sidebar headers + 2 panels headers + 2 contact avatars
-      expect(circularSkeletons.length).toBe(8);
+      // 2 contact avatars - card headers now use rounded
+      expect(circularSkeletons.length).toBe(2);
     });
   });
 
@@ -397,11 +397,11 @@ describe("DetailPageOverviewSkeleton", () => {
       expect(circularSkeletons.length).toBeGreaterThanOrEqual(2);
     });
 
-    it("renders chip skeletons with 24px height", () => {
+    it("renders chip skeletons with 20px height", () => {
       const { container } = render(<DetailPageOverviewSkeleton />);
       const roundedSkeletons = getRoundedSkeletons(container);
-      // All chips have height 24
-      expect(roundedSkeletons.length).toBe(4);
+      // 7 card header icons + 4 label chips = 11
+      expect(roundedSkeletons.length).toBe(11);
     });
   });
 

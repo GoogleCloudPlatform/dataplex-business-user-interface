@@ -35,6 +35,7 @@ vi.mock('../../features/dataProducts/dataProductsSlice', async (importOriginal) 
     ...actual,
     fetchDataProductsList: vi.fn(() => ({ type: 'dataProducts/fetchDataProductsList' })),
     fetchDataProductsAssetsList: vi.fn(() => ({ type: 'dataProducts/fetchDataProductsAssetsList' })),
+    setDataProductsDetailTabValue: vi.fn((val: number) => ({ type: 'dataProducts/setDataProductsDetailTabValue', payload: val })),
   };
 });
 
@@ -66,6 +67,7 @@ vi.mock('../../utils/resourceUtils', () => ({
     return 'png';
   }),
   hasValidAnnotationData: vi.fn(() => true),
+  getFormattedDateTimeParts: vi.fn(() => ({ date: 'Jan 1, 2025', time: '12:00:00 AM' })),
 }));
 
 // Mock NotificationContext
@@ -184,7 +186,7 @@ vi.mock('../SearchPage/NotificationBar', () => ({
       <div data-testid="notification-bar">
         {message}
         <button onClick={onClose} data-testid="close-notification">Close</button>
-        <button onClick={onUndo} data-testid="undo-notification">Undo</button>
+        {onUndo && <button onClick={onUndo} data-testid="undo-notification">Undo</button>}
       </div>
     ) : null;
   }
@@ -289,6 +291,7 @@ const createMockStore = (initialState: any = {}) => {
     reducer: {
       dataProducts: (state = initialState.dataProducts) => state,
       entry: (state = initialState.entry) => state,
+      user: (state = initialState.user) => state,
     },
   });
 };
@@ -299,11 +302,16 @@ const defaultStoreState = {
     status: 'succeeded',
     selectedDataProductDetails: createMockDataProductDetails(),
     selectedDataProductStatus: 'succeeded',
-    selectedDataProductError: null
+    selectedDataProductError: null,
+    viewMode: 'list',
+    detailTabValue: 0,
   },
   entry: {
     items: {},
     history: []
+  },
+  user: {
+    mode: 'light'
   }
 };
 
@@ -401,7 +409,7 @@ describe('DataProductsDetailView', () => {
 
       expect(screen.getByText('Overview')).toBeInTheDocument();
       expect(screen.getByText('Assets')).toBeInTheDocument();
-      expect(screen.getByText('Access Group & Permission')).toBeInTheDocument();
+      expect(screen.getByText('Access Groups & Permissions')).toBeInTheDocument();
       expect(screen.getByText('Contract')).toBeInTheDocument();
       expect(screen.getByText('Aspects')).toBeInTheDocument();
     });
@@ -435,15 +443,36 @@ describe('DataProductsDetailView', () => {
       const assetsTab = screen.getByText('Assets');
       fireEvent.click(assetsTab);
 
+      // Verify dispatch was called to change tab
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'dataProducts/setDataProductsDetailTabValue', payload: 1 }));
+    });
+
+    it('renders Assets tab content when detailTabValue is 1', () => {
+      const stateWithAssetsTab = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+      };
+      renderWithProviders(<DataProductsDetailView />, stateWithAssetsTab);
+
       expect(screen.getByTestId('tabpanel-1')).toBeInTheDocument();
       expect(screen.getByTestId('assets-tab')).toBeInTheDocument();
     });
 
-    it('switches to Access Group & Permission tab when clicked', () => {
+    it('switches to Access Groups & Permissions tab when clicked', () => {
       renderWithProviders(<DataProductsDetailView />);
 
-      const accessGroupTab = screen.getByText('Access Group & Permission');
+      const accessGroupTab = screen.getByText('Access Groups & Permissions');
       fireEvent.click(accessGroupTab);
+
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'dataProducts/setDataProductsDetailTabValue', payload: 2 }));
+    });
+
+    it('renders Access Groups tab content when detailTabValue is 2', () => {
+      const stateWithAccessTab = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 2 },
+      };
+      renderWithProviders(<DataProductsDetailView />, stateWithAccessTab);
 
       expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
       expect(screen.getByTestId('access-group-tab')).toBeInTheDocument();
@@ -455,6 +484,16 @@ describe('DataProductsDetailView', () => {
       const contractTab = screen.getByText('Contract');
       fireEvent.click(contractTab);
 
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'dataProducts/setDataProductsDetailTabValue', payload: 3 }));
+    });
+
+    it('renders Contract tab content when detailTabValue is 3', () => {
+      const stateWithContractTab = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 3 },
+      };
+      renderWithProviders(<DataProductsDetailView />, stateWithContractTab);
+
       expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
       expect(screen.getByTestId('contract-tab')).toBeInTheDocument();
     });
@@ -465,27 +504,38 @@ describe('DataProductsDetailView', () => {
       const aspectsTab = screen.getByText('Aspects');
       fireEvent.click(aspectsTab);
 
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'dataProducts/setDataProductsDetailTabValue', payload: 4 }));
+    });
+
+    it('renders Aspects tab content when detailTabValue is 4', () => {
+      const stateWithAspectsTab = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 4 },
+      };
+      renderWithProviders(<DataProductsDetailView />, stateWithAspectsTab);
+
       expect(screen.getByTestId('tabpanel-4')).toBeInTheDocument();
       expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
       expect(screen.getByTestId('preview-annotation')).toBeInTheDocument();
     });
 
-    it('closes asset preview when changing tabs', () => {
-      renderWithProviders(<DataProductsDetailView />);
+    it('dispatches tab change when switching tabs, closing asset preview', () => {
+      const stateWithAssetsTab = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+      };
+      renderWithProviders(<DataProductsDetailView />, stateWithAssetsTab);
 
-      // Go to Assets tab and open preview
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
-
+      // Open preview on Assets tab
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
       fireEvent.click(openPreviewBtn);
 
-      // Switch to another tab
+      // Switch to Overview tab
       const overviewTab = screen.getByText('Overview');
       fireEvent.click(overviewTab);
 
-      // Verify we're on overview tab
-      expect(screen.getByTestId('tabpanel-0')).toBeInTheDocument();
+      // Verify dispatch was called to change tab to 0
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'dataProducts/setDataProductsDetailTabValue', payload: 0 }));
     });
   });
 
@@ -592,7 +642,7 @@ describe('DataProductsDetailView', () => {
       expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
     });
 
-    it('closes notification when undo is clicked', () => {
+    it('does not show undo button in request access notification', () => {
       renderWithProviders(<DataProductsDetailView />);
 
       // Open and submit
@@ -602,21 +652,20 @@ describe('DataProductsDetailView', () => {
       const submitBtn = screen.getByTestId('submit-success');
       fireEvent.click(submitBtn);
 
-      // Click undo
-      const undoBtn = screen.getByTestId('undo-notification');
-      fireEvent.click(undoBtn);
-
-      expect(screen.queryByTestId('notification-bar')).not.toBeInTheDocument();
+      // Notification should be visible but without undo button
+      expect(screen.getByTestId('notification-bar')).toBeInTheDocument();
+      expect(screen.queryByTestId('undo-notification')).not.toBeInTheDocument();
     });
   });
 
   describe('Asset Preview', () => {
-    it('opens asset preview panel when asset is selected', () => {
-      renderWithProviders(<DataProductsDetailView />);
+    const assetsTabState = {
+      ...defaultStoreState,
+      dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+    };
 
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+    it('opens asset preview panel when asset is selected', () => {
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -626,11 +675,7 @@ describe('DataProductsDetailView', () => {
     });
 
     it('closes asset preview panel when close is triggered', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -647,11 +692,7 @@ describe('DataProductsDetailView', () => {
     });
 
     it('navigates to asset details when View Details is clicked', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -666,12 +707,13 @@ describe('DataProductsDetailView', () => {
   });
 
   describe('Annotation Actions', () => {
-    it('collapses all annotations when collapse button is clicked', () => {
-      renderWithProviders(<DataProductsDetailView />);
+    const aspectsTabState = {
+      ...defaultStoreState,
+      dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 4 },
+    };
 
-      // Go to Aspects tab
-      const aspectsTab = screen.getByText('Aspects');
-      fireEvent.click(aspectsTab);
+    it('collapses all annotations when collapse button is clicked', () => {
+      renderWithProviders(<DataProductsDetailView />, aspectsTabState);
 
       // Click collapse all
       const collapseBtn = screen.getByTestId('collapse-all-btn');
@@ -682,11 +724,7 @@ describe('DataProductsDetailView', () => {
     });
 
     it('expands all annotations when expand button is clicked', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Aspects tab
-      const aspectsTab = screen.getByText('Aspects');
-      fireEvent.click(aspectsTab);
+      renderWithProviders(<DataProductsDetailView />, aspectsTabState);
 
       // Click expand all
       const expandBtn = screen.getByTestId('expand-all-btn');
@@ -697,11 +735,7 @@ describe('DataProductsDetailView', () => {
     });
 
     it('applies filter when filter is changed', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Aspects tab
-      const aspectsTab = screen.getByText('Aspects');
-      fireEvent.click(aspectsTab);
+      renderWithProviders(<DataProductsDetailView />, aspectsTabState);
 
       // Apply filter
       const applyFilterBtn = screen.getByText('Apply Filter');
@@ -785,11 +819,11 @@ describe('DataProductsDetailView', () => {
 
   describe('Resource Click Handler', () => {
     it('handles resource click with entry name format', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+      const assetsTabState = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+      };
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -874,6 +908,7 @@ describe('DataProductsDetailView', () => {
         ...defaultStoreState,
         dataProducts: {
           ...defaultStoreState.dataProducts,
+          detailTabValue: 4,
           selectedDataProductDetails: {
             ...createMockDataProductDetails(),
             aspects: undefined
@@ -883,10 +918,6 @@ describe('DataProductsDetailView', () => {
 
       renderWithProviders(<DataProductsDetailView />, stateWithNoAspects);
 
-      // Go to Aspects tab
-      const aspectsTab = screen.getByText('Aspects');
-      fireEvent.click(aspectsTab);
-
       // Click expand all - should not throw
       const expandBtn = screen.getByTestId('expand-all-btn');
       expect(() => fireEvent.click(expandBtn)).not.toThrow();
@@ -894,12 +925,13 @@ describe('DataProductsDetailView', () => {
   });
 
   describe('ResourcePreview PreviewDataChange', () => {
-    it('opens preview when data is provided to onPreviewDataChange', () => {
-      renderWithProviders(<DataProductsDetailView />);
+    const assetsTabState = {
+      ...defaultStoreState,
+      dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+    };
 
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+    it('opens preview when data is provided to onPreviewDataChange', () => {
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -909,11 +941,7 @@ describe('DataProductsDetailView', () => {
     });
 
     it('closes preview when null is provided to onPreviewDataChange', () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open then close preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');
@@ -929,11 +957,11 @@ describe('DataProductsDetailView', () => {
 
   describe('handleResourceClick with different ID formats', () => {
     it('handles ID that already contains entryGroups', async () => {
-      renderWithProviders(<DataProductsDetailView />);
-
-      // Go to Assets tab
-      const assetsTab = screen.getByText('Assets');
-      fireEvent.click(assetsTab);
+      const assetsTabState = {
+        ...defaultStoreState,
+        dataProducts: { ...defaultStoreState.dataProducts, detailTabValue: 1 },
+      };
+      renderWithProviders(<DataProductsDetailView />, assetsTabState);
 
       // Open preview
       const openPreviewBtn = screen.getByTestId('open-asset-preview');

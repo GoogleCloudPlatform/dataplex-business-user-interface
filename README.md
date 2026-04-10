@@ -1,4 +1,4 @@
-# Dataplex Universal Catalog Business Interface - 1.3.1
+# Knowledge Catalog Business Interface - 1.3.2
 
 An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Dataplex** Universal Catalog (formerly Data Catalog).
 ## Key objectives of the application include:
@@ -81,7 +81,6 @@ Open the `.env` file and replace the placeholder with your actual Client ID:
 ```shell
 // .env
 VITE_GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // <-- PASTE YOUR ID HERE
-VITE_GOOGLE_CLIENT_SECRET = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 ```
 #### Step 4: Run the Application
 Start the Vite development server.
@@ -149,9 +148,7 @@ Once you open this file you will see the json structure as mentioned below.
 
 ```json
 {
-  "aspectType": {},
-  "assets": {},
-  "products": []
+  "aspectType": {}
 }
 ```
 
@@ -172,9 +169,7 @@ Now to use browse by aspects we have to set the aspectType here in the below for
       "domainname",
     ],
 
-  },
-  "assets": {},
-  "products": []
+  }
 }
 ```
 
@@ -185,7 +180,7 @@ Folllow these steps to get the values for configuration:
 3. Here you can see the project number.
 4. Copy the project number and replace it in the name.
   `projects/1069*****1809/locations/{replace-location-here}/entryGroups/@dataplex/entries/{replace-aspect-id-here}_aspectType`
-5. Now go to **Dataplex Universal Catalog**.
+5. Now go to **Knowledge Catalog**.
 6. Search for the name of the aspect and open the detail view.
 7. In here you can find the aspect type id, location and we already have the project number from the previous steps using that our name would be.
   `projects/1069*****1809/locations/us-central1/entryGroups/@dataplex/entries/aspecttype3_aspectType`.
@@ -201,9 +196,7 @@ Folllow these steps to get the values for configuration:
       "marketing",
     ],
     //you can add more aspects here 
-  },
-  "assets": {},
-  "products": []
+  }
 }
 ```
 11. You can add as many aspects you want in the same manner.
@@ -227,7 +220,7 @@ gcloud builds submit . --tag us-central1-docker.pkg.dev/[PROJECT_ID]/[REPO_NAME]
 ```
 
 #### Step 7: Deploy to Cloud Run
-Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] and [CLIENT_SCERET] with the **OAuth credentials** you created in earlier steps.
+Replace the [PROJECT_ID],[REPO_NAME],[APP_NAME] with the value you have used above and replace [SERVICE_NAME] with the name you want to set your cloud run service, [ADMIN_EMAIL_ID] to your admin email you want to set, then the most important replace the [CLIENT_ID] with the **OAuth credentials** you created in earlier steps.
 
 Deploy the container image you just built to **Cloud Run** using the below command after replacing the mentioned values.
 After successful deployment it will return a url to access the application.
@@ -247,8 +240,7 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 **--platform managed**: Specifies the fully managed Cloud Run environment.
 
@@ -256,7 +248,11 @@ gcloud run deploy [SERVICE_NAME] \
 
 **--allow-unauthenticated**: Makes the frontend publicly accessible.
 
-Cloud Run will provide you with a public URL for your service.
+If you don't want it to be publicly accessible please use **--no-allow-unauthenticated** flag, but then you need to add the users manually to IAP(Identity Aware proxy) in the cloud run security tab of your app, or you can create a group add that group into you project and IAP(Identity Aware proxy) and assign users to that group.
+
+Also if your organisation policy enforce the **Domain Restricted Sharing** then you also have to add the users to IAP(Identity Aware proxy) for security reasons.
+
+Cloud Run will provide you with a public URL for your service or IAP accessible URL accordingly.
 
 #### Step 8: Update OAuth Credentials for Production
 Go back to your **Google Cloud Console** > Credentials page.
@@ -315,26 +311,28 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  VITE_GOOGLE_CLIENT_SECRET="[CLIENT_SCERET]"
+  --set-env-vars  GCP_REGION="global"
 ```
 
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
 
 
-## Release Note : 1.3.1
+## Release Note : 1.3.2
 This is a minor release with features, identified bug/fixes and some user interface changes.
 Feature Enhancements:
 
-  - Insights added for bigquery table in view details page.
-  - Login and home page UI/UX is revamped.
-  - Multiple smaller UI/UX changes.
-  - Browse by aspects consistency with glossary.
-  - Increased unit test coverages.
+  - Rebranding of Dataplex Universal Catalog to Knowledge Catalog.
+  - UI/UX changes in search result, View Detail and browse by aspects page.
+  - Multiple Other smaller UI/UX changes.
+  - Data product request flow form modified.
+  - Increased and modified unit test coverages for the new and modified modules.
+  - Server caching for static files are modified for new deployments.
+  - data products inside search bar now working with natural language search.
+  - scope changes for auth and api usage
 
 Bug Fixes:
 
+  - Bug fixes in search filters.
+  - Dead code removal from backend.
   - Bug fix in data products.
-  - Bug fixes in browse by glossary.
-  - Data products Access and permissions tab, template group was showing rather then actual now it's actual.
 

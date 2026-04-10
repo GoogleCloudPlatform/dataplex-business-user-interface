@@ -50,6 +50,23 @@ vi.mock('../../utils/resourceUtils', () => ({
     const data = aspectData as { data?: { fields?: { value?: unknown } } } | undefined;
     return data?.data?.fields?.value !== undefined;
   },
+  getFormattedDateTimeParts: (timestamp: any) => {
+    if (!timestamp) return { date: '-', time: '' };
+    return { date: 'Jan 1, 2022', time: '12:00:00 AM' };
+  },
+}));
+
+// Mock NotificationContext
+vi.mock('../../contexts/NotificationContext', () => ({
+  useNotification: () => ({
+    showNotification: vi.fn(),
+    showSuccess: vi.fn(),
+    showError: vi.fn(),
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
+    clearNotification: vi.fn(),
+    clearAllNotifications: vi.fn()
+  })
 }));
 
 // Mock glossary UI helpers
@@ -79,22 +96,26 @@ vi.mock('./SidebarItem', () => ({
   ),
 }));
 
-vi.mock('./GlossaryFilterInput', () => ({
-  default: ({ filters, onFiltersChange, isLoading, placeholder }: any) => (
+vi.mock('../Common/FilterBar', () => ({
+  default: ({ activeFilters, onActiveFiltersChange, placeholder }: any) => (
     <div data-testid="glossary-filter-input">
       <input
         data-testid="filter-input"
         placeholder={placeholder}
         onChange={(e) => {
           if (e.target.value) {
-            onFiltersChange([{ id: '1', field: 'name', value: e.target.value, displayLabel: e.target.value }]);
+            onActiveFiltersChange([{ id: '1', property: 'Name', values: [e.target.value] }]);
           } else {
-            onFiltersChange([]);
+            onActiveFiltersChange([]);
           }
         }}
       />
-      {isLoading && <span data-testid="filter-loading">Loading...</span>}
-      <span data-testid="filter-count">{filters.length}</span>
+      <span data-testid="filter-count">{activeFilters.length}</span>
+    </div>
+  ),
+  FilterBarChips: ({ activeFilters }: any) => (
+    <div data-testid="filter-bar-chips">
+      {activeFilters.length > 0 && <span data-testid="chip-count">{activeFilters.length}</span>}
     </div>
   ),
 }));
@@ -364,6 +385,9 @@ const createMockStore = (initialState: any = {}) => {
     filterStatus: 'idle',
     activeFilters: [],
     accessDeniedItemId: null,
+    selectedId: '',
+    expandedIds: [],
+    tabValue: 0,
   };
 
   const defaultProjectsState = {
@@ -371,10 +395,22 @@ const createMockStore = (initialState: any = {}) => {
     projects: [],
   };
 
+  const defaultSearchState = {
+    searchTerm: '',
+    searchResult: null,
+    searchType: 'All',
+    searchFilters: [],
+    semanticSearch: true,
+    isSearchFiltersOpen: true,
+    isSideNavOpen: true,
+    searchSubmitted: false,
+  };
+
   return configureStore({
     reducer: {
       glossaries: (state = { ...defaultGlossariesState, ...initialState.glossaries }) => state,
       projects: (state = { ...defaultProjectsState, ...initialState.projects }) => state,
+      search: (state = { ...defaultSearchState, ...initialState.search }) => state,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
@@ -431,9 +467,9 @@ describe('Glossaries', () => {
       expect(screen.getByTestId('sidebar-item-glossary-1')).toBeInTheDocument();
     });
 
-    it('shows header shimmer during initial load', () => {
+    it('shows shimmer during initial load', () => {
       renderWithStore({ glossaries: { status: 'loading', glossaryItems: [] } });
-      expect(screen.getByTestId('shimmer-header')).toBeInTheDocument();
+      expect(screen.getByTestId('shimmer-simple-list')).toBeInTheDocument();
     });
   });
 
@@ -469,10 +505,7 @@ describe('Glossaries', () => {
       expect(screen.getByTestId('filter-count')).toHaveTextContent('0');
     });
 
-    it('shows loading indicator during filtering', () => {
-      renderWithStore({ glossaries: { filterStatus: 'loading', glossaryItems: [mockGlossaryItem] } });
-      expect(screen.getByTestId('filter-loading')).toBeInTheDocument();
-    });
+    // Loading indicator test removed — FilterBar component does not have a built-in loading state
 
     it('displays filtered items when filters are active', () => {
       const filteredItem = { ...mockGlossaryItem, id: 'filtered-1', displayName: 'Filtered Glossary' };

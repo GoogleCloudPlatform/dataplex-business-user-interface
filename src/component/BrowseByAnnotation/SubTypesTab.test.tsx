@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SubTypesTab from './SubTypesTab';
 import SubTypesTabSkeleton from './SubTypesTabSkeleton';
@@ -45,7 +45,7 @@ describe('SubTypesTab', () => {
       render(<SubTypesTab {...defaultProps} />);
 
       expect(screen.getByPlaceholderText('Filter Sub Types')).toBeInTheDocument();
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
       expect(screen.getByText('Alpha Item')).toBeInTheDocument();
       expect(screen.getByText('Beta Item')).toBeInTheDocument();
       expect(screen.getByText('Gamma Item')).toBeInTheDocument();
@@ -91,26 +91,24 @@ describe('SubTypesTab', () => {
     it('should display sort order icon correctly for asc order', () => {
       render(<SubTypesTab {...defaultProps} sortOrder="asc" />);
 
-      const sortButton = screen.getByRole('button', { name: '' });
-      expect(sortButton).toBeInTheDocument();
+      const sortToggle = screen.getByTestId('sort-order-toggle');
+      expect(sortToggle).toBeInTheDocument();
     });
 
     it('should display sort order icon correctly for desc order', () => {
       render(<SubTypesTab {...defaultProps} sortOrder="desc" />);
 
-      const sortButton = screen.getByRole('button', { name: '' });
-      expect(sortButton).toBeInTheDocument();
+      const sortToggle = screen.getByTestId('sort-order-toggle');
+      expect(sortToggle).toBeInTheDocument();
     });
   });
 
   describe('search functionality', () => {
-    it('should update input value when typing in search input', async () => {
-      const user = userEvent.setup();
-
+    it('should update input value when typing in search input', () => {
       render(<SubTypesTab {...defaultProps} />);
 
       const searchInput = screen.getByPlaceholderText('Filter Sub Types');
-      await user.type(searchInput, 'test');
+      fireEvent.change(searchInput, { target: { value: 'test' } });
 
       expect(searchInput).toHaveValue('test');
     });
@@ -185,22 +183,22 @@ describe('SubTypesTab', () => {
   });
 
   describe('sort functionality', () => {
-    it('should display "Sort by: Name" when sortBy is name', () => {
+    it('should display "Name" when sortBy is name', () => {
       render(<SubTypesTab {...defaultProps} sortBy="name" />);
 
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
-    it('should display "Sort by: Assets" when sortBy is assets', () => {
+    it('should display "Assets" when sortBy is assets', () => {
       render(<SubTypesTab {...defaultProps} sortBy="assets" />);
 
-      expect(screen.getByText('Sort by: Assets')).toBeInTheDocument();
+      expect(screen.getByText('Assets')).toBeInTheDocument();
     });
 
-    it('should display "Sort by: Type" when sortBy is type', () => {
+    it('should display "Type" when sortBy is type', () => {
       render(<SubTypesTab {...defaultProps} sortBy="type" />);
 
-      expect(screen.getByText('Sort by: Type')).toBeInTheDocument();
+      expect(screen.getByText('Type')).toBeInTheDocument();
     });
 
     it('should call onSortOrderToggle when sort order button is clicked', async () => {
@@ -209,7 +207,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} onSortOrderToggle={onSortOrderToggle} />);
 
-      const sortOrderButton = screen.getAllByRole('button')[0];
+      const sortOrderButton = screen.getByTestId('sort-order-toggle');
       await user.click(sortOrderButton);
 
       expect(onSortOrderToggle).toHaveBeenCalledTimes(1);
@@ -220,7 +218,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
@@ -234,7 +232,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} sortBy="assets" onSortByChange={onSortByChange} />);
 
-      const sortByButton = screen.getByText('Sort by: Assets');
+      const sortByButton = screen.getByText('Assets');
       await user.click(sortByButton);
 
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
@@ -249,7 +247,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} onSortByChange={onSortByChange} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       const assetsOption = screen.getByRole('menuitem', { name: 'Assets' });
@@ -264,7 +262,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} onSortByChange={onSortByChange} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       const typeOption = screen.getByRole('menuitem', { name: 'Type' });
@@ -279,7 +277,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} sortBy="name" onSortByChange={onSortByChange} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
@@ -293,7 +291,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
@@ -309,7 +307,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
@@ -638,22 +636,33 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} />);
 
-      // Add a filter
+      // Add a filter via Name text-mode property
       const searchInput = screen.getByPlaceholderText('Filter Sub Types');
       await user.click(searchInput);
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
       await user.click(nameOption);
-      await user.type(searchInput, 'Alpha{Enter}');
+
+      // Type in the name-prefixed input and create chip
+      const nameInput = screen.getByPlaceholderText('Enter Name value...');
+      await user.type(nameInput, 'Alpha{Enter}');
 
       // Verify filter is applied
-      expect(screen.queryByText('Beta Item')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Beta Item')).not.toBeInTheDocument();
+      });
 
-      // Press Backspace to remove filter
-      await user.type(searchInput, '{Backspace}');
+      // Close any open menu first
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+
+      // Press Backspace on the now-empty input to remove the chip
+      const currentInput = screen.getByPlaceholderText('Filter Sub Types');
+      fireEvent.keyDown(currentInput, { key: 'Backspace' });
 
       // All items should be visible again
-      expect(screen.getByText('Alpha Item')).toBeInTheDocument();
-      expect(screen.getByText('Beta Item')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Alpha Item')).toBeInTheDocument();
+        expect(screen.getByText('Beta Item')).toBeInTheDocument();
+      });
     });
 
     it('should clear selected field on Backspace when input is empty', async () => {
@@ -667,13 +676,16 @@ describe('SubTypesTab', () => {
       await user.click(nameOption);
 
       // Verify field is selected (placeholder changes)
-      expect(screen.getByPlaceholderText('Enter Name value...')).toBeInTheDocument();
+      const nameInput = screen.getByPlaceholderText('Enter Name value...');
+      expect(nameInput).toBeInTheDocument();
 
       // Press Backspace to clear field selection
-      await user.type(searchInput, '{Backspace}');
+      fireEvent.keyDown(nameInput, { key: 'Backspace' });
 
-      // Dropdown should reappear
-      expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
+      // Placeholder should revert to default
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Filter Sub Types')).toBeInTheDocument();
+      });
     });
 
     it('should close dropdown and clear state on Escape', async () => {
@@ -814,20 +826,24 @@ describe('SubTypesTab', () => {
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
     });
 
-    it('should show "Add filter..." placeholder when filters exist', async () => {
+    it('should revert to default placeholder after creating filter chip', async () => {
       const user = userEvent.setup();
 
       render(<SubTypesTab {...defaultProps} />);
 
-      // Add a filter
+      // Add a filter via Name text-mode property
       const searchInput = screen.getByPlaceholderText('Filter Sub Types');
       await user.click(searchInput);
       const nameOption = screen.getByRole('menuitem', { name: 'Name' });
       await user.click(nameOption);
-      await user.type(searchInput, 'Alpha{Enter}');
 
-      // Placeholder should change
-      expect(screen.getByPlaceholderText('Add filter...')).toBeInTheDocument();
+      const nameInput = screen.getByPlaceholderText('Enter Name value...');
+      await user.type(nameInput, 'Alpha{Enter}');
+
+      // Placeholder should revert to default after chip creation
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Filter Sub Types')).toBeInTheDocument();
+      });
     });
   });
 
@@ -855,21 +871,38 @@ describe('SubTypesTab', () => {
       expect(screen.queryByText('Item B')).not.toBeInTheDocument();
     });
 
-    it('should filter items by type', async () => {
-      const user = userEvent.setup();
-
+    it('should filter items by type via dropdown', async () => {
       render(<SubTypesTab {...defaultProps} items={itemsWithDescAndType} />);
 
-      const searchInput = screen.getByPlaceholderText('Filter Sub Types');
-      await user.click(searchInput);
+      // Open filter menu via filter icon (required for dropdown submenu)
+      const filterIcon = screen.getByTestId('FilterListIcon');
+      fireEvent.click(filterIcon);
+
+      // Hover over Type to open sub-menu
       const typeOption = screen.getByRole('menuitem', { name: 'Type' });
-      await user.click(typeOption);
-      await user.type(searchInput, 'boolean{Enter}');
+      fireEvent.mouseEnter(typeOption);
+
+      // Wait for sub-menu with type values (find the checkbox menu items)
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole('checkbox');
+        expect(checkboxes.length).toBeGreaterThan(0);
+      });
+
+      // Click the "Boolean" menu item in the sub-menu
+      const menuItems = screen.getAllByRole('menuitem');
+      const booleanItem = menuItems.find(item => item.textContent?.includes('Boolean'));
+      fireEvent.click(booleanItem!);
+
+      // Close menus
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      fireEvent.keyDown(document.body, { key: 'Escape' });
 
       // Only Item C has boolean type
-      expect(screen.getByText('Item C')).toBeInTheDocument();
-      expect(screen.queryByText('Item A')).not.toBeInTheDocument();
-      expect(screen.queryByText('Item B')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Item C')).toBeInTheDocument();
+        expect(screen.queryByText('Item A')).not.toBeInTheDocument();
+        expect(screen.queryByText('Item B')).not.toBeInTheDocument();
+      });
     });
 
     it('should show "Enter Description value..." placeholder when Description field selected', async () => {
@@ -885,23 +918,25 @@ describe('SubTypesTab', () => {
       expect(screen.getByPlaceholderText('Enter Description value...')).toBeInTheDocument();
     });
 
-    it('should show "Enter Type value..." placeholder when Type field selected', async () => {
-      const user = userEvent.setup();
-
+    it('should show Type sub-menu on hover (Type is dropdown mode)', async () => {
       render(<SubTypesTab {...defaultProps} />);
 
-      const searchInput = screen.getByPlaceholderText('Filter Sub Types');
-      await user.click(searchInput);
-      const typeOption = screen.getByRole('menuitem', { name: 'Type' });
-      await user.click(typeOption);
+      // Open filter menu via filter icon (required for dropdown submenu)
+      const filterIcon = screen.getByTestId('FilterListIcon');
+      fireEvent.click(filterIcon);
 
-      expect(screen.getByPlaceholderText('Enter Type value...')).toBeInTheDocument();
+      // Hover over Type to open sub-menu (dropdown mode, not text mode)
+      const typeOption = screen.getByRole('menuitem', { name: 'Type' });
+      fireEvent.mouseEnter(typeOption);
+
+      // Sub-menu should show type values as checkbox menu items
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole('checkbox');
+        expect(checkboxes.length).toBeGreaterThan(0);
+      });
     });
 
     it('should use default type "string" when item has no type', async () => {
-      const user = userEvent.setup();
-      // NOTE: type: 'string' added to Item Without Type to prevent formatTypeDisplay crash
-      // Original test verified filtering behavior when type is missing, but component now requires type
       const itemsWithoutType = [
         { title: 'Item Without Type', fieldValues: 5, type: 'string' },
         { title: 'Item With Type', type: 'number', fieldValues: 3 },
@@ -909,20 +944,38 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} items={itemsWithoutType} />);
 
-      const searchInput = screen.getByPlaceholderText('Filter Sub Types');
-      await user.click(searchInput);
-      const typeOption = screen.getByRole('menuitem', { name: 'Type' });
-      await user.click(typeOption);
-      await user.type(searchInput, 'string{Enter}');
+      // Open filter menu via filter icon (required for dropdown submenu)
+      const filterIcon = screen.getByTestId('FilterListIcon');
+      fireEvent.click(filterIcon);
 
-      // Item without type should match "string" (default)
-      expect(screen.getByText('Item Without Type')).toBeInTheDocument();
-      expect(screen.queryByText('Item With Type')).not.toBeInTheDocument();
+      const typeOption = screen.getByRole('menuitem', { name: 'Type' });
+      fireEvent.mouseEnter(typeOption);
+
+      // Wait for sub-menu and click "Text" (formatted display of "string")
+      await waitFor(() => {
+        const checkboxes = screen.getAllByRole('checkbox');
+        expect(checkboxes.length).toBeGreaterThan(0);
+      });
+
+      // Find the menu item containing "Text" in the sub-menu
+      const menuItems = screen.getAllByRole('menuitem');
+      const textItem = menuItems.find(item => item.textContent?.includes('Text'));
+      fireEvent.click(textItem!);
+
+      // Close menu
+      const backdrop = document.querySelector('.MuiBackdrop-root');
+      if (backdrop) fireEvent.click(backdrop);
+
+      // Item with type "string" (displayed as "Text") should match
+      await waitFor(() => {
+        expect(screen.getByText('Item Without Type')).toBeInTheDocument();
+        expect(screen.queryByText('Item With Type')).not.toBeInTheDocument();
+      });
     });
   });
 
   describe('dropdown behavior', () => {
-    it('should close dropdown when clicking away', async () => {
+    it('should close dropdown when pressing Escape', async () => {
       const user = userEvent.setup();
 
       render(<SubTypesTab {...defaultProps} />);
@@ -933,30 +986,32 @@ describe('SubTypesTab', () => {
       // Verify dropdown is open
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
 
-      // Click away (on a card)
-      const card = screen.getByText('Alpha Item').closest('[class*="MuiCard"]');
-      await user.click(card!);
+      // Press Escape to close
+      await user.keyboard('{Escape}');
 
       // Dropdown should be closed
-      expect(screen.queryByRole('menuitem', { name: 'Name' })).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('menuitem', { name: 'Name' })).not.toBeInTheDocument();
+      });
     });
 
-    it('should close dropdown when typing in input', async () => {
-      const user = userEvent.setup();
-
+    it('should close dropdown when clicking backdrop', async () => {
       render(<SubTypesTab {...defaultProps} />);
 
       const searchInput = screen.getByPlaceholderText('Filter Sub Types');
-      await user.click(searchInput);
+      fireEvent.click(searchInput);
 
       // Verify dropdown is open
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
 
-      // Type something
-      await user.type(searchInput, 'test');
+      // Click backdrop to close
+      const backdrop = document.querySelector('.MuiBackdrop-root');
+      if (backdrop) fireEvent.click(backdrop);
 
       // Dropdown should be closed
-      expect(screen.queryByRole('menuitem', { name: 'Name' })).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole('menuitem', { name: 'Name' })).not.toBeInTheDocument();
+      });
     });
 
     it('should not show dropdown when input has value and focused', async () => {
@@ -1051,11 +1106,11 @@ describe('SubTypesTab', () => {
       expect(searchInput.tagName).toBe('INPUT');
     });
 
-    it('should have clickable sort buttons', () => {
+    it('should have clickable sort controls', () => {
       render(<SubTypesTab {...defaultProps} />);
 
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByTestId('sort-order-toggle')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     it('should have proper menu items in sort dropdown', async () => {
@@ -1063,7 +1118,7 @@ describe('SubTypesTab', () => {
 
       render(<SubTypesTab {...defaultProps} />);
 
-      const sortByButton = screen.getByText('Sort by: Name');
+      const sortByButton = screen.getByText('Name');
       await user.click(sortByButton);
 
       const menuItems = screen.getAllByRole('menuitem');
@@ -1246,11 +1301,11 @@ describe('SubTypeHeaderSkeleton', () => {
       expect(container.querySelector('.MuiBox-root')).toBeInTheDocument();
     });
 
-    it('should render exactly 3 skeleton elements', () => {
+    it('should render exactly 4 skeleton elements', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const skeletons = container.querySelectorAll('.MuiSkeleton-root');
-      expect(skeletons.length).toBe(3);
+      expect(skeletons.length).toBe(4);
     });
 
     it('should render back arrow skeleton with circular variant', () => {
@@ -1284,18 +1339,11 @@ describe('SubTypeHeaderSkeleton', () => {
   });
 
   describe('structure', () => {
-    it('should have container with fixed height of 64px', () => {
+    it('should have container with flexShrink 0', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const outerBox = container.firstChild as HTMLElement;
-      expect(outerBox).toHaveStyle({ height: '64px' });
-    });
-
-    it('should have container with relative positioning', () => {
-      const { container } = render(<SubTypeHeaderSkeleton />);
-
-      const outerBox = container.firstChild as HTMLElement;
-      expect(outerBox).toHaveStyle({ position: 'relative' });
+      expect(outerBox).toHaveStyle({ flexShrink: '0' });
     });
 
     it('should have title row with flex display', () => {
@@ -1305,18 +1353,11 @@ describe('SubTypeHeaderSkeleton', () => {
       expect(titleRow).toHaveStyle({ display: 'flex' });
     });
 
-    it('should have title row with absolute positioning', () => {
+    it('should have title row with padding instead of absolute positioning', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      expect(titleRow).toHaveStyle({ position: 'absolute' });
-    });
-
-    it('should have title row positioned at top 20px and left 20px', () => {
-      const { container } = render(<SubTypeHeaderSkeleton />);
-
-      const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      expect(titleRow).toHaveStyle({ top: '20px', left: '20px' });
+      expect(titleRow).toHaveStyle({ padding: '20px 20px 0px' });
     });
 
     it('should have title row with center-aligned items', () => {
@@ -1328,36 +1369,35 @@ describe('SubTypeHeaderSkeleton', () => {
   });
 
   describe('skeleton dimensions', () => {
-    it('should render back arrow skeleton with 20x20 dimensions', () => {
+    it('should render back arrow skeleton with 24x24 dimensions', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const circularSkeleton = container.querySelector('.MuiSkeleton-circular');
-      expect(circularSkeleton).toHaveStyle({ width: '20px', height: '20px' });
+      expect(circularSkeleton).toHaveStyle({ width: '24px', height: '24px' });
     });
 
-    it('should render icon skeleton with 24x24 dimensions', () => {
+    it('should render icon skeleton with 48x48 dimensions', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const roundedSkeletons = container.querySelectorAll('.MuiSkeleton-rounded');
-      // Find the 24x24 skeleton (icon)
       const iconSkeleton = Array.from(roundedSkeletons).find(
-        (skeleton) => getComputedStyle(skeleton).width === '24px'
+        (skeleton) => getComputedStyle(skeleton).width === '48px'
       );
       expect(iconSkeleton).toBeTruthy();
     });
 
-    it('should render title skeleton with 180px width', () => {
+    it('should render title skeleton with 250px width', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
-      const textSkeleton = container.querySelector('.MuiSkeleton-text');
-      expect(textSkeleton).toHaveStyle({ width: '180px' });
+      const textSkeletons = container.querySelectorAll('.MuiSkeleton-text');
+      expect(textSkeletons[0]).toHaveStyle({ width: '250px' });
     });
 
-    it('should render title skeleton with 24px height', () => {
+    it('should render title skeleton with 36px height', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
-      const textSkeleton = container.querySelector('.MuiSkeleton-text');
-      expect(textSkeleton).toHaveStyle({ height: '24px' });
+      const textSkeletons = container.querySelectorAll('.MuiSkeleton-text');
+      expect(textSkeletons[0]).toHaveStyle({ height: '36px' });
     });
   });
 
@@ -1390,8 +1430,7 @@ describe('SubTypeHeaderSkeleton', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      // gap: 1 in MUI equals 8px by default
-      expect(titleRow).toHaveStyle({ gap: '8px' });
+      expect(titleRow).toHaveStyle({ gap: '20px' });
     });
 
     it('should have flexShrink 0 on container', () => {
@@ -1413,7 +1452,7 @@ describe('SubTypeHeaderSkeleton', () => {
       const rerenderSkeletonCount = container.querySelectorAll('.MuiSkeleton-root').length;
 
       expect(initialSkeletonCount).toBe(rerenderSkeletonCount);
-      expect(initialSkeletonCount).toBe(3);
+      expect(initialSkeletonCount).toBe(4);
     });
 
     it('should handle unmount correctly', () => {
@@ -1442,11 +1481,11 @@ describe('SubTypeHeaderSkeleton', () => {
       expect(circularSkeletons.length).toBe(1);
     });
 
-    it('should have exactly one text skeleton for title', () => {
+    it('should have two text skeletons for title and description', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const textSkeletons = container.querySelectorAll('.MuiSkeleton-text');
-      expect(textSkeletons.length).toBe(1);
+      expect(textSkeletons.length).toBe(2);
     });
 
     it('should have exactly one rounded skeleton for icon', () => {
@@ -1468,19 +1507,18 @@ describe('SubTypeHeaderSkeleton', () => {
   });
 
   describe('layout matching MainComponent header', () => {
-    it('should match the header height of 64px used in MainComponent', () => {
+    it('should have flexShrink 0 matching MainComponent header', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const outerBox = container.firstChild as HTMLElement;
-      expect(outerBox).toHaveStyle({ height: '64px' });
+      expect(outerBox).toHaveStyle({ flexShrink: '0' });
     });
 
-    it('should have the same positioning as MainComponent header elements', () => {
+    it('should have the same padding as MainComponent header elements', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      // Matches MainComponent's header positioning
-      expect(titleRow).toHaveStyle({ top: '20px', left: '20px' });
+      expect(titleRow).toHaveStyle({ padding: '20px 20px 0px' });
     });
   });
 });

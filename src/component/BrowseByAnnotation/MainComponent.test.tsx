@@ -193,6 +193,23 @@ vi.mock('../../utils/resourceUtils', () => ({
     VIEW: 'View',
     DATASET: 'Dataset',
   },
+  getFormattedDateTimeParts: (timestamp: any) => {
+    if (!timestamp) return { date: '-', time: '' };
+    return { date: 'Jan 1, 2022', time: '12:00:00 AM' };
+  },
+}));
+
+// Mock NotificationContext
+vi.mock('../../contexts/NotificationContext', () => ({
+  useNotification: () => ({
+    showNotification: vi.fn(),
+    showSuccess: vi.fn(),
+    showError: vi.fn(),
+    showWarning: vi.fn(),
+    showInfo: vi.fn(),
+    clearNotification: vi.fn(),
+    clearAllNotifications: vi.fn()
+  })
 }));
 
 // Mock SVG imports

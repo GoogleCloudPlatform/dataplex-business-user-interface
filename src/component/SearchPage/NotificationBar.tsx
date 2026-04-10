@@ -30,7 +30,7 @@ import { Close } from '@mui/icons-material';
 interface NotificationBarProps {
   isVisible: boolean;
   onClose: () => void;
-  onUndo: () => void;
+  onUndo?: () => void;
   message: string;
 }
 
@@ -84,22 +84,24 @@ const NotificationBar: React.FC<NotificationBarProps> = ({
         {message}
       </Typography>
       
-      <Typography
-        onClick={onUndo}
-        sx={{
-          fontFamily: 'sans-serif',
-          fontSize: '14px',
-          fontWeight: '500',
-          color: '#FFFFFF',
-          cursor: 'pointer',
-          '&:hover': {
-            textDecoration: 'underline'
-          }
-        }}
-      >
-        Undo
-      </Typography>
-      
+      {onUndo && (
+        <Typography
+          onClick={onUndo}
+          sx={{
+            fontFamily: 'sans-serif',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#FFFFFF',
+            cursor: 'pointer',
+            '&:hover': {
+              textDecoration: 'underline'
+            }
+          }}
+        >
+          Undo
+        </Typography>
+      )}
+
       <IconButton
         onClick={onClose}
         sx={{

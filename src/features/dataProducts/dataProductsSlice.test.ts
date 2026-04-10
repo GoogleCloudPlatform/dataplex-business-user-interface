@@ -1230,6 +1230,8 @@ describe("dataProductsSlice", () => {
         dataProductAssets: [],
         dataProductAssetsStatus: "idle" as const,
         dataProductAssetsError: null,
+        viewMode: 'list' as const,
+        detailTabValue: 0,
       };
 
       const newState = dataProductsReducer(initialState, {

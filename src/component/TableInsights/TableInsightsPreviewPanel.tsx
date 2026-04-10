@@ -15,7 +15,6 @@ import { Close, FilterList } from '@mui/icons-material';
 import type { ColumnDescription } from '../../mocks/insightsMockData';
 
 interface TableInsightsPreviewPanelProps {
-  isOpen: boolean;
   currentDescription: string;
   geminiDescription: string;
   columnDescriptions: ColumnDescription[];
@@ -23,7 +22,6 @@ interface TableInsightsPreviewPanelProps {
 }
 
 const TableInsightsPreviewPanel: React.FC<TableInsightsPreviewPanelProps> = ({
-  isOpen,
   currentDescription,
   geminiDescription,
   columnDescriptions,
@@ -57,17 +55,9 @@ const TableInsightsPreviewPanel: React.FC<TableInsightsPreviewPanelProps> = ({
   return (
     <Box
       sx={{
-        position: 'fixed',
-        top: 0,
-        right: isOpen ? 0 : '-38.25rem',
-        width: '38.25rem',
-        height: '100vh',
-        backgroundColor: '#ffffff',
-        boxShadow: '-0.25rem 0rem 0.5rem rgba(0, 0, 0, 0.1)',
-        zIndex: 1200,
-        transition: 'right 0.3s ease-in-out',
         display: 'flex',
         flexDirection: 'column',
+        height: '100%',
       }}
     >
       {/* Header */}

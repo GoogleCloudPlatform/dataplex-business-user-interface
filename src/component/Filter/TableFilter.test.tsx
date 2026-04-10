@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TableFilter from './TableFilter';
 
@@ -167,23 +167,23 @@ describe('TableFilter', () => {
       const filterIcon = screen.getByTestId('FilterListIcon');
       await user.click(filterIcon.closest('button')!);
 
-      expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+      expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
     it('should open filter menu when Filter text is clicked', async () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
-      expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+      expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
     it('should display column names in filter menu', async () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       mockColumns.forEach(column => {
         expect(screen.getByText(column)).toBeInTheDocument();
@@ -195,11 +195,11 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Initially menu should not be visible
-      expect(screen.queryByText('Select Property to Filter')).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 
       // Open menu
-      await user.click(screen.getByText('Filter'));
-      expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
 
       // Verify menu is open
       expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('TableFilter', () => {
       ];
       render(<TableFilter data={dataWithNulls} columns={['name', 'category']} onFilteredDataChange={mockOnFilteredDataChange} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       expect(screen.getByText('name')).toBeInTheDocument();
       // category should not appear since all values are null/undefined
@@ -224,55 +224,27 @@ describe('TableFilter', () => {
   });
 
   describe('property selection', () => {
-    it('should show property values when property is selected', async () => {
-      const user = userEvent.setup();
+    it('should show property values when property is hovered', async () => {
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      fireEvent.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
+      fireEvent.mouseEnter(categoryItem!);
 
-      expect(screen.getByText('Filter by: category')).toBeInTheDocument();
-      expect(screen.getByText('Electronics')).toBeInTheDocument();
-      expect(screen.getByText('Clothing')).toBeInTheDocument();
-      expect(screen.getByText('Food')).toBeInTheDocument();
-    });
-
-    it('should show back button when property is selected', async () => {
-      const user = userEvent.setup();
-      render(<TableFilter {...defaultProps} />);
-
-      await user.click(screen.getByText('Filter'));
-
-      const menuItems = screen.getAllByRole('menuitem');
-      const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
-
-      expect(screen.getByText('← Back to Properties')).toBeInTheDocument();
-    });
-
-    it('should navigate back to properties when back button is clicked', async () => {
-      const user = userEvent.setup();
-      render(<TableFilter {...defaultProps} />);
-
-      await user.click(screen.getByText('Filter'));
-
-      const menuItems = screen.getAllByRole('menuitem');
-      const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
-
-      await user.click(screen.getByText('← Back to Properties'));
-
-      expect(screen.getByText('Select Property to Filter')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Electronics')).toBeInTheDocument();
+        expect(screen.getByText('Clothing')).toBeInTheDocument();
+        expect(screen.getByText('Food')).toBeInTheDocument();
+      });
     });
 
     it('should show checkboxes for property values', async () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -286,7 +258,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -308,7 +280,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -324,7 +296,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -344,7 +316,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -366,7 +338,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -389,7 +361,7 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Select a filter
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -398,7 +370,7 @@ describe('TableFilter', () => {
       await user.keyboard('{Escape}');
 
       // Reopen the filter menu
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       menuItems = screen.getAllByRole('menuitem');
       const categoryItemAgain = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItemAgain!);
@@ -414,7 +386,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -433,7 +405,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -452,7 +424,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -473,7 +445,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -496,7 +468,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -516,7 +488,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
@@ -543,7 +515,7 @@ describe('TableFilter', () => {
       await user.type(searchInput, 'test');
 
       // Add a filter to show Clear All button
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -563,7 +535,7 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Add a filter
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -575,7 +547,7 @@ describe('TableFilter', () => {
       await user.click(screen.getByText('Clear All'));
 
       // Menu should be closed
-      expect(screen.queryByText('Select Property to Filter')).not.toBeInTheDocument();
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     });
 
     it('should call onFilteredDataChange with empty array after clearing', async () => {
@@ -583,7 +555,7 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Add a filter
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -607,7 +579,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -628,7 +600,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -652,7 +624,7 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Add property filter for Electronics
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -678,20 +650,30 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Add category filter
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
-      const electronicsItem = screen.getByText('Electronics').closest('li')!;
-      await user.click(electronicsItem);
-      await user.click(screen.getByText('← Back to Properties'));
+      fireEvent.mouseEnter(categoryItem!);
+      await waitFor(() => {
+        expect(screen.getByText('Electronics')).toBeInTheDocument();
+      });
+      const electronicsCheckbox = screen.getByText('Electronics').closest('li')!.querySelector('input[type="checkbox"]')!;
+      await user.click(electronicsCheckbox);
 
-      // Add status filter
+      // Re-open menu (clicking checkbox closes menus)
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
+      await waitFor(() => {
+        menuItems = screen.getAllByRole('menuitem');
+        expect(menuItems.find(mi => mi.textContent === 'status')).toBeTruthy();
+      });
       menuItems = screen.getAllByRole('menuitem');
       const statusItem = menuItems.find(item => item.textContent === 'status');
-      await user.click(statusItem!);
-      const activeItem = screen.getByText('Active').closest('li')!;
-      await user.click(activeItem);
+      fireEvent.mouseEnter(statusItem!);
+      await waitFor(() => {
+        expect(screen.getByText('Active')).toBeInTheDocument();
+      });
+      const activeCheckbox = screen.getByText('Active').closest('li')!.querySelector('input[type="checkbox"]')!;
+      await user.click(activeCheckbox);
 
       await waitFor(() => {
         expect(mockOnFilteredDataChange).toHaveBeenCalled();
@@ -732,7 +714,7 @@ describe('TableFilter', () => {
       ];
       render(<TableFilter data={dataWithEmptyStrings} columns={['name', 'category']} onFilteredDataChange={mockOnFilteredDataChange} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       // Category should still be available since one item has a value
       expect(screen.getByText('category')).toBeInTheDocument();
@@ -746,7 +728,7 @@ describe('TableFilter', () => {
       ];
       render(<TableFilter data={dataWithNumbers} columns={['name', 'price']} onFilteredDataChange={mockOnFilteredDataChange} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const priceItem = menuItems.find(item => item.textContent === 'price');
       await user.click(priceItem!);
@@ -764,7 +746,7 @@ describe('TableFilter', () => {
       ];
       render(<TableFilter data={dataWithSpecialChars} columns={['name', 'category']} onFilteredDataChange={mockOnFilteredDataChange} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -781,7 +763,7 @@ describe('TableFilter', () => {
       ];
       render(<TableFilter data={dataWithLongValues} columns={['name', 'category']} onFilteredDataChange={mockOnFilteredDataChange} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const nameItem = menuItems.find(item => item.textContent === 'name');
       await user.click(nameItem!);
@@ -847,7 +829,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
 
       const menuItems = screen.getAllByRole('menuitem');
       expect(menuItems.length).toBeGreaterThan(0);
@@ -857,7 +839,7 @@ describe('TableFilter', () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       const menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
       await user.click(categoryItem!);
@@ -905,57 +887,87 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Add first filter (category)
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
+      fireEvent.mouseEnter(categoryItem!);
+      await waitFor(() => {
+        expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+      });
       let checkboxes = screen.getAllByRole('checkbox');
-      await user.click(checkboxes[0]); // Select Clothing
-      await user.click(screen.getByText('← Back to Properties'));
+      await user.click(checkboxes[0]); // Select first value
 
-      // Add second filter (status)
+      // Re-open menu and add status filter
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
+      await waitFor(() => {
+        menuItems = screen.getAllByRole('menuitem');
+        expect(menuItems.find(mi => mi.textContent === 'status')).toBeTruthy();
+      }, { timeout: 3000 });
       menuItems = screen.getAllByRole('menuitem');
       const statusItem = menuItems.find(item => item.textContent === 'status');
-      await user.click(statusItem!);
+      fireEvent.mouseEnter(statusItem!);
+      await waitFor(() => {
+        expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
       checkboxes = screen.getAllByRole('checkbox');
-      await user.click(checkboxes[0]); // Select Active
-      await user.click(screen.getByText('← Back to Properties'));
+      await user.click(checkboxes[0]); // Select first value
 
-      // Now update the first filter (category) by adding another value
+      // Re-open menu and update category
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
+      await waitFor(() => {
+        menuItems = screen.getAllByRole('menuitem');
+        expect(menuItems.find(mi => mi.textContent === 'category')).toBeTruthy();
+      }, { timeout: 3000 });
       menuItems = screen.getAllByRole('menuitem');
       const categoryItemAgain = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItemAgain!);
+      fireEvent.mouseEnter(categoryItemAgain!);
+      await waitFor(() => {
+        expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+      });
       checkboxes = screen.getAllByRole('checkbox');
-      await user.click(checkboxes[1]); // Select Electronics too
-
-      await user.keyboard('{Escape}');
+      await user.click(checkboxes[1]); // Select second value too
 
       // Both filters should be active
-      expect(screen.getByText('category:')).toBeInTheDocument();
-      expect(screen.getByText('status:')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('category:')).toBeInTheDocument();
+        expect(screen.getByText('status:')).toBeInTheDocument();
+      });
     });
 
     it('should handle filter removal while other filters remain', async () => {
       const user = userEvent.setup();
       render(<TableFilter {...defaultProps} />);
 
-      // Add two filters
-      await user.click(screen.getByText('Filter'));
+      // Add category filter
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       let menuItems = screen.getAllByRole('menuitem');
       const categoryItem = menuItems.find(item => item.textContent === 'category');
-      await user.click(categoryItem!);
+      fireEvent.mouseEnter(categoryItem!);
+      await waitFor(() => {
+        expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+      });
       let checkboxes = screen.getAllByRole('checkbox');
       await user.click(checkboxes[0]);
-      await user.click(screen.getByText('← Back to Properties'));
 
+      // Re-open menu and add status filter
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
+      await waitFor(() => {
+        menuItems = screen.getAllByRole('menuitem');
+        expect(menuItems.find(mi => mi.textContent === 'status')).toBeTruthy();
+      }, { timeout: 3000 });
       menuItems = screen.getAllByRole('menuitem');
       const statusItem = menuItems.find(item => item.textContent === 'status');
-      await user.click(statusItem!);
+      fireEvent.mouseEnter(statusItem!);
+      await waitFor(() => {
+        expect(screen.getAllByRole('checkbox').length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
       checkboxes = screen.getAllByRole('checkbox');
       await user.click(checkboxes[0]);
-      await user.keyboard('{Escape}');
 
-      // Remove category filter
+      // Remove category filter via chip close
+      await waitFor(() => {
+        expect(screen.getAllByText('×').length).toBeGreaterThan(0);
+      });
       const categoryChipClose = screen.getAllByText('×')[0].closest('button')!;
       await user.click(categoryChipClose);
 
@@ -971,7 +983,7 @@ describe('TableFilter', () => {
       render(<TableFilter {...defaultProps} />);
 
       // Open menu
-      await user.click(screen.getByText('Filter'));
+      await user.click(screen.getByTestId('FilterListIcon').closest('button')!);
       expect(screen.getByRole('menu')).toBeInTheDocument();
 
       // Select a property

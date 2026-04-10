@@ -7,9 +7,9 @@ import { configureStore } from '@reduxjs/toolkit';
 
 // Mock child component
 vi.mock('./DataProfileConfigurationsPanel', () => ({
-  default: function MockDataProfileConfigurationsPanel({ isOpen, onClose, dataProfileScan }: any) {
+  default: function MockDataProfileConfigurationsPanel({ onClose, dataProfileScan }: any) {
     return (
-      <div data-testid="configurations-panel" style={{ display: isOpen ? 'block' : 'none' }}>
+      <div data-testid="configurations-panel">
         <button onClick={onClose}>Close Panel</button>
         <div>Data Profile Scan: {dataProfileScan ? 'Available' : 'Not Available'}</div>
       </div>
@@ -251,15 +251,20 @@ describe('DataProfile', () => {
       isLoading: false
     });
 
+    // Open the panel
+    const configButton = screen.getByText('Configurations');
+    fireEvent.click(configButton);
+
     await waitFor(() => {
-      const configButton = screen.getByText('Configurations');
-      fireEvent.click(configButton);
-      
-      const closeButton = screen.getByText('Close Panel');
-      fireEvent.click(closeButton);
-      
-      const panel = screen.getByTestId('configurations-panel');
-      expect(panel).toHaveStyle({ display: 'none' });
+      expect(screen.getByRole('presentation')).toBeInTheDocument();
+    });
+
+    // Close the panel
+    const closeButton = screen.getByText('Close Panel');
+    fireEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
     });
   });
 
@@ -1358,21 +1363,21 @@ describe('DataProfile', () => {
   });
 
 
-  it('closes configurations panel when overlay is clicked', async () => {
+  it('opens configurations panel when button is clicked', async () => {
     renderDataProfile({}, {
       scanData: mockDataProfileScan,
       status: 'succeeded',
       isLoading: false
     });
 
-    await waitFor(() => {
-      // Open configurations panel
-      const configButton = screen.getByText('Configurations');
-      fireEvent.click(configButton);
+    // Open configurations panel
+    const configButton = screen.getByText('Configurations');
+    fireEvent.click(configButton);
 
-      // Panel should be visible
-      const panel = screen.getByTestId('configurations-panel');
-      expect(panel).toHaveStyle({ display: 'block' });
+    await waitFor(() => {
+      // Panel should be visible inside a Drawer
+      expect(screen.getByRole('presentation')).toBeInTheDocument();
+      expect(screen.getByTestId('configurations-panel')).toBeInTheDocument();
     });
   });
 

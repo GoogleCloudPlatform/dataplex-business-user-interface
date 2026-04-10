@@ -1,8 +1,12 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSessionExpiration } from '../../hooks/useSessionExpiration';
 import { useSessionManagement } from '../../hooks/useSessionManagement';
 import SessionExpired from './SessionExpired';
 import { SessionWarningModal } from '../../components/Auth/SessionWarningModal';
+import { NoAccessModal } from '../../components/Auth/NoAccessModal';
+import { NoAccessProvider, useNoAccess } from '../../contexts/NoAccessContext';
+import { useAuth } from '../../auth/AuthProvider';
 import { setSessionExpirationModalActive } from '../../utils/apiInterceptor';
 
 /**
@@ -100,15 +104,40 @@ const SessionExpirationWrapper: React.FC<SessionExpirationWrapperProps> = ({
 
   // Otherwise, render the children normally with the warning modal
   return (
-    <>
+    <NoAccessProvider>
       {children}
+      <NoAccessModalBridge />
       <SessionWarningModal
         open={isWarningModalOpen}
         remainingTime={remainingTime}
         onStayLoggedIn={handleStayLoggedIn}
         onLogOut={handleLogOut}
       />
-    </>
+    </NoAccessProvider>
+  );
+};
+
+/**
+ * Bridge component that connects NoAccessContext to NoAccessModal.
+ * Must be rendered inside NoAccessProvider.
+ */
+const NoAccessModalBridge: React.FC = () => {
+  const { isNoAccessOpen, noAccessMessage, dismissNoAccess } = useNoAccess();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignIn = () => {
+    dismissNoAccess();
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <NoAccessModal
+      open={isNoAccessOpen}
+      message={noAccessMessage}
+      onSignIn={handleSignIn}
+    />
   );
 };
 

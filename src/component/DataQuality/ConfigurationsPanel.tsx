@@ -45,12 +45,11 @@ import {
  */
 
 interface ConfigurationsPanelProps {
-  isOpen: boolean;
   onClose: () => void;
   dataQualtyScan: any;
 }
 
-const ConfigurationsPanel: React.FC<ConfigurationsPanelProps> = ({ isOpen, onClose, dataQualtyScan }) => {
+const ConfigurationsPanel: React.FC<ConfigurationsPanelProps> = ({ onClose, dataQualtyScan }) => {
   // const configurations = [
   //   { key: 'Scope', value: 'Entire data' },
   //   { key: 'Row Filter', value: 'N/A' },
@@ -67,19 +66,11 @@ const ConfigurationsPanel: React.FC<ConfigurationsPanelProps> = ({ isOpen, onClo
   return (
     <Box
       sx={{
-        position: 'fixed',
-        top: 0,
-        right: isOpen ? 0 : '-38.25rem',
-        width: '38.25rem',
-        height: '100vh',
-        backgroundColor: '#ffffff',
-        boxShadow: '-0.25rem 0rem 0.5rem rgba(0, 0, 0, 0.1)',
-        zIndex: 1200,
-        transition: 'right 0.3s ease-in-out',
         display: 'flex',
         flexDirection: 'column',
         padding: '1.25rem 0rem 1.25rem 1.25rem',
-        gap: '1.25rem'
+        gap: '1.25rem',
+        height: '100%',
       }}
     >
       {/* Header */}

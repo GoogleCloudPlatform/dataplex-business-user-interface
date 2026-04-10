@@ -55,7 +55,7 @@ const Login: React.FC = () => {
     },
     onError: () => console.error('Google Login Failed'),
     flow: 'implicit', // or 'auth-code' depending on your OAuth setup
-    scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
+    scope: 'https://www.googleapis.com/auth/cloud-platform.read-only https://www.googleapis.com/auth/bigquery https://www.googleapis.com/auth/dataplex.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/gmail.send',
 
   });
   
@@ -70,8 +70,8 @@ const Login: React.FC = () => {
             <div className='logo-container'>
               <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="Catalog Studio Logo" className='logo-image'/>
               <div className='logo-text-container'>
-                <span className='logo-text-primary' style={{color: '#0E4DCA'}}>Dataplex</span>
-                <span className='logo-text-secondary' style={{color: '#0E4DCA'}}>Universal Catalog</span>
+                <span className='logo-text-primary' style={{color: '#0E4DCA'}}>Knowledge</span>
+                <span className='logo-text-secondary' style={{color: '#0E4DCA'}}>Catalog</span>
               </div>
             </div>
           </div>

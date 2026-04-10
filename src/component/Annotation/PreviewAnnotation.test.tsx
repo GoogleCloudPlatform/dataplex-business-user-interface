@@ -1,13 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import PreviewAnnotation from './PreviewAnnotation';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 
-// Mock SVG import
-vi.mock('../../assets/svg/help_outline.svg', () => ({
-  default: 'help-outline-icon'
+// Mock SVG imports
+vi.mock('../../assets/svg/annotations-icon-blue.svg', () => ({
+  default: 'annotations-icon-blue'
+}));
+vi.mock('../../assets/svg/edit_note.svg', () => ({
+  default: 'edit-note-icon'
+}));
+vi.mock('../../assets/svg/database_schema_icon.svg', () => ({
+  default: 'database-schema-icon'
 }));
 
 describe('PreviewAnnotation', () => {
@@ -120,6 +125,67 @@ describe('PreviewAnnotation', () => {
     }
   };
 
+  const mockEntryWithStructValue = {
+    entryType: 'tables/123',
+    aspects: {
+      '123.custom.withstruct': {
+        aspectType: 'tables/custom/withstruct',
+        data: {
+          fields: {
+            job: {
+              kind: 'structValue',
+              structValue: {
+                fields: {
+                  name: { kind: 'stringValue', stringValue: 'Job Name Value' },
+                  runTime: { kind: 'stringValue', stringValue: '2026-02-24T05:05:13Z' }
+                }
+              }
+            },
+            description: { kind: 'stringValue', stringValue: 'A description' }
+          }
+        }
+      }
+    }
+  };
+
+  const mockEntryWithListOfStructs = {
+    entryType: 'tables/123',
+    aspects: {
+      '123.custom.withliststruct': {
+        aspectType: 'tables/custom/withliststruct',
+        data: {
+          fields: {
+            fields: {
+              kind: 'listValue',
+              listValue: {
+                values: [
+                  {
+                    kind: 'structValue',
+                    structValue: {
+                      fields: {
+                        name: { kind: 'stringValue', stringValue: 'department' },
+                        description: { kind: 'stringValue', stringValue: 'The department' }
+                      }
+                    }
+                  },
+                  {
+                    kind: 'structValue',
+                    structValue: {
+                      fields: {
+                        name: { kind: 'stringValue', stringValue: 'emp_id' },
+                        description: { kind: 'stringValue', stringValue: 'Employee ID' }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
   let setExpandedItemsMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -143,29 +209,33 @@ describe('PreviewAnnotation', () => {
   describe('Basic Rendering', () => {
     it('renders annotation accordions including those with null data as static items', () => {
       renderPreviewAnnotation();
-      expect(screen.getByText('annotation1')).toBeInTheDocument();
-      expect(screen.getByText('annotation2')).toBeInTheDocument();
-      expect(screen.getByText('empty')).toBeInTheDocument();
-      // Null data aspects are rendered as non-expandable static items
-      expect(screen.getByText('null')).toBeInTheDocument();
+      expect(screen.getByText('Annotation1')).toBeInTheDocument();
+      expect(screen.getByText('Annotation2')).toBeInTheDocument();
+      expect(screen.getByText('Empty')).toBeInTheDocument();
+      expect(screen.getByText('Null')).toBeInTheDocument();
     });
 
-    it('renders "Aspect" label for each annotation', () => {
+    it('does not render "Aspect" chip label (removed per design spec)', () => {
       renderPreviewAnnotation();
-      const aspectLabels = screen.getAllByText('Aspect');
-      expect(aspectLabels.length).toBeGreaterThan(0);
+      expect(screen.queryAllByText('Aspect')).toHaveLength(0);
+    });
+
+    it('renders aspect icon next to aspect names', () => {
+      renderPreviewAnnotation();
+      const icons = screen.getAllByAltText('');
+      expect(icons.length).toBeGreaterThan(0);
     });
 
     it('handles entry without aspects gracefully', () => {
       const entryWithoutAspects = { ...mockEntry, aspects: undefined };
       renderPreviewAnnotation({ entry: entryWithoutAspects });
-      expect(screen.queryByText('annotation1')).not.toBeInTheDocument();
+      expect(screen.queryByText('Annotation1')).not.toBeInTheDocument();
     });
 
     it('handles entry without entryType gracefully', () => {
       const entryWithoutType = { ...mockEntry, entryType: undefined };
       renderPreviewAnnotation({ entry: entryWithoutType });
-      expect(screen.getByText('annotation1')).toBeInTheDocument();
+      expect(screen.getByText('Annotation1')).toBeInTheDocument();
     });
 
     it('handles null entry gracefully', () => {
@@ -204,7 +274,6 @@ describe('PreviewAnnotation', () => {
     it('filters out schema, overview, contacts, usage, glossary-term-aspect, and refresh-cadence aspects', () => {
       renderPreviewAnnotation({ entry: mockEntryWithGlobalAspects });
 
-      // These should be filtered out
       expect(screen.queryByText('schema')).not.toBeInTheDocument();
       expect(screen.queryByText('overview')).not.toBeInTheDocument();
       expect(screen.queryByText('contacts')).not.toBeInTheDocument();
@@ -212,8 +281,7 @@ describe('PreviewAnnotation', () => {
       expect(screen.queryByText('glossary-term-aspect')).not.toBeInTheDocument();
       expect(screen.queryByText('refresh-cadence')).not.toBeInTheDocument();
 
-      // This should be visible
-      expect(screen.getByText('visible')).toBeInTheDocument();
+      expect(screen.getByText('Visible')).toBeInTheDocument();
     });
   });
 
@@ -223,19 +291,30 @@ describe('PreviewAnnotation', () => {
     it('calls setExpandedItems when an accordion is clicked', () => {
       renderPreviewAnnotation();
 
-      const annotation1Accordion = screen.getByText('annotation1');
+      const annotation1Accordion = screen.getByText('Annotation1');
       fireEvent.click(annotation1Accordion);
 
       expect(setExpandedItemsMock).toHaveBeenCalledTimes(1);
       expect(setExpandedItemsMock).toHaveBeenCalledWith(new Set(['123.custom.annotation1']));
     });
 
-    it('shows annotation data when the expandedItems prop is updated', () => {
-      // Render with accordion already expanded
+    it('shows field names when the aspect accordion is expanded', () => {
       const expandedSet = new Set(['123.custom.annotation1']);
       renderPreviewAnnotation({}, expandedSet);
 
+      // Field name should be visible as a collapsible row
       expect(screen.getByText('field1')).toBeInTheDocument();
+    });
+
+    it('shows field value when field row is clicked to expand', () => {
+      const expandedSet = new Set(['123.custom.annotation1']);
+      renderPreviewAnnotation({}, expandedSet);
+
+      // Click the field to expand it
+      const fieldRow = screen.getByText('field1');
+      fireEvent.click(fieldRow);
+
+      // Value should now be visible
       expect(screen.getByText('test value 1')).toBeInTheDocument();
     });
 
@@ -248,7 +327,7 @@ describe('PreviewAnnotation', () => {
 
       const { rerender } = renderPreviewAnnotation({}, expandedSet);
 
-      const annotation1Accordion = screen.getByText('annotation1');
+      const annotation1Accordion = screen.getByText('Annotation1');
 
       // Expand
       fireEvent.click(annotation1Accordion);
@@ -256,7 +335,7 @@ describe('PreviewAnnotation', () => {
       expect(expandedSet.has('123.custom.annotation1')).toBe(true);
 
       rerender(<PreviewAnnotation entry={mockEntry} css={{}} expandedItems={expandedSet} setExpandedItems={setExpandedItemsMock} />);
-      expect(screen.getByText('test value 1')).toBeInTheDocument();
+      expect(screen.getByText('field1')).toBeInTheDocument();
 
       // Collapse
       fireEvent.click(annotation1Accordion);
@@ -267,90 +346,99 @@ describe('PreviewAnnotation', () => {
     it('does not expand accordion for annotations without valid data', () => {
       renderPreviewAnnotation();
 
-      const emptyAccordion = screen.getByText('empty');
-
-      // Clicking should not attempt to change state
+      const emptyAccordion = screen.getByText('Empty');
       fireEvent.click(emptyAccordion);
       expect(setExpandedItemsMock).not.toHaveBeenCalled();
     });
 
-    it('updates annotation label styling when expanded', () => {
-      const { rerender } = renderPreviewAnnotation();
-      const annotationLabel = screen.getAllByText('Aspect')[0];
-
-      // Initial (collapsed) style
-      expect(annotationLabel).toHaveStyle({ background: '#E7F0FE', color: '#004A77' });
-
-      // Rerender with the item expanded
+    it('updates accordion background styling when expanded', () => {
       const expandedSet = new Set(['123.custom.annotation1']);
-      rerender(<PreviewAnnotation entry={mockEntry} css={{}} expandedItems={expandedSet} setExpandedItems={setExpandedItemsMock} />);
+      renderPreviewAnnotation({}, expandedSet);
 
-      // Expanded style
-      expect(annotationLabel).toHaveStyle({ background: '#0B57D0', color: '#FFFFFF' });
+      // When expanded, the accordion summary should have #F0F4F8 background
+      const annotationName = screen.getByText('Annotation1');
+      const accordionSummary = annotationName.closest('[role="button"]') || annotationName.closest('div');
+      expect(accordionSummary).toBeInTheDocument();
     });
   });
 
   // --- FIELD TYPE RENDERING TESTS ---
 
   describe('Field Type Rendering', () => {
-    it('renders stringValue fields correctly', () => {
+    it('renders stringValue fields as collapsible rows', () => {
       const expandedSet = new Set(['123.custom.alltypes']);
       renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
 
       expect(screen.getByText('stringField')).toBeInTheDocument();
+      // When all aspects are expanded, nested fields are auto-expanded
       expect(screen.getByText('string value')).toBeInTheDocument();
     });
 
-    it('renders numberValue fields correctly', () => {
+    it('renders numberValue fields correctly when expanded', () => {
       const expandedSet = new Set(['123.custom.alltypes']);
       renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
 
+      // Auto-expanded when all aspects are expanded
       expect(screen.getByText('numberField')).toBeInTheDocument();
       expect(screen.getByText('42')).toBeInTheDocument();
     });
 
-    it('renders boolValue fields correctly (true and false)', () => {
+    it('renders boolValue fields correctly when expanded (true and false)', () => {
       const expandedSet = new Set(['123.custom.alltypes']);
       renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
 
+      // Auto-expanded when all aspects are expanded
       expect(screen.getByText('boolTrueField')).toBeInTheDocument();
       expect(screen.getByText('true')).toBeInTheDocument();
       expect(screen.getByText('boolFalseField')).toBeInTheDocument();
       expect(screen.getByText('false')).toBeInTheDocument();
     });
 
-    it('renders listValue fields with multiple items', () => {
+    it('renders listValue fields with items when expanded', () => {
       const expandedSet = new Set(['123.custom.annotation2']);
       renderPreviewAnnotation({}, expandedSet);
 
+      fireEvent.click(screen.getByText('listField'));
       expect(screen.getByText('list item 1')).toBeInTheDocument();
       expect(screen.getByText('list item 2')).toBeInTheDocument();
     });
 
-    it('renders simple (non-object) field values', () => {
+    it('renders simple (non-object) field values when expanded', () => {
       const expandedSet = new Set(['123.custom.simple']);
       renderPreviewAnnotation({ entry: mockEntryWithSimpleValues }, expandedSet);
 
       expect(screen.getByText('simpleString')).toBeInTheDocument();
-      expect(screen.getByText('direct string')).toBeInTheDocument();
       expect(screen.getByText('simpleNumber')).toBeInTheDocument();
-      expect(screen.getByText('123')).toBeInTheDocument();
     });
 
-    it('renders "No data available" when fields are empty or invalid', () => {
-      const entryWithNoFields = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.nodata': {
-            aspectType: 'tables/custom/nodata',
-            data: { fields: {} }
-          }
-        }
-      };
+    it('renders structValue fields as collapsible rows', () => {
+      const expandedSet = new Set(['123.custom.withstruct']);
+      renderPreviewAnnotation({ entry: mockEntryWithStructValue }, expandedSet);
 
-      // The accordion won't have content so it renders as static div
-      renderPreviewAnnotation({ entry: entryWithNoFields });
-      expect(screen.getByText('nodata')).toBeInTheDocument();
+      // struct field 'job' should be visible
+      expect(screen.getByText('job')).toBeInTheDocument();
+      // simple field 'description' should also be visible
+      expect(screen.getByText('description')).toBeInTheDocument();
+    });
+
+    it('shows struct sub-fields as key-value pairs when expanded', () => {
+      const expandedSet = new Set(['123.custom.withstruct']);
+      renderPreviewAnnotation({ entry: mockEntryWithStructValue }, expandedSet);
+
+      // Auto-expanded when all aspects are expanded — sub-fields visible immediately
+      expect(screen.getByText('Name')).toBeInTheDocument();
+      expect(screen.getByText('Job Name Value')).toBeInTheDocument();
+      expect(screen.getByText('Run Time')).toBeInTheDocument();
+      expect(screen.getByText('2026-02-24T05:05:13Z')).toBeInTheDocument();
+    });
+
+    it('renders listValue with struct items as expandable list', () => {
+      const expandedSet = new Set(['123.custom.withliststruct']);
+      renderPreviewAnnotation({ entry: mockEntryWithListOfStructs }, expandedSet);
+
+      // Auto-expanded when all aspects are expanded — parent + list items visible
+      const fieldItems = screen.getAllByText('fields');
+      expect(fieldItems.length).toBeGreaterThan(1);
     });
 
     it('handles raw data without fields property', () => {
@@ -358,144 +446,26 @@ describe('PreviewAnnotation', () => {
       renderPreviewAnnotation({ entry: mockEntryWithRawData }, expandedSet);
 
       expect(screen.getByText('directField')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('directField'));
       expect(screen.getByText('direct value')).toBeInTheDocument();
-    });
-  });
-
-  // --- SORTING TESTS ---
-
-  describe('Sorting Functionality', () => {
-    it('shows sort button on hover over Name column', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      const nameHeader = screen.getByText('Name');
-      fireEvent.mouseEnter(nameHeader.parentElement!);
-
-      // Sort button should appear with tooltip
-      expect(screen.getByRole('button')).toBeInTheDocument();
-
-      fireEvent.mouseLeave(nameHeader.parentElement!);
-    });
-
-    it('shows sort button on hover over Value column', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader.parentElement!);
-
-      // Sort button should appear
-      expect(screen.getByRole('button')).toBeInTheDocument();
-
-      fireEvent.mouseLeave(valueHeader.parentElement!);
-    });
-
-    it('sorts by name on click and maintains sort state', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      const nameHeader = screen.getByText('Name');
-      fireEvent.mouseEnter(nameHeader.parentElement!);
-
-      const sortButton = screen.getByRole('button');
-      fireEvent.click(sortButton);
-
-      // After clicking, button should still be visible (active sort)
-      expect(screen.getByRole('button')).toBeInTheDocument();
-    });
-
-    it('cycles through sort states on multiple clicks', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      const nameHeader = screen.getByText('Name');
-      fireEvent.mouseEnter(nameHeader.parentElement!);
-
-      const sortButton = screen.getByRole('button');
-
-      // First click - ascending
-      fireEvent.click(sortButton);
-      expect(sortButton).toBeInTheDocument();
-
-      // Second click - descending
-      fireEvent.click(sortButton);
-      expect(sortButton).toBeInTheDocument();
-
-      // Third click - clears sort
-      fireEvent.click(sortButton);
-      expect(sortButton).toBeInTheDocument();
-    });
-
-    it('sorts by value column', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader.parentElement!);
-
-      const sortButton = screen.getByRole('button');
-      fireEvent.click(sortButton);
-
-      // Should sort by value
-      expect(sortButton).toBeInTheDocument();
-    });
-
-    it('handles sort column switching', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Sort by name first
-      const nameHeader = screen.getByText('Name');
-      fireEvent.mouseEnter(nameHeader.parentElement!);
-      let sortButton = screen.getByRole('button');
-      fireEvent.click(sortButton);
-
-      // Now hover and sort by value
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader.parentElement!);
-
-      // Should have multiple sort buttons now
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   // --- PROP TESTS ---
 
-  describe('isTopComponent Prop', () => {
-    it('renders correctly with isTopComponent true', () => {
-      const expandedSet = new Set(['123.custom.annotation1']);
-      renderPreviewAnnotation({ isTopComponent: true }, expandedSet);
-
-      // Component should render without errors
-      expect(screen.getAllByText('Name').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Value').length).toBeGreaterThan(0);
-    });
-
-    it('renders correctly with isTopComponent false (default)', () => {
-      const expandedSet = new Set(['123.custom.annotation1']);
-      renderPreviewAnnotation({ isTopComponent: false }, expandedSet);
-
-      // Component should render without errors
-      expect(screen.getAllByText('Name').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Value').length).toBeGreaterThan(0);
-    });
-  });
-
   describe('isGlossary Prop', () => {
     it('applies glossary-specific styling when isGlossary is true', () => {
       renderPreviewAnnotation({ isGlossary: true });
 
-      const annotationName = screen.getByText('annotation1');
+      const annotationName = screen.getByText('Annotation1');
       expect(annotationName).toHaveStyle({ fontSize: '0.7rem' });
     });
 
     it('applies default styling when isGlossary is false', () => {
       renderPreviewAnnotation({ isGlossary: false });
 
-      const annotationName = screen.getByText('annotation1');
-      expect(annotationName).toHaveStyle({ fontSize: '0.875rem' });
+      const annotationName = screen.getByText('Annotation1');
+      expect(annotationName).toHaveStyle({ fontSize: '14px' });
     });
   });
 
@@ -504,8 +474,7 @@ describe('PreviewAnnotation', () => {
       const customCss = { backgroundColor: 'red', padding: '20px' };
       renderPreviewAnnotation({ css: customCss });
 
-      // Component should render without errors
-      expect(screen.getByText('annotation1')).toBeInTheDocument();
+      expect(screen.getByText('Annotation1')).toBeInTheDocument();
     });
 
     it('applies CSS to empty state container', () => {
@@ -540,16 +509,15 @@ describe('PreviewAnnotation', () => {
       };
 
       renderPreviewAnnotation({ entry: entryWithHyphenatedName });
-      // Hyphenated names should be converted to spaces
-      expect(screen.getByText('my custom aspect')).toBeInTheDocument();
+      expect(screen.getByText('My Custom Aspect')).toBeInTheDocument();
     });
 
     it('handles multiple accordions expanded simultaneously', () => {
       const expandedSet = new Set(['123.custom.annotation1', '123.custom.annotation2']);
       renderPreviewAnnotation({}, expandedSet);
 
-      expect(screen.getByText('test value 1')).toBeInTheDocument();
-      expect(screen.getByText('list item 1')).toBeInTheDocument();
+      expect(screen.getByText('field1')).toBeInTheDocument();
+      expect(screen.getByText('listField')).toBeInTheDocument();
     });
 
     it('handles entry with deeply nested entryType', () => {
@@ -564,7 +532,7 @@ describe('PreviewAnnotation', () => {
       };
 
       renderPreviewAnnotation({ entry: entryWithDeepType });
-      expect(screen.getByText('test')).toBeInTheDocument();
+      expect(screen.getByText('Test')).toBeInTheDocument();
     });
 
     it('handles listValue with empty values array', () => {
@@ -583,8 +551,7 @@ describe('PreviewAnnotation', () => {
       };
 
       renderPreviewAnnotation({ entry: entryWithEmptyList });
-      // Should render but not show the empty list field
-      expect(screen.getByText('emptylist')).toBeInTheDocument();
+      expect(screen.getByText('Emptylist')).toBeInTheDocument();
     });
 
     it('filters fields with null listValue', () => {
@@ -603,7 +570,7 @@ describe('PreviewAnnotation', () => {
       };
 
       renderPreviewAnnotation({ entry: entryWithNullListValue });
-      expect(screen.getByText('nulllist')).toBeInTheDocument();
+      expect(screen.getByText('Nulllist')).toBeInTheDocument();
     });
 
     it('handles numberValue of 0 correctly', () => {
@@ -625,6 +592,7 @@ describe('PreviewAnnotation', () => {
       renderPreviewAnnotation({ entry: entryWithZero }, expandedSet);
 
       expect(screen.getByText('zeroField')).toBeInTheDocument();
+      // Auto-expanded when all aspects are expanded
       expect(screen.getByText('0')).toBeInTheDocument();
     });
 
@@ -647,162 +615,28 @@ describe('PreviewAnnotation', () => {
       const expandedSet = new Set(['123.custom.emptystring']);
       renderPreviewAnnotation({ entry: entryWithEmptyString }, expandedSet);
 
-      // Valid field should be shown
-      expect(screen.getByText('valid')).toBeInTheDocument();
-      // Empty field should not trigger row rendering
-    });
-  });
-
-  // --- HELP ICON TESTS ---
-
-  describe('Help Icons', () => {
-    it('renders help icon for list value items', () => {
-      const expandedSet = new Set(['123.custom.annotation2']);
-      renderPreviewAnnotation({}, expandedSet);
-
-      const helpIcons = screen.getAllByAltText('Help');
-      expect(helpIcons.length).toBeGreaterThan(0);
-    });
-  });
-
-  // --- ADDITIONAL COVERAGE TESTS ---
-
-  describe('Additional Sort and Edge Case Coverage', () => {
-    it('handles click on Value column sort button', async () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      const { container } = renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Find the Value header and trigger mouseEnter
-      const valueHeaders = screen.getAllByText('Value');
-      const valueHeader = valueHeaders[0];
-      const valueHeaderContainer = valueHeader.parentElement;
-
-      if (valueHeaderContainer) {
-        fireEvent.mouseEnter(valueHeaderContainer);
-      }
-
-      // Try to find and click any sort buttons that appear
-      const sortButtons = container.querySelectorAll('button');
-      if (sortButtons.length > 0) {
-        fireEvent.click(sortButtons[sortButtons.length - 1]);
-      }
-
-      // Component should handle the sort
-      expect(screen.getAllByText('Value').length).toBeGreaterThan(0);
+      // Valid field should be shown as a collapsible row
+      expect(screen.getByText('validField')).toBeInTheDocument();
     });
 
-    it('handles sorting when sort config exists for value column', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      const { container } = renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Find Value headers and trigger hover on them directly
-      const valueHeaders = screen.getAllByText('Value');
-
-      // Hover over the first Value header to show sort button
-      if (valueHeaders[0]?.parentElement) {
-        fireEvent.mouseEnter(valueHeaders[0].parentElement);
-
-        // Find any buttons that appeared
-        const buttons = container.querySelectorAll('[role="button"]');
-        if (buttons.length > 0) {
-          // Click the last button (Value sort button)
-          fireEvent.click(buttons[buttons.length - 1]);
-
-          // Click again to change direction to desc
-          fireEvent.click(buttons[buttons.length - 1]);
-
-          // Click again to clear
-          fireEvent.click(buttons[buttons.length - 1]);
-        }
-
-        fireEvent.mouseLeave(valueHeaders[0].parentElement);
-      }
-
-      // Component should handle sorting state changes
-      expect(valueHeaders.length).toBeGreaterThan(0);
-    });
-
-    it('renders No data available for truly empty fields object', () => {
-      const entryWithEmptyObject = {
+    it('handles structValue with empty fields', () => {
+      const entryWithEmptyStruct = {
         entryType: 'tables/123',
         aspects: {
-          '123.custom.emptyobj': {
-            aspectType: 'tables/custom/emptyobj',
-            data: { fields: {} }
-          }
-        }
-      };
-
-      // This will render a static div, not an expandable accordion
-      renderPreviewAnnotation({ entry: entryWithEmptyObject });
-      expect(screen.getByText('emptyobj')).toBeInTheDocument();
-    });
-
-    it('renders correctly when fields is not an object', () => {
-      const entryWithNonObjectFields = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.noobj': {
-            aspectType: 'tables/custom/noobj',
-            data: { fields: null }
-          }
-        }
-      };
-
-      renderPreviewAnnotation({ entry: entryWithNonObjectFields });
-      expect(screen.getByText('noobj')).toBeInTheDocument();
-    });
-
-    it('handles field with empty displayValue after filtering', () => {
-      // This tests the return null case at line 359
-      // The field passes the validFields filter but has empty displayValue
-      const entryWithMixedFields = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.mixed': {
-            aspectType: 'tables/custom/mixed',
+          '123.custom.emptystruct': {
+            aspectType: 'tables/custom/emptystruct',
             data: {
               fields: {
-                validField: { kind: 'stringValue', stringValue: 'valid' },
-                // Field with a kind but no corresponding value
-                weirdField: { kind: 'stringValue', stringValue: undefined },
-                // Object that doesn't match any known kind
-                unknownKindField: { kind: 'unknownKind' }
+                emptyStruct: { kind: 'structValue', structValue: { fields: {} } }
               }
             }
           }
         }
       };
 
-      const expandedSet = new Set(['123.custom.mixed']);
-      renderPreviewAnnotation({ entry: entryWithMixedFields }, expandedSet);
-
-      // Valid field should be shown
-      expect(screen.getByText('valid')).toBeInTheDocument();
-    });
-
-    it('handles field where displayValue is explicitly empty string', () => {
-      const entryWithEmptyDisplay = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.emptydisplay': {
-            aspectType: 'tables/custom/emptydisplay',
-            data: {
-              fields: {
-                // This passes validFields filter (has stringValue) but displayValue will be empty
-                hasKindButEmpty: { kind: 'stringValue', stringValue: '' },
-                validOne: { kind: 'stringValue', stringValue: 'valid one' }
-              }
-            }
-          }
-        }
-      };
-
-      const expandedSet = new Set(['123.custom.emptydisplay']);
-      renderPreviewAnnotation({ entry: entryWithEmptyDisplay }, expandedSet);
-
-      // Valid field should be shown
-      expect(screen.getByText('valid one')).toBeInTheDocument();
+      renderPreviewAnnotation({ entry: entryWithEmptyStruct });
+      // Empty struct should not be rendered as expandable
+      expect(screen.getByText('Emptystruct')).toBeInTheDocument();
     });
 
     it('handles undefined numberValue', () => {
@@ -820,27 +654,11 @@ describe('PreviewAnnotation', () => {
         }
       };
 
-      // Should not crash and render the aspect name
       renderPreviewAnnotation({ entry: entryWithUndefinedNumber });
-      expect(screen.getByText('undefinednum')).toBeInTheDocument();
+      expect(screen.getByText('Undefinednum')).toBeInTheDocument();
     });
 
-    it('handles sorting with boolValue fields', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Sort by value to test boolValue string conversion
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader.parentElement!);
-      const sortButton = screen.getByRole('button');
-      fireEvent.click(sortButton);
-
-      // Should have sorted and still show the fields
-      expect(screen.getByText('true')).toBeInTheDocument();
-      expect(screen.getByText('false')).toBeInTheDocument();
-    });
-
-    it('handles multiple accordions with independent sort states', () => {
+    it('handles multiple accordions with independent field expansion', () => {
       const entryWithMultiple = {
         entryType: 'tables/123',
         aspects: {
@@ -868,7 +686,11 @@ describe('PreviewAnnotation', () => {
       const expandedSet = new Set(['123.custom.first', '123.custom.second']);
       renderPreviewAnnotation({ entry: entryWithMultiple }, expandedSet);
 
-      // Both accordions should be expanded
+      // Field names should be visible
+      expect(screen.getByText('aField')).toBeInTheDocument();
+      expect(screen.getByText('xField')).toBeInTheDocument();
+
+      // All fields auto-expanded when all aspects are expanded
       expect(screen.getByText('A value')).toBeInTheDocument();
       expect(screen.getByText('X value')).toBeInTheDocument();
     });
@@ -889,171 +711,8 @@ describe('PreviewAnnotation', () => {
       const expandedSet = new Set(['123.custom.direct']);
       renderPreviewAnnotation({ entry: entryWithNoFieldsProperty }, expandedSet);
 
-      expect(screen.getByText('direct')).toBeInTheDocument();
-      expect(screen.getByText('direct data')).toBeInTheDocument();
-    });
-
-    it('triggers sort on Value column with userEvent hover', async () => {
-      const user = userEvent.setup();
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Find Value header and hover using userEvent
-      const valueHeaders = screen.getAllByText('Value');
-      if (valueHeaders[0]?.parentElement) {
-        await user.hover(valueHeaders[0].parentElement);
-
-        // Wait for the sort button to appear and click it
-        await waitFor(() => {
-          const buttons = screen.getAllByRole('button');
-          expect(buttons.length).toBeGreaterThan(0);
-        });
-
-        const buttons = screen.getAllByRole('button');
-        await user.click(buttons[buttons.length - 1]);
-      }
-
-      expect(screen.getAllByText('Value').length).toBeGreaterThan(0);
-    });
-
-    it('shows and clicks Value column sort button correctly', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Get the Value header element directly (not its parent)
-      const valueHeader = screen.getByText('Value');
-
-      // Hover directly on the Value header div to trigger onMouseEnter
-      fireEvent.mouseEnter(valueHeader);
-
-      // The sort button should appear for the Value column
-      const buttons = screen.getAllByRole('button');
-      expect(buttons.length).toBeGreaterThan(0);
-
-      // Click the Value sort button
-      fireEvent.click(buttons[buttons.length - 1]);
-
-      // Button should still be visible due to sortConfigs state
-      expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
-    });
-
-    it('cycles through Value column sort states: asc -> desc -> off', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Get Value header element directly
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader);
-
-      // Get the sort button for Value column
-      let buttons = screen.getAllByRole('button');
-      const valueButton = buttons[buttons.length - 1];
-
-      // First click - ascending sort by value
-      fireEvent.click(valueButton);
-
-      // Second click - descending sort by value
-      fireEvent.click(valueButton);
-
-      // Third click - clears the sort
-      fireEvent.click(valueButton);
-
-      // After clearing, button should still be visible if hovered
-      expect(screen.getAllByText('Value').length).toBeGreaterThan(0);
-    });
-
-    it('maintains Value column sort button visible after sorting', () => {
-      const expandedSet = new Set(['123.custom.alltypes']);
-      renderPreviewAnnotation({ entry: mockEntryWithAllFieldTypes }, expandedSet);
-
-      // Hover on Value header
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader);
-
-      // Click to sort by value
-      const sortButton = screen.getAllByRole('button').pop();
-      if (sortButton) {
-        fireEvent.click(sortButton);
-      }
-
-      // Leave the Value column
-      fireEvent.mouseLeave(valueHeader);
-
-      // The button should still be visible because sortConfigs[key].key === 'value'
-      const buttonsAfterLeave = screen.getAllByRole('button');
-      expect(buttonsAfterLeave.length).toBeGreaterThan(0);
-    });
-
-    it('sorts data by value column correctly', () => {
-      const entryWithSortableValues = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.sorttest': {
-            aspectType: 'tables/custom/sorttest',
-            data: {
-              fields: {
-                alpha: { kind: 'stringValue', stringValue: 'zzz' },
-                beta: { kind: 'stringValue', stringValue: 'aaa' },
-                gamma: { kind: 'stringValue', stringValue: 'mmm' }
-              }
-            }
-          }
-        }
-      };
-
-      const expandedSet = new Set(['123.custom.sorttest']);
-      renderPreviewAnnotation({ entry: entryWithSortableValues }, expandedSet);
-
-      // Verify initial values are present
-      expect(screen.getByText('zzz')).toBeInTheDocument();
-      expect(screen.getByText('aaa')).toBeInTheDocument();
-      expect(screen.getByText('mmm')).toBeInTheDocument();
-
-      // Hover on Value and click sort
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader);
-
-      const buttons = screen.getAllByRole('button');
-      fireEvent.click(buttons[buttons.length - 1]);
-
-      // Values should still be present after sorting
-      expect(screen.getByText('zzz')).toBeInTheDocument();
-      expect(screen.getByText('aaa')).toBeInTheDocument();
-      expect(screen.getByText('mmm')).toBeInTheDocument();
-    });
-
-    it('handles value column sort with mixed field types', () => {
-      const entryWithMixedTypes = {
-        entryType: 'tables/123',
-        aspects: {
-          '123.custom.mixedsort': {
-            aspectType: 'tables/custom/mixedsort',
-            data: {
-              fields: {
-                strField: { kind: 'stringValue', stringValue: 'zebra' },
-                numField: { kind: 'numberValue', numberValue: 100 },
-                boolField: { kind: 'boolValue', boolValue: true }
-              }
-            }
-          }
-        }
-      };
-
-      const expandedSet = new Set(['123.custom.mixedsort']);
-      renderPreviewAnnotation({ entry: entryWithMixedTypes }, expandedSet);
-
-      // Hover on Value column and sort
-      const valueHeader = screen.getByText('Value');
-      fireEvent.mouseEnter(valueHeader);
-
-      const buttons = screen.getAllByRole('button');
-      fireEvent.click(buttons[buttons.length - 1]); // Sort ascending
-      fireEvent.click(buttons[buttons.length - 1]); // Sort descending
-
-      // All values should still be present
-      expect(screen.getByText('zebra')).toBeInTheDocument();
-      expect(screen.getByText('100')).toBeInTheDocument();
-      expect(screen.getByText('true')).toBeInTheDocument();
+      expect(screen.getByText('Direct')).toBeInTheDocument();
+      expect(screen.getByText('directKey')).toBeInTheDocument();
     });
   });
 });

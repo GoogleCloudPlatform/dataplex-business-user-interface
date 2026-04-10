@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import { useSelector } from 'react-redux';
 
 /**
  * @file ShimmerLoader.tsx
@@ -29,17 +30,30 @@ import { Box } from '@mui/material';
 
 interface ShimmerLoaderProps {
   count?: number;
-  type?: 'list' | 'table' | 'card'| 'simple-list'| 'header'| 'title';
+  type?: 'list' | 'table' | 'card'| 'simple-list'| 'header'| 'title' | 'search-card' | 'search-table' | 'preview-schema';
 }
 
 const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' }) => {
+  const mode = useSelector((state: any) => state.user?.mode) as string | undefined;
+  const isDark = mode === 'dark';
+  const shapeBg = isDark ? '#3c4043' : '#F0F0F0';
+  const cardBg = isDark ? '#131314' : '#ffffff';
+  const borderColor = isDark ? '#3c4043' : '#DADCE0';
+  const borderColorAlt = isDark ? '#3c4043' : '#E0E0E0';
+  const shimmerGradient = isDark
+    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)'
+    : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)';
+  const shimmerGradientAlt = isDark
+    ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)'
+    : 'linear-gradient(90deg, transparent, rgba(240,240,240,0.8), transparent)';
+
   const renderTitleShimmer = () => (
     <>
       <Box 
         sx={{ 
           width: '250px', // Typical length for a title
           height: '24px', // Matches h5 line-height/font-size
-          backgroundColor: '#F0F0F0', 
+          backgroundColor: shapeBg, 
           borderRadius: '4px',
           position: 'relative',
           overflow: 'hidden'
@@ -53,7 +67,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+              background: shimmerGradient,
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
             }}
@@ -81,7 +95,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(240,240,240,0.8), transparent)',
+              background: shimmerGradientAlt,
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
             }}
@@ -92,7 +106,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{ 
               width: 24, 
               height: 24, 
-              backgroundColor: '#F0F0F0', 
+              backgroundColor: shapeBg, 
               borderRadius: '4px',
               flexShrink: 0 
             }} 
@@ -103,7 +117,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{ 
               width: '200px', 
               height: '24px', 
-              backgroundColor: '#F0F0F0', 
+              backgroundColor: shapeBg, 
               borderRadius: '4px' 
             }} 
           />
@@ -134,7 +148,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(240,240,240,0.8), transparent)', // Lighter gradient for white bg
+              background: shimmerGradientAlt, // Lighter gradient for white bg
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } }
             }}
@@ -146,7 +160,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               width: '24px',
               height: '24px',
               borderRadius: '50%',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               flexShrink: 0
             }}
           />
@@ -156,7 +170,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{
               width: '70%',
               height: '14px',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               borderRadius: '4px'
             }}
           />
@@ -171,10 +185,10 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
           key={index}
           sx={{
             marginBottom: '10px',
-            backgroundColor: '#ffffff',
+            backgroundColor: cardBg,
             borderRadius: '8px',
             padding: '16px',
-            border: '1px solid #E0E0E0',
+            border: `1px solid ${borderColorAlt}`,
             position: 'relative',
             overflow: 'hidden'
           }}
@@ -187,7 +201,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+              background: shimmerGradient,
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': {
                 '0%': {
@@ -208,7 +222,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 flexShrink: 0
               }}
             />
@@ -219,7 +233,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
                 sx={{
                   width: '60%',
                   height: '16px',
-                  backgroundColor: '#F0F0F0',
+                  backgroundColor: shapeBg,
                   borderRadius: '4px',
                   marginBottom: '4px'
                 }}
@@ -228,7 +242,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
                 sx={{
                   width: '40%',
                   height: '12px',
-                  backgroundColor: '#F0F0F0',
+                  backgroundColor: shapeBg,
                   borderRadius: '4px'
                 }}
               />
@@ -240,7 +254,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{
               width: '80%',
               height: '12px',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               borderRadius: '4px',
               marginBottom: '8px'
             }}
@@ -252,7 +266,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '60px',
                 height: '20px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '12px'
               }}
             />
@@ -260,7 +274,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '80px',
                 height: '20px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '12px'
               }}
             />
@@ -279,7 +293,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             display: 'flex',
             alignItems: 'center',
             padding: '12px 16px',
-            borderBottom: '1px solid #E0E0E0',
+            borderBottom: `1px solid ${borderColorAlt}`,
             position: 'relative',
             overflow: 'hidden'
           }}
@@ -292,7 +306,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+              background: shimmerGradient,
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': {
                 '0%': {
@@ -311,7 +325,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '30%',
                 height: '16px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '4px'
               }}
             />
@@ -319,7 +333,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '25%',
                 height: '16px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '4px'
               }}
             />
@@ -327,7 +341,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '25%',
                 height: '16px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '4px'
               }}
             />
@@ -335,7 +349,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               sx={{
                 width: '20%',
                 height: '16px',
-                backgroundColor: '#F0F0F0',
+                backgroundColor: shapeBg,
                 borderRadius: '4px'
               }}
             />
@@ -351,10 +365,10 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
         <Box
           key={index}
           sx={{
-            backgroundColor: '#ffffff',
+            backgroundColor: cardBg,
             borderRadius: '8px',
             padding: '16px',
-            border: '1px solid #E0E0E0',
+            border: `1px solid ${borderColorAlt}`,
             position: 'relative',
             overflow: 'hidden',
             marginBottom: '16px'
@@ -368,7 +382,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
               left: '-100%',
               width: '100%',
               height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
+              background: shimmerGradient,
               animation: 'shimmer 1.5s infinite',
               '@keyframes shimmer': {
                 '0%': {
@@ -386,7 +400,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{
               width: '70%',
               height: '20px',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               borderRadius: '4px',
               marginBottom: '12px'
             }}
@@ -395,7 +409,7 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{
               width: '90%',
               height: '14px',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               borderRadius: '4px',
               marginBottom: '8px'
             }}
@@ -404,13 +418,298 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
             sx={{
               width: '60%',
               height: '14px',
-              backgroundColor: '#F0F0F0',
+              backgroundColor: shapeBg,
               borderRadius: '4px'
             }}
           />
         </Box>
       ))}
     </>
+  );
+
+  const renderSearchCardShimmer = () => (
+    <>
+      {[...Array(count)].map((_, index) => (
+        <Box
+          key={index}
+          sx={{
+            backgroundColor: cardBg,
+            borderRadius: '16px',
+            padding: '12px 16px',
+            border: `1px solid ${borderColor}`,
+            height: '120px',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            position: 'relative',
+            overflow: 'hidden',
+            marginBottom: '11px',
+          }}
+        >
+          {/* Shimmer Animation */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: shimmerGradient,
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } },
+              zIndex: 1,
+            }}
+          />
+
+          {/* Row 1: Icon + Title */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Box sx={{ width: '24px', height: '24px', backgroundColor: shapeBg, borderRadius: '4px', flexShrink: 0 }} />
+            <Box sx={{ width: '250px', height: '16px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+
+          {/* Row 2: Description */}
+          <Box sx={{ width: '75%', height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+
+          {/* Row 3: Tags + Date + Location */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Box sx={{ width: '70px', height: '24px', backgroundColor: shapeBg, borderRadius: '38px' }} />
+            <Box sx={{ width: '85px', height: '24px', backgroundColor: shapeBg, borderRadius: '38px' }} />
+            <Box sx={{ width: '90px', height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+            <Box sx={{ width: '80px', height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+        </Box>
+      ))}
+    </>
+  );
+
+  const renderSearchTableShimmer = () => (
+    <Box
+      sx={{
+        backgroundColor: cardBg,
+        borderRadius: '8px',
+        boxShadow: 'none',
+        width: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header Row */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '12px',
+            right: '10px',
+            height: '1px',
+            backgroundColor: borderColor,
+          },
+        }}
+      >
+        {/* Name header - 25% */}
+        <Box sx={{ width: '25%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '40px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Description header - 30% */}
+        <Box sx={{ width: '30%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '72px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Type header - 17% */}
+        <Box sx={{ width: '17%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '32px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Location header - 13% */}
+        <Box sx={{ width: '13%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '52px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Last Modified header - 15% */}
+        <Box sx={{ width: '15%', padding: '12px 20px 4px', display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ width: '84px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Data Rows */}
+      {[...Array(count)].map((_, index) => (
+        <Box
+          key={index}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            height: '40px',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 0,
+              left: '12px',
+              right: '10px',
+              height: '1px',
+              backgroundColor: borderColor,
+            },
+          }}
+        >
+          {/* Shimmer Animation */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: shimmerGradient,
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } },
+              zIndex: 1,
+            }}
+          />
+
+          {/* Name cell - 25% */}
+          <Box sx={{ width: '25%', padding: '10px 20px' }}>
+            <Box sx={{ width: `${60 + (index % 3) * 15}%`, height: '18px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+
+          {/* Description cell - 30% */}
+          <Box sx={{ width: '30%', padding: '10px 20px' }}>
+            <Box sx={{ width: `${70 + (index % 2) * 10}%`, height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+
+          {/* Type cell - 17% */}
+          <Box sx={{ width: '17%', padding: '10px 20px' }}>
+            <Box sx={{ display: 'flex', gap: '8px' }}>
+              <Box sx={{ width: '56px', height: '20px', backgroundColor: shapeBg, borderRadius: '8px' }} />
+              <Box sx={{ width: '48px', height: '20px', backgroundColor: shapeBg, borderRadius: '8px' }} />
+            </Box>
+          </Box>
+
+          {/* Location cell - 13% */}
+          <Box sx={{ width: '13%', padding: '10px 20px' }}>
+            <Box sx={{ width: '70%', height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+
+          {/* Last Modified cell - 15% */}
+          <Box sx={{ width: '15%', padding: '10px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ width: '80%', height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+        </Box>
+      ))}
+    </Box>
+  );
+
+  const renderPreviewSchemaShimmer = () => (
+    <Box
+      sx={{
+        backgroundColor: cardBg,
+        borderRadius: '0px',
+        boxShadow: 'none',
+        width: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header Row */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '12px',
+            right: '0px',
+            height: '1px',
+            backgroundColor: borderColor,
+          },
+        }}
+      >
+        {/* Name header - 40% */}
+        <Box sx={{ width: '40%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '40px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Type header - 30% */}
+        <Box sx={{ width: '30%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '32px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+        {/* Mode header - 30% */}
+        <Box sx={{ width: '30%', padding: '12px 20px 4px' }}>
+          <Box sx={{ width: '36px', height: '12px', backgroundColor: shapeBg, borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: shimmerGradient, animation: 'shimmer 1.5s infinite', '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } } }} />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Data Rows */}
+      {[...Array(count)].map((_, index) => (
+        <Box
+          key={index}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            height: '40px',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 0,
+              left: '12px',
+              right: '0px',
+              height: '1px',
+              backgroundColor: borderColor,
+            },
+          }}
+        >
+          {/* Shimmer Animation */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: shimmerGradient,
+              animation: 'shimmer 1.5s infinite',
+              '@keyframes shimmer': { '0%': { left: '-100%' }, '100%': { left: '100%' } },
+              zIndex: 1,
+            }}
+          />
+
+          {/* Name cell - 40% */}
+          <Box sx={{ width: '40%', padding: '10px 20px' }}>
+            <Box sx={{ width: `${60 + (index % 3) * 15}%`, height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+
+          {/* Type cell - 30% (chip shape) */}
+          <Box sx={{ width: '30%', padding: '10px 20px' }}>
+            <Box sx={{ width: `${50 + (index % 2) * 12}px`, height: '20px', backgroundColor: shapeBg, borderRadius: '8px' }} />
+          </Box>
+
+          {/* Mode cell - 30% */}
+          <Box sx={{ width: '30%', padding: '10px 20px' }}>
+            <Box sx={{ width: `${50 + (index % 3) * 10}%`, height: '14px', backgroundColor: shapeBg, borderRadius: '4px' }} />
+          </Box>
+        </Box>
+      ))}
+    </Box>
   );
 
   const renderShimmer = () => {
@@ -421,6 +720,12 @@ const ShimmerLoader: React.FC<ShimmerLoaderProps> = ({ count = 6, type = 'list' 
         return renderHeaderShimmer();
       case 'simple-list':
         return renderSimpleListShimmer();
+      case 'search-card':
+        return renderSearchCardShimmer();
+      case 'search-table':
+        return renderSearchTableShimmer();
+      case 'preview-schema':
+        return renderPreviewSchemaShimmer();
       case 'table':
         return renderTableShimmer();
       case 'card':

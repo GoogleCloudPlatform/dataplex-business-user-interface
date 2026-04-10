@@ -3,45 +3,12 @@ import { render, screen } from "@testing-library/react";
 import PreviewSchema from "./PreviewSchema";
 
 // ============================================================================
-// Mock @mui/x-data-grid to avoid CSS import error
+// Mock react-redux
 // ============================================================================
 
-vi.mock("@mui/x-data-grid", () => ({
-  DataGrid: () => null,
-}));
-
-// ============================================================================
-// Mock TableView Component
-// ============================================================================
-
-vi.mock("../Table/TableView", () => ({
-  default: ({ rows, columns, sx }: any) => (
-    <div
-      data-testid="table-view"
-      data-rows={JSON.stringify(rows)}
-      data-columns={JSON.stringify(columns.map((c: any) => c.field))}
-      data-has-sx={sx ? "true" : "false"}
-    >
-      <table>
-        <thead>
-          <tr>
-            {columns.map((col: any) => (
-              <th key={col.field}>{col.headerName}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row: any) => (
-            <tr key={row.id}>
-              <td>{row.name}</td>
-              <td>{row.type}</td>
-              <td>{row.mode}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ),
+const mockUseSelector = vi.fn();
+vi.mock("react-redux", () => ({
+  useSelector: (selector: any) => mockUseSelector(selector),
 }));
 
 // ============================================================================
@@ -92,6 +59,7 @@ const createMockEntry = (
 describe("PreviewSchema", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseSelector.mockReturnValue("light");
   });
 
   afterEach(() => {
@@ -112,10 +80,10 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
-    it("renders TableView with correct rows", () => {
+    it("renders table with correct rows", () => {
       const entry = createMockEntry(
         "projects/1/locations/us/entryTypes/table",
         "1.global.schema",
@@ -127,37 +95,12 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(2);
-      expect(rows[0]).toEqual({
-        id: 1,
-        name: "id",
-        type: "INTEGER",
-        mode: "REQUIRED",
-      });
-      expect(rows[1]).toEqual({
-        id: 2,
-        name: "name",
-        type: "STRING",
-        mode: "NULLABLE",
-      });
-    });
-
-    it("renders TableView with correct columns", () => {
-      const entry = createMockEntry(
-        "projects/1/locations/us/entryTypes/table",
-        "1.global.schema",
-        [createSchemaField("id", "INTEGER", "NULLABLE")]
-      );
-
-      render(<PreviewSchema entry={entry} />);
-
-      const tableView = screen.getByTestId("table-view");
-      const columns = JSON.parse(tableView.getAttribute("data-columns") || "[]");
-
-      expect(columns).toEqual(["name", "type", "mode"]);
+      expect(screen.getByText("id")).toBeInTheDocument();
+      expect(screen.getByText("INTEGER")).toBeInTheDocument();
+      expect(screen.getByText("REQUIRED")).toBeInTheDocument();
+      expect(screen.getByText("name")).toBeInTheDocument();
+      expect(screen.getByText("STRING")).toBeInTheDocument();
+      expect(screen.getByText("NULLABLE")).toBeInTheDocument();
     });
 
     it("displays column headers Name, Type, Mode", () => {
@@ -172,6 +115,25 @@ describe("PreviewSchema", () => {
       expect(screen.getByText("Name")).toBeInTheDocument();
       expect(screen.getByText("Type")).toBeInTheDocument();
       expect(screen.getByText("Mode")).toBeInTheDocument();
+    });
+
+    it("renders correct number of body rows", () => {
+      const entry = createMockEntry(
+        "projects/1/locations/us/entryTypes/table",
+        "1.global.schema",
+        [
+          createSchemaField("id", "INTEGER", "REQUIRED"),
+          createSchemaField("name", "STRING", "NULLABLE"),
+        ]
+      );
+
+      render(<PreviewSchema entry={entry} />);
+
+      const table = screen.getByRole("table");
+      const tbody = table.querySelector("tbody");
+      const rows = tbody?.querySelectorAll("tr");
+
+      expect(rows).toHaveLength(2);
     });
   });
 
@@ -323,7 +285,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
       expect(screen.getByText("column1")).toBeInTheDocument();
     });
 
@@ -336,7 +298,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
     it("uses 'table' as default when entryType has no slash", () => {
@@ -348,7 +310,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
     it("handles entryType with only one segment before slash", () => {
@@ -362,7 +324,7 @@ describe("PreviewSchema", () => {
 
       // With "projects/" split gives ["projects", ""], so number = ""
       // Schema key becomes ".global.schema"
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
   });
 
@@ -380,10 +342,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].name).toBe("");
+      expect(screen.getByText("INTEGER")).toBeInTheDocument();
+      expect(screen.getByText("NULLABLE")).toBeInTheDocument();
     });
 
     it("handles field with missing dataType", () => {
@@ -395,10 +355,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].type).toBe("");
+      expect(screen.getByText("column1")).toBeInTheDocument();
+      expect(screen.getByText("REQUIRED")).toBeInTheDocument();
     });
 
     it("handles field with missing mode", () => {
@@ -410,10 +368,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].mode).toBe("");
+      expect(screen.getByText("column1")).toBeInTheDocument();
+      expect(screen.getByText("STRING")).toBeInTheDocument();
     });
 
     it("handles field with all properties missing", () => {
@@ -425,15 +381,10 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0]).toEqual({
-        id: 1,
-        name: "",
-        type: "",
-        mode: "",
-      });
+      expect(screen.getByRole("table")).toBeInTheDocument();
+      // Row should exist but with empty cells
+      const tbody = screen.getByRole("table").querySelector("tbody");
+      expect(tbody?.querySelectorAll("tr")).toHaveLength(1);
     });
 
     it("handles multiple schema fields", () => {
@@ -450,14 +401,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(4);
-      expect(rows[0].id).toBe(1);
-      expect(rows[1].id).toBe(2);
-      expect(rows[2].id).toBe(3);
-      expect(rows[3].id).toBe(4);
+      const tbody = screen.getByRole("table").querySelector("tbody");
+      expect(tbody?.querySelectorAll("tr")).toHaveLength(4);
     });
 
     it("handles empty schema fields array", () => {
@@ -469,10 +414,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(0);
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      expect(screen.getByText("No data matches the applied filters")).toBeInTheDocument();
     });
 
     it("handles field with missing structValue", () => {
@@ -484,15 +427,9 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0]).toEqual({
-        id: 1,
-        name: "",
-        type: "",
-        mode: "",
-      });
+      expect(screen.getByRole("table")).toBeInTheDocument();
+      const tbody = screen.getByRole("table").querySelector("tbody");
+      expect(tbody?.querySelectorAll("tr")).toHaveLength(1);
     });
 
     it("handles field with missing fields in structValue", () => {
@@ -504,15 +441,9 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0]).toEqual({
-        id: 1,
-        name: "",
-        type: "",
-        mode: "",
-      });
+      expect(screen.getByRole("table")).toBeInTheDocument();
+      const tbody = screen.getByRole("table").querySelector("tbody");
+      expect(tbody?.querySelectorAll("tr")).toHaveLength(1);
     });
   });
 
@@ -521,7 +452,7 @@ describe("PreviewSchema", () => {
   // ==========================================================================
 
   describe("SX Props", () => {
-    it("passes sx prop to TableView", () => {
+    it("renders with sx prop without error", () => {
       const entry = createMockEntry(
         "projects/1/locations/us/entryTypes/table",
         "1.global.schema",
@@ -531,8 +462,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} sx={customSx} />);
 
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-has-sx", "true");
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
     it("works without sx prop", () => {
@@ -544,8 +474,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      expect(tableView).toHaveAttribute("data-has-sx", "false");
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
   });
 
@@ -568,7 +497,7 @@ describe("PreviewSchema", () => {
       expect(screen.getByText("REQUIRED")).toBeInTheDocument();
     });
 
-    it("assigns sequential IDs starting from 1", () => {
+    it("renders all rows for multiple fields", () => {
       const entry = createMockEntry(
         "projects/1/locations/us/entryTypes/table",
         "1.global.schema",
@@ -581,10 +510,9 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows.map((r: any) => r.id)).toEqual([1, 2, 3]);
+      expect(screen.getByText("col1")).toBeInTheDocument();
+      expect(screen.getByText("col2")).toBeInTheDocument();
+      expect(screen.getByText("col3")).toBeInTheDocument();
     });
   });
 
@@ -622,10 +550,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows[0].name).toBe(longName);
+      expect(screen.getByText(longName)).toBeInTheDocument();
     });
 
     it("handles special characters in field names", () => {
@@ -650,7 +575,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
     it("handles alphanumeric project ID in entryType", () => {
@@ -662,7 +587,7 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
     it("handles field with name containing only stringValue key", () => {
@@ -693,12 +618,26 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
+      expect(screen.getByText("test_field")).toBeInTheDocument();
+    });
+  });
 
-      expect(rows[0].name).toBe("test_field");
-      expect(rows[0].type).toBe("");
-      expect(rows[0].mode).toBe("");
+  // ==========================================================================
+  // Dark Mode Tests
+  // ==========================================================================
+
+  describe("Dark Mode", () => {
+    it("renders in dark mode without crashing", () => {
+      mockUseSelector.mockReturnValue("dark");
+      const entry = createMockEntry(
+        "projects/1/locations/us/entryTypes/table",
+        "1.global.schema",
+        [createSchemaField("id", "INTEGER", "NULLABLE")]
+      );
+
+      render(<PreviewSchema entry={entry} />);
+
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
   });
 
@@ -725,10 +664,8 @@ describe("PreviewSchema", () => {
 
       render(<PreviewSchema entry={entry} />);
 
-      const tableView = screen.getByTestId("table-view");
-      const rows = JSON.parse(tableView.getAttribute("data-rows") || "[]");
-
-      expect(rows).toHaveLength(8);
+      const tbody = screen.getByRole("table").querySelector("tbody");
+      expect(tbody?.querySelectorAll("tr")).toHaveLength(8);
       expect(screen.getByText("id")).toBeInTheDocument();
       expect(screen.getByText("username")).toBeInTheDocument();
       expect(screen.getByText("email")).toBeInTheDocument();
@@ -790,6 +727,41 @@ describe("PreviewSchema", () => {
       expect(screen.getByText("event_id")).toBeInTheDocument();
       expect(screen.getByText("event_timestamp")).toBeInTheDocument();
       expect(screen.getByText("user_pseudo_id")).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Column Resizing Tests
+  // ==========================================================================
+
+  describe("Column Resizing", () => {
+    it("renders resize handles for first two columns (not the last)", () => {
+      const entry = createMockEntry(
+        "projects/1/locations/us/entryTypes/table",
+        "1.global.schema",
+        [createSchemaField("id", "INTEGER", "NULLABLE")]
+      );
+
+      render(<PreviewSchema entry={entry} />);
+
+      const handles = screen.getAllByTestId("resize-handle");
+      expect(handles).toHaveLength(2);
+    });
+
+    it("renders colgroup with col elements for column widths", () => {
+      const entry = createMockEntry(
+        "projects/1/locations/us/entryTypes/table",
+        "1.global.schema",
+        [createSchemaField("id", "INTEGER", "NULLABLE")]
+      );
+
+      render(<PreviewSchema entry={entry} />);
+
+      const table = screen.getByRole("table");
+      const colgroup = table.querySelector("colgroup");
+      expect(colgroup).toBeInTheDocument();
+      const cols = colgroup?.querySelectorAll("col");
+      expect(cols).toHaveLength(3);
     });
   });
 });

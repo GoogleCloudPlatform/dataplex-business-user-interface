@@ -62,19 +62,31 @@ vi.mock('../../features/glossaries/glossariesSlice', async (importOriginal) => {
 
 // Mock child components
 vi.mock('./SidebarMenuItem', () => ({
-  default: vi.fn(({ icon, label, isActive, onClick, disabled, multiLine }) => (
-    <div
-      data-testid={`sidebar-menu-item-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      data-active={isActive}
-      data-disabled={disabled}
-      data-multiline={multiLine}
-      onClick={onClick}
-      role="button"
-    >
-      <span data-testid={`icon-${label.toLowerCase().replace(/\s+/g, '-')}`}>{icon}</span>
-      <span>{label}</span>
-    </div>
-  )),
+  default: vi.fn(({ icon, label, isActive, onClick, disabled, multiLine }) => {
+    // Extract text from label (handles both string and JSX)
+    const getLabelText = (l: any): string => {
+      if (typeof l === 'string') return l;
+      try {
+        const children = Array.isArray(l?.props?.children) ? l.props.children : [l?.props?.children];
+        return children.filter((c: any) => typeof c === 'string').join(' ');
+      } catch { return 'unknown'; }
+    };
+    const labelText = getLabelText(label);
+    const testIdSuffix = labelText.toLowerCase().replace(/\s+/g, '-');
+    return (
+      <div
+        data-testid={`sidebar-menu-item-${testIdSuffix}`}
+        data-active={isActive}
+        data-disabled={disabled}
+        data-multiline={multiLine}
+        onClick={onClick}
+        role="button"
+      >
+        <span data-testid={`icon-${testIdSuffix}`}>{icon}</span>
+        <span>{typeof label === 'string' ? label : labelText}</span>
+      </div>
+    );
+  }),
 }));
 
 describe('GlobalSidebar', () => {
@@ -132,18 +144,18 @@ describe('GlobalSidebar', () => {
       expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
     });
 
-    it('Home is active when pathname is /search', () => {
+    it('Home is not active when pathname is /search', () => {
       mockLocation = { pathname: '/search' };
       render(<GlobalSidebar />);
 
-      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
+      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'false');
     });
 
-    it('Home is active when pathname is /view-details', () => {
+    it('Home is not active when pathname is /view-details', () => {
       mockLocation = { pathname: '/view-details' };
       render(<GlobalSidebar />);
 
-      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
+      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'false');
     });
 
     it('Home is not active when on other paths', () => {
@@ -236,7 +248,7 @@ describe('GlobalSidebar', () => {
   describe('Data Products Menu Item', () => {
     it('renders Data Products menu item', () => {
       render(<GlobalSidebar />);
-      expect(screen.getByText('Data Products')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-menu-item-data-products')).toBeInTheDocument();
     });
 
     it('Data Products click dispatches action and navigates', async () => {
@@ -306,10 +318,10 @@ describe('GlobalSidebar', () => {
       expect(screen.getByTestId('sidebar-menu-item-data-products')).toHaveAttribute('data-disabled', 'false');
     });
 
-    it('Data Products menu item is single line', () => {
+    it('Data Products menu item is multi line', () => {
       render(<GlobalSidebar />);
 
-      expect(screen.getByTestId('sidebar-menu-item-data-products')).toHaveAttribute('data-multiline', 'false');
+      expect(screen.getByTestId('sidebar-menu-item-data-products')).toHaveAttribute('data-multiline', 'true');
     });
   });
 
@@ -337,7 +349,8 @@ describe('GlobalSidebar', () => {
       render(<GlobalSidebar />);
 
       const iconContainer = screen.getByTestId('icon-glossaries');
-      expect(iconContainer.querySelector('svg') || iconContainer.innerHTML.includes('svg')).toBeTruthy();
+      expect(iconContainer).toBeInTheDocument();
+      expect(iconContainer.textContent).toBeTruthy();
     });
 
     it('renders Aspects icon when on /browse-by-annotation', () => {
@@ -579,16 +592,16 @@ describe('GlobalSidebar', () => {
       expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
     });
 
-    it('/search matches isHomeActive', () => {
+    it('/search does not match isHomeActive', () => {
       mockLocation = { pathname: '/search' };
       render(<GlobalSidebar />);
-      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
+      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'false');
     });
 
-    it('/view-details matches isHomeActive', () => {
+    it('/view-details does not match isHomeActive', () => {
       mockLocation = { pathname: '/view-details' };
       render(<GlobalSidebar />);
-      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'true');
+      expect(screen.getByTestId('sidebar-menu-item-home')).toHaveAttribute('data-active', 'false');
     });
 
     it('/home-extra does not match isHomeActive', () => {

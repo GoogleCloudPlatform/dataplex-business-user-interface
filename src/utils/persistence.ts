@@ -64,7 +64,12 @@ export const loadStateFromStorage = (): PersistedState => {
     }
 
     if (entryState) {
-      persistedState.entry = JSON.parse(entryState);
+      const parsed = JSON.parse(entryState);
+      // Ensure accessCheckCache always exists (may be missing from older persisted state)
+      if (!parsed.accessCheckCache) {
+        parsed.accessCheckCache = {};
+      }
+      persistedState.entry = parsed;
     }
 
     return persistedState;

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import DataProductOverview from './DataProductOverview';
@@ -22,12 +22,16 @@ vi.mock('../Schema/SchemaFilter', () => ({
   }
 }));
 
-vi.mock('../Filter/TableFilter', () => ({
-  default: function MockTableFilter({ data, onFilteredDataChange }: any) {
+vi.mock('../Common/FilterBar', () => ({
+  default: function MockFilterBar({ filterText, onFilterTextChange, activeFilters }: any) {
     return (
-      <div data-testid="table-filter">
-        Table Filter for {data?.length} rows
-        <button onClick={() => onFilteredDataChange(data)}>Apply Table Filter</button>
+      <div data-testid="filter-bar">
+        <input
+          data-testid="filter-bar-input"
+          value={filterText}
+          onChange={(e: any) => onFilterTextChange(e.target.value)}
+        />
+        <span>Filters: {activeFilters?.length || 0}</span>
       </div>
     );
   }
@@ -473,11 +477,6 @@ describe('DataProductOverviewNew', () => {
   };
 
   describe('main sections rendering', () => {
-    it('renders Details accordion', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('Details')).toBeInTheDocument();
-    });
-
     it('renders Table Info section for Tables entry type', () => {
       renderDataProductOverviewNew();
       expect(screen.getByText('Table Info')).toBeInTheDocument();
@@ -495,7 +494,7 @@ describe('DataProductOverviewNew', () => {
 
     it('renders Info section', () => {
       renderDataProductOverviewNew();
-      expect(screen.getByText('Info')).toBeInTheDocument();
+      expect(screen.getByText('Timestamps')).toBeInTheDocument();
     });
 
     it('renders Usage Metrics section when entryType is set and not data-product', () => {
@@ -527,79 +526,6 @@ describe('DataProductOverviewNew', () => {
     it('does not render Last Run Time for data-product type', () => {
       renderDataProductOverviewNew({ entry: mockDataProductEntry, entryType: 'data-product' });
       expect(screen.queryByText('Last Run Time')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Details section', () => {
-    it('displays entry description', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('Test table description')).toBeInTheDocument();
-    });
-
-    it('displays No Description Available when description is missing', () => {
-      const entryWithoutDescription = {
-        ...mockEntry,
-        entrySource: { ...mockEntry.entrySource, description: undefined }
-      };
-      renderDataProductOverviewNew({ entry: entryWithoutDescription });
-      expect(screen.getByText('No Description Available')).toBeInTheDocument();
-    });
-
-    it('displays system information', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('System')).toBeInTheDocument();
-      expect(screen.getByText('BigQuery')).toBeInTheDocument();
-    });
-
-    it('displays status as Active', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('Status')).toBeInTheDocument();
-      expect(screen.getByText('Active')).toBeInTheDocument();
-    });
-
-    it('displays location information', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('Location')).toBeInTheDocument();
-      expect(screen.getByText('US')).toBeInTheDocument();
-    });
-
-    it('displays identifiers section', () => {
-      renderDataProductOverviewNew();
-      expect(screen.getByText('Identifiers')).toBeInTheDocument();
-      expect(screen.getByText('Resource')).toBeInTheDocument();
-      expect(screen.getByText('FQN')).toBeInTheDocument();
-    });
-  });
-
-  describe('copy functionality', () => {
-    it('copies resource to clipboard when clicked', () => {
-      renderDataProductOverviewNew();
-      const resourceButton = screen.getByText('Resource');
-      fireEvent.click(resourceButton);
-
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        'projects/test-project/datasets/test-dataset/tables/test-table'
-      );
-      expect(mockShowNotification).toHaveBeenCalledWith(
-        'Copied to clipboard.',
-        'success',
-        3000,
-        undefined
-      );
-    });
-
-    it('copies FQN to clipboard when clicked', () => {
-      renderDataProductOverviewNew();
-      const fqnButton = screen.getByText('FQN');
-      fireEvent.click(fqnButton);
-
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('project:dataset.table');
-      expect(mockShowNotification).toHaveBeenCalledWith(
-        'Copied to clipboard.',
-        'success',
-        3000,
-        undefined
-      );
     });
   });
 
@@ -653,11 +579,11 @@ describe('DataProductOverviewNew', () => {
       expect(screen.queryByTestId('schema-filter')).not.toBeInTheDocument();
     });
 
-    it('renders table filter when Sample Data tab is active', () => {
+    it('renders filter bar when Sample Data tab is active', () => {
       renderDataProductOverviewNew();
       const sampleDataTab = screen.getByText('Sample Data');
       fireEvent.click(sampleDataTab);
-      expect(screen.getByTestId('table-filter')).toBeInTheDocument();
+      expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
     });
 
     it('handles filtered schema entry changes', () => {
@@ -667,17 +593,13 @@ describe('DataProductOverviewNew', () => {
       expect(screen.getByTestId('schema')).toBeInTheDocument();
     });
 
-    it('handles filtered sample data changes', async () => {
+    it('renders filter bar with sample data', async () => {
       renderDataProductOverviewNew();
       const sampleDataTab = screen.getByText('Sample Data');
       fireEvent.click(sampleDataTab);
 
-      const applyFilterButton = screen.getByText('Apply Table Filter');
-      fireEvent.click(applyFilterButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('table-view')).toBeInTheDocument();
-      });
+      expect(screen.getByTestId('filter-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('table-view')).toBeInTheDocument();
     });
   });
 
@@ -759,7 +681,7 @@ describe('DataProductOverviewNew', () => {
       expect(screen.getByText('Test documentation content')).toBeInTheDocument();
     });
 
-    it('displays No Documentation Available when missing', () => {
+    it('displays empty state when no documentation', () => {
       const entryWithoutDoc = {
         ...mockEntry,
         aspects: {
@@ -774,7 +696,7 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithoutDoc });
-      expect(screen.getByText('No Documentation Available')).toBeInTheDocument();
+      expect(screen.getByText('No documentation yet')).toBeInTheDocument();
     });
 
     it('handles missing overview aspect gracefully', () => {
@@ -787,7 +709,7 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithoutOverview });
-      expect(screen.getByText('No Documentation Available')).toBeInTheDocument();
+      expect(screen.getByText('No documentation yet')).toBeInTheDocument();
     });
   });
 
@@ -827,7 +749,7 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithoutContacts });
-      expect(screen.getByText('No Contacts Available')).toBeInTheDocument();
+      expect(screen.getByText('No contacts assigned to this asset.')).toBeInTheDocument();
     });
 
     it('handles contact without email format', () => {
@@ -894,27 +816,22 @@ describe('DataProductOverviewNew', () => {
     });
   });
 
-  describe('Info section', () => {
-    it('displays Creation Time', () => {
+  describe('Timestamps section', () => {
+    it('displays Created', () => {
       renderDataProductOverviewNew();
-      expect(screen.getByText('Creation Time')).toBeInTheDocument();
+      expect(screen.getByText('Created')).toBeInTheDocument();
     });
 
-    it('displays Last Modified Time', () => {
+    it('displays Last modified', () => {
       renderDataProductOverviewNew();
-      expect(screen.getByText('Last Modified Time')).toBeInTheDocument();
-    });
-
-    it('displays Last Run Time when entryType is set and not data-product', () => {
-      renderDataProductOverviewNew({ entryType: 'table' });
-      expect(screen.getByText('Last Run Time')).toBeInTheDocument();
+      expect(screen.getByText('Last modified')).toBeInTheDocument();
     });
 
     it('formats dates correctly for regular entry', () => {
       renderDataProductOverviewNew();
-      // Check that the Creation Time section contains a date
-      const creationTimeSection = screen.getByText('Creation Time').closest('div')?.parentElement;
-      expect(creationTimeSection?.textContent).toMatch(/2022/);
+      // Check that the Created section contains a date
+      const createdSection = screen.getByText('Created').closest('div')?.parentElement;
+      expect(createdSection?.textContent).toMatch(/2022/);
     });
 
     it('handles missing timestamp', () => {
@@ -933,22 +850,15 @@ describe('DataProductOverviewNew', () => {
   describe('Usage Metrics section', () => {
     it('displays execution time', () => {
       renderDataProductOverviewNew({ entryType: 'table' });
-      expect(screen.getByText('Execution Time')).toBeInTheDocument();
-      expect(screen.getByText('150')).toBeInTheDocument();
+      expect(screen.getByText('Avg Exec Time')).toBeInTheDocument();
     });
 
     it('displays total queries', () => {
       renderDataProductOverviewNew({ entryType: 'table' });
       expect(screen.getByText('Total Queries')).toBeInTheDocument();
-      expect(screen.getByText('42')).toBeInTheDocument();
     });
 
-    it('displays refresh time', () => {
-      renderDataProductOverviewNew({ entryType: 'table' });
-      expect(screen.getByText('Refresh Time')).toBeInTheDocument();
-    });
-
-    it('shows dashes when usage metrics are empty', () => {
+    it('shows empty state when usage metrics are empty', () => {
       const entryWithEmptyUsage = {
         ...mockEntry,
         aspects: {
@@ -961,11 +871,10 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithEmptyUsage, entryType: 'table' });
-      const executionTimeSection = screen.getByText('Execution Time').closest('div')?.parentElement;
-      expect(executionTimeSection?.textContent).toContain('-');
+      expect(screen.getByText('No usage metrics available for this asset.')).toBeInTheDocument();
     });
 
-    it('handles missing refresh time', () => {
+    it('handles usage metrics without refresh time', () => {
       const entryWithoutRefreshTime = {
         ...mockEntry,
         aspects: {
@@ -980,7 +889,7 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithoutRefreshTime, entryType: 'table' });
-      expect(screen.getByText('Refresh Time')).toBeInTheDocument();
+      expect(screen.getByText('Usage Metrics')).toBeInTheDocument();
     });
 
     it('handles missing metrics data gracefully', () => {
@@ -1038,8 +947,8 @@ describe('DataProductOverviewNew', () => {
     it('uses ISO date format for data-product type', () => {
       renderDataProductOverviewNew({ entry: mockDataProductEntry, entryType: 'data-product' });
       // For data-product, the date is split from ISO format: '2022-01-01T10:30:00Z' -> '2022-01-01'
-      const creationTimeSection = screen.getByText('Creation Time').closest('div')?.parentElement;
-      expect(creationTimeSection?.textContent).toContain('2022-01-01');
+      const createdSection = screen.getByText('Created').closest('div')?.parentElement;
+      expect(createdSection?.textContent).toContain('2022-01-01');
     });
 
     it('renders contacts differently for data-product type', () => {
@@ -1055,26 +964,18 @@ describe('DataProductOverviewNew', () => {
     });
   });
 
-  describe('accordion states', () => {
-    it('Details accordion is expanded by default', () => {
+  describe('card sections render', () => {
+    it('Timestamps card is always visible', () => {
       renderDataProductOverviewNew();
-      const detailsAccordion = screen.getByText('Details').closest('button');
-      expect(detailsAccordion).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Timestamps')).toBeInTheDocument();
     });
 
-    it('Info accordion is expanded by default', () => {
+    it('Documentation card is always visible', () => {
       renderDataProductOverviewNew();
-      const infoAccordion = screen.getByText('Info').closest('button');
-      expect(infoAccordion).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Documentation')).toBeInTheDocument();
     });
 
-    it('Documentation accordion expands based on hasData', () => {
-      renderDataProductOverviewNew();
-      const docAccordion = screen.getByText('Documentation').closest('button');
-      expect(docAccordion).toHaveAttribute('aria-expanded', 'true');
-    });
-
-    it('Contacts accordion collapses when no contacts', () => {
+    it('Contacts card shows empty state when no contacts', () => {
       const entryWithoutContacts = {
         ...mockEntry,
         aspects: {
@@ -1093,12 +994,11 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithoutContacts });
-      const contactsAccordion = screen.getByText('Contacts').closest('button');
-      expect(contactsAccordion).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByText('No contacts assigned to this asset.')).toBeInTheDocument();
     });
   });
 
-  describe('hasData helper function coverage', () => {
+  describe('empty state rendering', () => {
     it('handles empty string documentation', () => {
       const entryWithEmptyDoc = {
         ...mockEntry,
@@ -1114,11 +1014,10 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithEmptyDoc });
-      const docAccordion = screen.getByText('Documentation').closest('button');
-      expect(docAccordion).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByText('No documentation yet')).toBeInTheDocument();
     });
 
-    it('handles whitespace-only documentation as false', () => {
+    it('handles whitespace-only documentation', () => {
       const entryWithWhitespaceDoc = {
         ...mockEntry,
         aspects: {
@@ -1133,11 +1032,11 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithWhitespaceDoc });
-      const docAccordion = screen.getByText('Documentation').closest('button');
-      expect(docAccordion).toHaveAttribute('aria-expanded', 'false');
+      // Whitespace-only content is rendered as HTML, not shown as empty state
+      expect(screen.getByText('Documentation')).toBeInTheDocument();
     });
 
-    it('handles labels accordion with empty labels object', () => {
+    it('handles labels with empty labels object', () => {
       const entryWithEmptyLabels = {
         ...mockEntry,
         entrySource: {
@@ -1146,14 +1045,12 @@ describe('DataProductOverviewNew', () => {
         }
       };
       renderDataProductOverviewNew({ entry: entryWithEmptyLabels, entryType: 'table' });
-      const labelsAccordion = screen.getByText('Labels').closest('button');
-      expect(labelsAccordion).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByText('No Labels available')).toBeInTheDocument();
     });
 
-    it('handles labels accordion with labels present', () => {
+    it('renders labels when present', () => {
       renderDataProductOverviewNew({ entryType: 'table' });
-      const labelsAccordion = screen.getByText('Labels').closest('button');
-      expect(labelsAccordion).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('environment: production')).toBeInTheDocument();
     });
   });
 
@@ -1165,15 +1062,15 @@ describe('DataProductOverviewNew', () => {
         updateTime: null
       };
       renderDataProductOverviewNew({ entry: entryWithNoTime });
-      const creationTimeSection = screen.getByText('Creation Time').closest('div')?.parentElement;
-      expect(creationTimeSection?.textContent).toContain('-');
+      const createdSection = screen.getByText('Created').closest('div')?.parentElement;
+      expect(createdSection?.textContent).toContain('-');
     });
 
     it('formats time with AM/PM', () => {
       renderDataProductOverviewNew();
       // Check that time format includes AM/PM indicator
-      const infoSection = screen.getByText('Creation Time').closest('div')?.parentElement;
-      expect(infoSection?.textContent).toMatch(/AM|PM/);
+      const createdSection = screen.getByText('Created').closest('div')?.parentElement;
+      expect(createdSection?.textContent).toMatch(/AM|PM/);
     });
   });
 
@@ -1193,7 +1090,7 @@ describe('DataProductOverviewNew', () => {
 
   describe('tooltip rendering', () => {
     it('renders help icons in accordions', () => {
-      renderDataProductOverviewNew();
+      renderDataProductOverviewNew({ entryType: 'table' });
       const helpIcons = screen.getAllByTestId('InfoOutlineIcon');
       expect(helpIcons.length).toBeGreaterThan(0);
     });
@@ -1203,7 +1100,7 @@ describe('DataProductOverviewNew', () => {
     it('handles entry without aspects', () => {
       const entryWithoutAspects = { ...mockEntry, aspects: {} };
       renderDataProductOverviewNew({ entry: entryWithoutAspects });
-      expect(screen.getByText('Details')).toBeInTheDocument();
+      expect(screen.getByText('Documentation')).toBeInTheDocument();
     });
 
     it('applies custom CSS styles', () => {
@@ -1215,19 +1112,18 @@ describe('DataProductOverviewNew', () => {
   describe('entryType prop handling', () => {
     it('handles null entryType prop', () => {
       renderDataProductOverviewNew({ entryType: null });
-      expect(screen.getByText('Details')).toBeInTheDocument();
+      expect(screen.getByText('Documentation')).toBeInTheDocument();
     });
 
     it('handles undefined entryType prop', () => {
       renderDataProductOverviewNew({ entryType: undefined });
-      expect(screen.getByText('Details')).toBeInTheDocument();
+      expect(screen.getByText('Documentation')).toBeInTheDocument();
     });
 
     it('shows all sections when entryType is not data-product', () => {
       renderDataProductOverviewNew({ entryType: 'table' });
       expect(screen.getByText('Usage Metrics')).toBeInTheDocument();
       expect(screen.getByText('Labels')).toBeInTheDocument();
-      expect(screen.getByText('Last Run Time')).toBeInTheDocument();
     });
   });
 });
@@ -1363,11 +1259,10 @@ describe('Integration Tests', () => {
       );
 
       // Verify main sections are visible
-      expect(screen.getByText('Details')).toBeInTheDocument();
       expect(screen.getByText('Table Info')).toBeInTheDocument();
       expect(screen.getByText('Documentation')).toBeInTheDocument();
       expect(screen.getByText('Contacts')).toBeInTheDocument();
-      expect(screen.getByText('Info')).toBeInTheDocument();
+      expect(screen.getByText('Timestamps')).toBeInTheDocument();
 
       // Switch to Sample Data tab
       fireEvent.click(screen.getByText('Sample Data'));
@@ -1376,14 +1271,6 @@ describe('Integration Tests', () => {
       // Switch back to Schema tab
       fireEvent.click(screen.getByText('Schema'));
       expect(screen.getByTestId('schema')).toBeInTheDocument();
-
-      // Copy resource identifier
-      fireEvent.click(screen.getByText('Resource'));
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
-
-      // Copy FQN identifier
-      fireEvent.click(screen.getByText('FQN'));
-      expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(2);
     });
   });
 });

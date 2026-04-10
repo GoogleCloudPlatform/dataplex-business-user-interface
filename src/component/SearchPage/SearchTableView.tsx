@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Tooltip } from '@mui/material';
-import { Lock, ArrowUpward, ArrowDownward } from '@mui/icons-material';
+import React, { useState, useRef } from 'react';
+import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Tooltip } from '@mui/material';
+import { Lock } from '@mui/icons-material';
+import { useSelector } from 'react-redux';
 import Tag from '../Tags/Tag';
+import { useColumnResize } from '../../hooks/useColumnResize';
+import ResizeHandle from '../Schema/ResizeHandle';
 
 /**
  * @file SearchTableView.tsx
@@ -9,7 +12,7 @@ import Tag from '../Tags/Tag';
  * This component renders search results in a Material-UI `Table` view.
  *
  * It displays a list of `resources` in rows, with columns for Name,
- * Description, Type (as `Tag` components), Owner, and Last Modified date.
+ * Description, Type (as `Tag` components), Location, and Last Modified date.
  * It provides local state for sorting the "Name" and "Last modified" columns
  * in ascending, descending, or default order.
  *
@@ -39,6 +42,8 @@ interface SearchTableViewProps {
   onFavoriteClick: (entry: any) => void;
   getFormatedDate: (date: any) => string;
   getEntryType: (namePath: string, separator: string) => string;
+  previewOpen?: boolean;
+  selectedEntryName?: string | null;
 }
 
 // const capitalizeFirstLetter = (s: any) => {
@@ -58,87 +63,208 @@ const getNameFromEntry = (entry: any) => {
   }
   return calculatedName;
 }
+const OverflowTooltip: React.FC<{ text: string; children: React.ReactElement<{ onMouseEnter?: React.MouseEventHandler<HTMLElement> }> }> = ({ text, children }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    setShowTooltip(el.scrollWidth > el.clientWidth);
+  };
+
+  return (
+    <Tooltip title={text} arrow disableHoverListener={!showTooltip}>
+      {React.cloneElement(children, { onMouseEnter: handleMouseEnter })}
+    </Tooltip>
+  );
+};
+
+const OverflowTag: React.FC<{ text: string; className?: string; css?: React.CSSProperties }> = ({ text, className, css }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const spanRef = useRef<HTMLSpanElement>(null);
+
+  const handleMouseEnter = () => {
+    const el = spanRef.current?.querySelector('span') as HTMLElement;
+    if (el) setShowTooltip(el.scrollWidth > el.clientWidth);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  return (
+    <Tooltip title={showTooltip ? text : ''} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -8] } }] } }}>
+      <span
+        ref={spanRef}
+        style={{ maxWidth: '100%', overflow: 'hidden' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <Tag text={text} className={className} css={{ ...css, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', display: 'block' }} />
+      </span>
+    </Tooltip>
+  );
+};
+
 const SearchTableView: React.FC<SearchTableViewProps> = ({
   resources,
   onRowClick,
   // onFavoriteClick,
   getFormatedDate,
-  getEntryType
+  getEntryType,
+  previewOpen,
+  selectedEntryName
 }) => {
+  const mode = useSelector((state: any) => state.user.mode) as string;
+  const isDark = mode === 'dark';
+  const borderRight = previewOpen ? '0px' : '10px';
+  const gradientRight = previewOpen ? '0px' : '10px';
   // const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [nameSortOrder, setNameSortOrder] = useState<'asc' | 'desc' | null>(null);
-  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc' | null>(null);
-  const [sortColumn, setSortColumn] = useState<'name' | 'date' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'name' | 'date' | 'location' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const COLUMN_CONFIGS = React.useMemo(() => [
+    { key: 'name', initialWidth: 250, minWidth: 120 },
+    { key: 'description', initialWidth: 300, minWidth: 120 },
+    { key: 'type', initialWidth: 170, minWidth: 100 },
+    { key: 'location', initialWidth: 130, minWidth: 80 },
+    { key: 'lastModified', initialWidth: 150, minWidth: 100 },
+  ], []);
+
+  const { columnWidths, activeIndex, handleMouseDown } = useColumnResize({
+    columns: COLUMN_CONFIGS,
+    mode: 'coupled',
+  });
+
+  const columnPercents = React.useMemo(() => {
+    const total = columnWidths.reduce((s, w) => s + w, 0);
+    return columnWidths.map(w => `${((w / total) * 100).toFixed(2)}%`);
+  }, [columnWidths]);
 
   const handleRowClick = (entry: any) => {
     onRowClick(entry);
   };
 
-  // const handleFavoriteClick = (event: React.MouseEvent, entry: any) => {
-  //   event.stopPropagation();
-  //   const entryName = entry.name;
-  //   const newFavorites = new Set(favorites);
-    
-  //   if (newFavorites.has(entryName)) {
-  //     newFavorites.delete(entryName);
-  //   } else {
-  //     newFavorites.add(entryName);
-  //   }
-    
-  //   setFavorites(newFavorites);
-  //   onFavoriteClick(entry);
-  // };
-
   const displayedResources = React.useMemo(() => {
-    // Date sort has priority if active
-    if (dateSortOrder) {
-      const sortedByDate = [...resources].sort((a: any, b: any) => {
-        const aTs = a?.dataplexEntry?.updateTime?.seconds || a?.dataplexEntry?.createTime?.seconds || 0;
-        const bTs = b?.dataplexEntry?.updateTime?.seconds || b?.dataplexEntry?.createTime?.seconds || 0;
+    if (!sortColumn) return resources;
+
+    if (sortColumn === 'date') {
+      const toTimestamp = (raw: any) => {
+        if (!raw) return 0;
+        if (typeof raw === 'string') return new Date(raw).getTime();
+        if (raw.seconds) return raw.seconds * 1000;
+        return typeof raw === 'number' ? raw * 1000 : 0;
+      };
+      const sorted = [...resources].sort((a: any, b: any) => {
+        const aTs = toTimestamp(a?.dataplexEntry?.updateTime || a?.dataplexEntry?.createTime);
+        const bTs = toTimestamp(b?.dataplexEntry?.updateTime || b?.dataplexEntry?.createTime);
         return aTs - bTs;
       });
-      return dateSortOrder === 'asc' ? sortedByDate : sortedByDate.reverse();
+      return sortOrder === 'asc' ? sorted : sorted.reverse();
     }
 
-    if (nameSortOrder) {
-      const sortedByName = [...resources].sort((a: any, b: any) => {
+    if (sortColumn === 'name') {
+      const sorted = [...resources].sort((a: any, b: any) => {
         const aName = (a?.dataplexEntry?.name || '').split('/').pop() || '';
         const bName = (b?.dataplexEntry?.name || '').split('/').pop() || '';
         return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
       });
-      return nameSortOrder === 'asc' ? sortedByName : sortedByName.reverse();
+      return sortOrder === 'asc' ? sorted : sorted.reverse();
+    }
+
+    if (sortColumn === 'location') {
+      const sorted = [...resources].sort((a: any, b: any) => {
+        const aLoc = a?.dataplexEntry?.entrySource?.location || '';
+        const bLoc = b?.dataplexEntry?.entrySource?.location || '';
+        return aLoc.localeCompare(bLoc, undefined, { sensitivity: 'base' });
+      });
+      return sortOrder === 'asc' ? sorted : sorted.reverse();
     }
 
     return resources;
-  }, [resources, nameSortOrder, dateSortOrder]);
+  }, [resources, sortColumn, sortOrder]);
 
   const handleToggleNameSort = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setDateSortOrder(null);
-    setSortColumn('name');
-    setNameSortOrder(prev => {
-      const newOrder = prev === 'asc' ? 'desc' : prev === 'desc' ? null : 'asc';
-      if (newOrder === null) setSortColumn(null);
-      return newOrder;
-    });
+    if (sortColumn === 'name') {
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else {
+        // desc → back to default (most relevant)
+        setSortColumn(null);
+        setSortOrder('asc');
+      }
+    } else {
+      setSortColumn('name');
+      setSortOrder('asc');
+    }
   };
 
   const handleToggleDateSort = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setNameSortOrder(null);
-    setSortColumn('date');
-    setDateSortOrder(prev => {
-      const newOrder = prev === 'asc' ? 'desc' : prev === 'desc' ? null : 'asc';
-      if (newOrder === null) setSortColumn(null);
-      return newOrder;
-    });
+    if (sortColumn === 'date') {
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else {
+        // desc → back to default (most relevant)
+        setSortColumn(null);
+        setSortOrder('asc');
+      }
+    } else {
+      setSortColumn('date');
+      setSortOrder('asc');
+    }
+  };
+
+  const handleToggleLocationSort = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (sortColumn === 'location') {
+      if (sortOrder === 'asc') {
+        setSortOrder('desc');
+      } else {
+        setSortColumn(null);
+        setSortOrder('asc');
+      }
+    } else {
+      setSortColumn('location');
+      setSortOrder('asc');
+    }
+  };
+
+  const getLocationSortTooltip = (): string => {
+    if (sortColumn === 'location' && sortOrder === 'asc') {
+      return 'Sort Z to A';
+    }
+    if (sortColumn === 'location' && sortOrder === 'desc') {
+      return '';
+    }
+    return 'Sort A to Z';
+  };
+
+  const getNameSortTooltip = (): string => {
+    if (sortColumn === 'name' && sortOrder === 'asc') {
+      return 'Sort Z to A';
+    }
+    if (sortColumn === 'name' && sortOrder === 'desc') {
+      return '';
+    }
+    return 'Sort A to Z';
+  };
+
+  const getDateSortTooltip = (): string => {
+    if (sortColumn === 'date' && sortOrder === 'asc') {
+      return 'Sort new to old';
+    }
+    if (sortColumn === 'date' && sortOrder === 'desc') {
+      return '';
+    }
+    return 'Sort old to new';
   };
 
   return (
     <TableContainer
       component={Paper}
       sx={{
-        backgroundColor: '#FFFFFF',
+        backgroundColor: isDark ? '#131314' : '#FFFFFF',
         borderRadius: '8px',
         boxShadow: 'none',
         maxHeight: 'calc(100vh - 200px)',
@@ -148,119 +274,228 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
       }}
     >
       <Table sx={{ width: '100%', tableLayout: 'fixed' }} aria-label="search results table">
+        <colgroup>
+          {columnPercents.map((w, i) => (
+            <col key={i} style={{ width: w }} />
+          ))}
+        </colgroup>
         <TableHead>
-          <TableRow 
+          <TableRow
             sx={{
+              position: 'relative',
               '& .MuiTableCell-root': {
                 borderBottom: 'none',
-                paddingTop: '0px',
-                paddingBottom: '3px'
-              }
+                padding: '12px 20px 4px',
+              },
+              '& .MuiTableCell-root:first-of-type': {
+                paddingLeft: '20px',
+              },
+              ...(previewOpen ? { '& .MuiTableCell-root:last-of-type': { paddingRight: '8px' } } : {}),
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: 0,
+                left: '12px',
+                right: borderRight,
+                height: '1px',
+                backgroundColor: mode === 'dark' ? '#3c4043' : '#DADCE0',
+              },
             }}
           >
             {/* Name */}
             <TableCell
               sx={{
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#444746',
-                fontFamily: '"Google Sans Text",sans-serif',
-                paddingLeft: '16px',
-                width: '25%',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: isDark ? '#dedfe0' : '#444746',
+                fontFamily: '"Google Sans", sans-serif',
+                position: 'relative',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', '&:hover .MuiIconButton-root': { opacity: 1 } }}>
-                <span>Name</span>
-                <Tooltip title="Sort" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={handleToggleNameSort}
-                    sx={{ 
-                      padding: '2px', 
-                      color: '#444746',
-                      opacity: (sortColumn === 'name' && nameSortOrder !== null) ? 1 : 0
+              <Tooltip title={getNameSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
+                <Box
+                  role="button"
+                  onClick={handleToggleNameSort}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    margin: '-4px -8px',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: isDark ? '#3c4043' : '#F8F9FA',
+                    },
+                  }}
+                >
+                  <span>Name</span>
+                  <Box
+                    component="span"
+                    className="sort-btn"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      opacity: sortColumn === 'name' ? 1 : 0,
+                      transform: (sortColumn === 'name' && sortOrder === 'desc') ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out, opacity 0.2s ease',
                     }}
                   >
-                    {nameSortOrder === 'asc' && <ArrowUpward sx={{ fontSize: '16px' }} />}
-                    {nameSortOrder === 'desc' && <ArrowDownward sx={{ fontSize: '16px' }} />}
-                    {nameSortOrder === null && <ArrowUpward sx={{ fontSize: '16px', opacity: 0.5 }} />}
-                  </IconButton>
-                </Tooltip>
-              </Box>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill={isDark ? '#004a77' : '#C2E7FF'}/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={isDark ? '#8ab4f8' : '#004A77'}/>
+                    </svg>
+                  </Box>
+                </Box>
+              </Tooltip>
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(0, e); }}
+                isActive={activeIndex === 0}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Description */}
             <TableCell
               sx={{
-                fontFamily: '"Google Sans Text",sans-serif',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#444746',
-                padding: '0px 12px',
-                width: '35%',
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
               Description
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(1, e); }}
+                isActive={activeIndex === 1}
+                darkMode={isDark}
+              />
             </TableCell>
 
             {/* Type */}
             <TableCell
               sx={{
-                fontFamily: '"Google Sans Text",sans-serif',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#444746',
-                padding: '0px 12px',
-                width: '20%',
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
               Type
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(2, e); }}
+                isActive={activeIndex === 2}
+                darkMode={isDark}
+              />
             </TableCell>
-            
-            {/* Owner */}
-            {/* <TableCell 
+
+            {/* Location */}
+            <TableCell
               sx={{
-                fontFamily: '"Google Sans Text",sans-serif',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#444746',
-                padding: '0px 12px',
-                paddingLeft: '14px' 
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: isDark ? '#dedfe0' : '#444746',
+                position: 'relative',
               }}
             >
-              Owner
-            </TableCell> */}
+              <Tooltip title={getLocationSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
+                <Box
+                  role="button"
+                  onClick={handleToggleLocationSort}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    margin: '-4px -8px',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: isDark ? '#3c4043' : '#F8F9FA',
+                    },
+                  }}
+                >
+                  <span>Location</span>
+                  <Box
+                    component="span"
+                    className="sort-btn"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      opacity: sortColumn === 'location' ? 1 : 0,
+                      transform: (sortColumn === 'location' && sortOrder === 'desc') ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out, opacity 0.2s ease',
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill={isDark ? '#004a77' : '#C2E7FF'}/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={isDark ? '#8ab4f8' : '#004A77'}/>
+                    </svg>
+                  </Box>
+                </Box>
+              </Tooltip>
+              <ResizeHandle
+                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(3, e); }}
+                isActive={activeIndex === 3}
+                darkMode={isDark}
+              />
+            </TableCell>
 
             {/* Last Modified */}
             <TableCell
               sx={{
-                fontFamily: '"Google Sans Text",sans-serif',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: '#444746',
-                padding: '0px 4px',
-                paddingLeft: '3px',
-                width: '20%',
+                fontFamily: '"Google Sans", sans-serif',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: isDark ? '#dedfe0' : '#444746',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px' , '&:hover .MuiIconButton-root': { opacity: 1 } }}>
-                <span>Last modified</span>
-                <Tooltip title="Sort" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={handleToggleDateSort}
-                    sx={{ 
-                      padding: '2px', 
-                      color: '#444746',
-                      opacity: (sortColumn === 'date' && dateSortOrder !== null) ? 1 : 0
+              <Tooltip title={getDateSortTooltip()} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
+                <Box
+                  role="button"
+                  onClick={handleToggleDateSort}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    margin: '-4px -8px',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: mode === 'dark' ? '#3c4043' : '#F8F9FA',
+                    },
+                  }}
+                >
+                  <Box
+                    component="span"
+                    className="sort-btn"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      opacity: sortColumn === 'date' ? 1 : 0,
+                      transform: (sortColumn === 'date' && sortOrder === 'desc') ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out, opacity 0.2s ease',
                     }}
                   >
-                    {dateSortOrder === 'asc' && <ArrowUpward sx={{ fontSize: '16px' }} />}
-                    {dateSortOrder === 'desc' && <ArrowDownward sx={{ fontSize: '16px' }} />}
-                    {dateSortOrder === null && <ArrowUpward sx={{ fontSize: '16px', opacity: 0.5 }} />}
-                  </IconButton>
-                </Tooltip>
-              </Box>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill={mode === 'dark' ? '#004a77' : '#C2E7FF'}/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={mode === 'dark' ? '#8ab4f8' : '#004A77'}/>
+                    </svg>
+                  </Box>
+                  <span style={{ whiteSpace: 'nowrap' }}>Last modified</span>
+                </Box>
+              </Tooltip>
             </TableCell>
           </TableRow>
         </TableHead>
@@ -269,69 +504,100 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
             const entry = resource.dataplexEntry;
             // const isFavorite = favorites.has(entry.name);
             const hasLock = entry.name.includes('Sales_Dataset') || entry.name.includes('sales_reporting'); // Demo logic
-            
+            const isSelected = selectedEntryName === entry.name;
+
             return (
               <TableRow
                 key={entry.name}
+                className={isSelected ? 'row-selected' : ''}
                 onClick={() => handleRowClick(entry)}
                 sx={{
-                  borderBottom: '1px solid #DADCE0',
+                  position: 'relative',
                   cursor: 'pointer',
-                  height: '36px',
-                  '&:hover': {
-                    backgroundColor: '#F8F9FA'
-                  }
+                  height: '40px',
+                  backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
+                  '& .MuiTableCell-root': {
+                    borderBottom: 'none',
+                    backgroundColor: isSelected ? (mode === 'dark' ? '#004a76' : '#EDF2FC') : undefined,
+                  },
+                  '& .MuiTableCell-root:first-of-type': {
+                    background: isSelected ? (mode === 'dark' ? `linear-gradient(to right, transparent 12px, #004a76 12px)` : 'linear-gradient(to right, transparent 12px, #EDF2FC 12px)') : undefined,
+                  },
+                  '& .MuiTableCell-root:last-of-type': {
+                    background: isSelected ? (mode === 'dark' ? `linear-gradient(to left, transparent ${gradientRight}, #004a76 ${gradientRight})` : `linear-gradient(to left, transparent ${gradientRight}, #EDF2FC ${gradientRight})`) : undefined,
+                  },
+                  '&:hover .MuiTableCell-root': {
+                    backgroundColor: isSelected ? (mode === 'dark' ? '#185683' : '#EDF2FC') : (mode === 'dark' ? '#3c4043' : '#F8F9FA'),
+                  },
+                  '&:hover .MuiTableCell-root:first-of-type': {
+                    background: isSelected ? (mode === 'dark' ? `linear-gradient(to right, transparent 12px, #185683 12px)` : 'linear-gradient(to right, transparent 12px, #EDF2FC 12px)') : (mode === 'dark' ? 'linear-gradient(to right, transparent 12px, #3c4043 12px)' : 'linear-gradient(to right, transparent 12px, #F8F9FA 12px)'),
+                  },
+                  '&:hover .MuiTableCell-root:last-of-type': {
+                    background: isSelected ? (mode === 'dark' ? `linear-gradient(to left, transparent ${gradientRight}, #185683 ${gradientRight})` : `linear-gradient(to left, transparent ${gradientRight}, #EDF2FC ${gradientRight})`) : (mode === 'dark' ? `linear-gradient(to left, transparent ${gradientRight}, #3c4043 ${gradientRight})` : `linear-gradient(to left, transparent ${gradientRight}, #F8F9FA ${gradientRight})`),
+                  },
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: 0,
+                    left: '12px',
+                    right: borderRight,
+                    height: '1px',
+                    backgroundColor: mode === 'dark' ? '#3c4043' : '#DADCE0',
+                  },
                 }}
               >
+                {/* Name */}
                 <TableCell
                   sx={{
                     fontFamily: '"Google Sans", sans-serif',
-                    fontSize: '11px',
-                    color: '#1F1F1F',
-                    padding: '10px 6px',
-                    paddingLeft: '16px',
-                    borderBottom: 'none',
+                    fontSize: '12px',
+                    color: mode === 'dark' ? '#dedfe0' : '#1F1F1F',
+                    padding: '10px 20px',
+                    paddingLeft: '20px',
                     overflow: 'hidden',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <Typography
-                      sx={{
-                        flex: 1,
-                        fontFamily: '"Google Sans Text",sans-serif',
-                        fontSize: '1.125rem',
-                        fontWeight: '400',
-                        color: '#0B57D0',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          color: '#0A4BC0'
-                        },
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {getNameFromEntry(entry)}
-                    </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', overflow: 'hidden' }}>
+                    <OverflowTooltip text={getNameFromEntry(entry)}>
+                      <Typography
+                        sx={{
+                          flex: 1,
+                          fontFamily: '"Google Sans", sans-serif',
+                          fontSize: '14px',
+                          fontWeight: 400,
+                          color: mode === 'dark' ? '#dedfe0' : '#1F1F1F',
+                          cursor: 'pointer',
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {getNameFromEntry(entry)}
+                      </Typography>
+                    </OverflowTooltip>
                     {hasLock && (
-                      <Lock sx={{ fontSize: '12px', color: '#575757', flexShrink: 0 }} />
+                      <Lock sx={{ fontSize: '12px', color: mode === 'dark' ? '#dedfe0' : '#575757', flexShrink: 0 }} />
                     )}
                   </Box>
                 </TableCell>
+
+                {/* Description */}
                 <TableCell
                   sx={{
-                    fontFamily: '"Google Sans Text",sans-serif',
-                    fontSize: '0.75rem',
-                    color: '#575757',
-                    padding: '3px 12px',
+                    fontFamily: '"Product Sans", "Google Sans Text", sans-serif',
+                    fontSize: '12px',
+                    color: mode === 'dark' ? '#dedfe0' : '#575757',
+                    padding: '10px 20px',
                     overflow: 'hidden',
                   }}
                 >
                   <Typography
                     sx={{
-                      fontFamily: '"Google Sans Text",sans-serif',
-                      fontSize: '0.875rem',
-                      color: '#000000DE',
+                      fontFamily: '"Product Sans", "Google Sans Text", sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '400',
+                      color: mode === 'dark' ? '#dedfe0' : '#575757',
+                      letterSpacing: '0.1px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
@@ -340,67 +606,98 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                     {entry.entrySource?.description || 'No Description Available'}
                   </Typography>
                 </TableCell>
-                <TableCell 
-                   sx={{
-                     padding: '3px 12px'
-                   }}
-                 >
-                  <Box sx={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    <Tag 
+
+                {/* Type */}
+                <TableCell
+                  sx={{
+                    padding: '10px 20px'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflow: 'hidden' }}>
+                    <OverflowTag
                       text={(() => {
-                        return entry.entrySource?.system.toLowerCase() === 'bigquery' ? 'BigQuery' : entry.entrySource?.system.charAt(0).toUpperCase() + entry.entrySource?.system.slice(1).toLowerCase();
-                      })()} 
+                        const sys = entry.entrySource?.system;
+                        if (!sys) return 'Custom';
+                        const lower = sys.toLowerCase();
+                        if (lower === 'dataplex universal catalog' || lower === 'dataplex') return 'Knowledge Catalog';
+                        if (lower === 'bigquery') return 'BigQuery';
+                        return sys.charAt(0).toUpperCase() + sys.slice(1).toLowerCase();
+                      })()}
+                      className="asset-tag"
                       css={{
-                        fontFamily: '"Google Sans Text",sans-serif',
-                        backgroundColor: '#C2E7FF',
-                        color: '#004A77',
+                        fontFamily: '"Google Sans", sans-serif',
+                        backgroundColor: mode === 'dark' ? '#004a76' : '#C2E7FF',
+                        color: mode === 'dark' ? '#c1e6ff' : '#004A77',
                         borderRadius: '8px',
-                        height:'20px',
-                        padding: '1px 8px',
+                        height: '20px',
+                        padding: '0px 8px',
                         fontSize: '12px',
                         fontWeight: '500',
                         textTransform: 'capitalize',
-                        border: 'none'
+                        border: 'none',
+                        cursor: 'default',
+                        transition: 'none',
                       }}
                     />
-                    <Tag 
-                      text={getEntryType(entry.name, '/')} 
+                    <OverflowTag
+                      text={getEntryType(entry.name, '/')}
+                      className="asset-tag"
                       css={{
-                        fontFamily: '"Google Sans Text",sans-serif',
-                        backgroundColor: '#C2E7FF',
-                        color: '#004A77',
-                        height:'20px',
+                        fontFamily: '"Google Sans", sans-serif',
+                        backgroundColor: mode === 'dark' ? '#004a76' : '#C2E7FF',
+                        color: mode === 'dark' ? '#c1e6ff' : '#004A77',
+                        height: '20px',
                         borderRadius: '8px',
-                        padding: '1px 8px',
+                        padding: '0px 8px',
                         fontSize: '12px',
                         fontWeight: '500',
-                        border: 'none'
+                        border: 'none',
+                        cursor: 'default',
+                        transition: 'none',
                       }}
                     />
                   </Box>
                 </TableCell>
-                {/* <TableCell 
-                   sx={{
-                     fontFamily: '"Google Sans Text",sans-serif',
-                     fontSize: '12px',
-                     color: '#575757',
-                     padding: '3px 12px',
-                     paddingLeft: '16px'
-                   }}
-                 >
-                   {entry.entrySource?.owner || '-'}
-                </TableCell> */}
-                <TableCell 
-                   sx={{
-                     fontFamily: '"Google Sans Text",sans-serif',
-                     fontSize: '12px',
-                     color: '#575757',
-                     padding: '3px 12px',
-                     paddingLeft: '3px'
-                   }}
-                 >
-                   {getFormatedDate(entry?.updateTime || entry?.createTime)}
-                 </TableCell>
+
+                {/* Location */}
+                <TableCell
+                  sx={{
+                    padding: '10px 20px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <OverflowTooltip text={entry.entrySource?.location || '-'}>
+                    <Typography
+                      sx={{
+                        fontFamily: '"Product Sans", "Google Sans Text", sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '400',
+                        color: mode === 'dark' ? '#dedfe0' : '#575757',
+                        letterSpacing: '0.1px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {entry.entrySource?.location || '-'}
+                    </Typography>
+                  </OverflowTooltip>
+                </TableCell>
+
+                {/* Last Modified */}
+                <TableCell
+                  sx={{
+                    fontFamily: '"Product Sans", "Google Sans Text", sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    color: mode === 'dark' ? '#dedfe0' : '#575757',
+                    padding: previewOpen ? '10px 8px 10px 20px' : '10px 20px',
+                    letterSpacing: '0.1px',
+                    textAlign: 'right',
+                  }}
+                >
+                  {getFormatedDate(entry?.updateTime || entry?.createTime)}
+                </TableCell>
               </TableRow>
             );
           })}

@@ -36,6 +36,15 @@ vi.mock('../../contexts/NotificationContext', () => ({
   })
 }));
 
+vi.mock('../../contexts/NoAccessContext', () => ({
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: vi.fn(),
+    dismissNoAccess: vi.fn(),
+  }),
+}));
+
 // Mock Redux store
 const createMockStore = (initialState = {}) => {
   return configureStore({
@@ -52,7 +61,7 @@ const createMockStore = (initialState = {}) => {
             return state;
         }
       },
-      entry: (state = { items: null, status: 'idle', lineageEntryItems: null, lineageEntrystatus: 'idle' }, action: any) => {
+      entry: (state = { items: null, status: 'idle', lineageEntryItems: null, lineageEntrystatus: 'idle', lineageEntryError: null }, action: any) => {
         switch (action.type) {
           case 'entry/fetchLineageEntry/pending':
             return { ...state, lineageEntrystatus: 'loading' };
@@ -67,7 +76,7 @@ const createMockStore = (initialState = {}) => {
     },
     preloadedState: {
       lineage: initialState,
-      entry: { items: null, status: 'idle', lineageEntryItems: null, lineageEntrystatus: 'idle' }
+      entry: { items: null, status: 'idle', lineageEntryItems: null, lineageEntrystatus: 'idle', lineageEntryError: null }
     }
   });
 };

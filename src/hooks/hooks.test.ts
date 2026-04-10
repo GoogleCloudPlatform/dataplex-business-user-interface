@@ -1248,15 +1248,9 @@ describe('useSessionExpiration', () => {
       })
     );
 
-    // The hook checks immediately on mount, so the notification should be called
-    expect(mockShowError).toHaveBeenCalledWith(
-      'Your access token has expired. You will be redirected to the login page.',
-      5000
-    );
-
-    // Advance timers for the setTimeout inside the hook (2000ms delay)
+    // The hook checks immediately on mount via checkTokenValidity (async)
     await act(async () => {
-      vi.advanceTimersByTime(2100);
+      vi.advanceTimersByTime(0);
     });
 
     expect(result.current.isExpired).toBe(true);
@@ -1274,15 +1268,9 @@ describe('useSessionExpiration', () => {
       })
     );
 
-    // The hook checks immediately on mount
-    expect(mockShowWarning).toHaveBeenCalledWith(
-      'Your session has expired. You will be redirected to the login page.',
-      5000
-    );
-
-    // Advance timers for the setTimeout inside the hook
+    // The hook checks immediately on mount via checkTokenValidity (async)
     await act(async () => {
-      vi.advanceTimersByTime(2100);
+      vi.advanceTimersByTime(0);
     });
 
     expect(result.current.isExpired).toBe(true);

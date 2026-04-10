@@ -50,3 +50,18 @@ export const AUTH_CONFIG = {
     '/',
   ],
 } as const;
+
+/**
+ * OAuth scopes required by the application.
+ * Checked against granted scopes at login time.
+ */
+export const REQUIRED_SCOPES = [
+  'https://www.googleapis.com/auth/cloud-platform',
+  'https://www.googleapis.com/auth/bigquery',
+  'https://www.googleapis.com/auth/dataplex.readonly',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/userinfo.email',
+] as const;
+
+/** Minimum IAM role required to use the application */
+export const REQUIRED_IAM_ROLE = 'roles/dataplex.viewer';

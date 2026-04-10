@@ -1,0 +1,323 @@
+.preview-card {
+  container-type: inline-size;
+  container-name: preview;
+
+  /* === DEFAULT SIZES (300–399px card width) === */
+
+  /* Card */
+  --preview-padding: 20px;
+  --preview-radius: 24px;
+  --preview-margin-top: 8px;
+
+  /* Title */
+  --title-font-size: 15px;
+  --title-line-height: 22px;
+  --close-icon-size: 22px;
+
+  /* Tags */
+  --tag-font-size: 12px;
+  --tag-padding: 4px 12px;
+  --tag-radius: 38px;
+  --tag-gap: 8px;
+  --tag-section-pb: 12px;
+  --tag-section-mt: 8px;
+
+  /* CTA Buttons */
+  --btn-height: 38px;
+  --btn-font-size: 13px;
+  --btn-radius: 100px;
+  --btn-padding: 10px 16px;
+  --btn-gap: 8px;
+  --cta-gap: 12px;
+  --cta-pt: 16px;
+  --cta-mb: 12px;
+  --lock-icon-size: 20px;
+  --icon-btn-size: 36px;
+  --icon-img-size: 22px;
+
+  /* Tabs */
+  --tab-font-size: 14px;
+  --tab-underline-height: 3px;
+  --tab-mb: 8px;
+
+  /* Overview Rows */
+  --label-font-size: 12px;
+  --label-line-height: 18px;
+  --label-width: 78px;
+  --value-font-size: 12px;
+  --value-line-height: 20px;
+  --row-padding: 6px 0;
+  --row-gap: 30px;
+
+  /* Description */
+  --desc-label-size: 12px;
+  --desc-text-size: 13px;
+  --desc-section-padding: 12px 0;
+  --show-more-size: 12px;
+
+  /* Empty State */
+  --empty-img-width: 12.5rem;
+  --empty-text-size: 0.875rem;
+  --empty-text-margin-top: 1.25rem;
+  --empty-content-padding: 30px;
+  --empty-content-font-size: 14px;
+}
+
+/* Tabs full-bleed class */
+.preview-tabs {
+  margin-left: calc(-1 * var(--preview-padding));
+  margin-right: calc(-1 * var(--preview-padding));
+  padding-left: var(--preview-padding);
+  padding-right: var(--preview-padding);
+}
+
+/* === SMALL CARD (< 300px) === */
+@container preview (max-width: 299px) {
+  .preview-card {
+    --preview-padding: 16px;
+    --preview-radius: 20px;
+
+    --title-font-size: 14px;
+    --title-line-height: 20px;
+    --close-icon-size: 20px;
+
+    --tag-font-size: 11px;
+    --tag-padding: 3px 10px;
+    --tag-gap: 6px;
+    --tag-section-pb: 10px;
+
+    --btn-height: 36px;
+    --btn-font-size: 13px;
+    --btn-padding: 8px 12px;
+    --cta-gap: 12px;
+    --lock-icon-size: 18px;
+    --icon-btn-size: 36px;
+    --icon-img-size: 20px;
+
+    --tab-font-size: 12px;
+
+    --label-font-size: 12px;
+    --label-line-height: 16px;
+    --value-font-size: 11px;
+    --value-line-height: 18px;
+    --row-gap: 30px;
+
+    --desc-label-size: 11px;
+    --desc-text-size: 13px;
+    --show-more-size: 11px;
+
+    --empty-img-width: 10rem;
+    --empty-text-size: 0.8125rem;
+    --empty-text-margin-top: 1rem;
+    --empty-content-padding: 24px;
+    --empty-content-font-size: 13px;
+  }
+}
+
+/* === EXTRA-SMALL CARD (< 250px) === */
+@container preview (max-width: 249px) {
+  .preview-cta-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .preview-cta-row > :first-child {
+    flex: 0 0 100% !important;
+  }
+
+  .preview-card {
+    --preview-padding: 12px;
+    --preview-radius: 16px;
+
+    --title-font-size: 11px;
+    --title-line-height: 16px;
+    --close-icon-size: 16px;
+
+    --tag-font-size: 10px;
+    --tag-padding: 2px 8px;
+    --tag-gap: 4px;
+    --tag-section-pb: 8px;
+    --tag-section-mt: 6px;
+
+    --btn-height: 30px;
+    --btn-font-size: 10px;
+    --btn-padding: 6px 8px;
+    --btn-gap: 6px;
+    --cta-gap: 8px;
+    --cta-mb: 8px;
+    --lock-icon-size: 14px;
+    --icon-btn-size: 28px;
+    --icon-img-size: 14px;
+
+    --tab-font-size: 10px;
+    --tab-underline-height: 2px;
+    --tab-mb: 12px;
+
+    --label-font-size: 12px;
+    --label-line-height: 14px;
+    --value-font-size: 10px;
+    --value-line-height: 16px;
+    --row-padding: 4px 0;
+    --row-gap: 30px;
+
+    --desc-label-size: 10px;
+    --desc-text-size: 10px;
+    --desc-section-padding: 8px 0;
+    --show-more-size: 10px;
+
+    --empty-img-width: 7rem;
+    --empty-text-size: 0.6875rem;
+    --empty-text-margin-top: 0.75rem;
+    --empty-content-padding: 16px;
+    --empty-content-font-size: 11px;
+  }
+
+}
+
+/* === ULTRA-SMALL CARD (< 200px) === */
+@container preview (max-width: 199px) {
+  .preview-card {
+    --preview-padding: 8px;
+    --preview-radius: 12px;
+
+    --title-font-size: 11px;
+    --title-line-height: 16px;
+    --close-icon-size: 16px;
+
+    --tag-font-size: 9px;
+    --tag-padding: 2px 6px;
+
+    --btn-height: 28px;
+    --btn-font-size: 10px;
+    --btn-padding: 4px 6px;
+    --btn-gap: 4px;
+    --cta-gap: 6px;
+    --cta-mb: 6px;
+    --lock-icon-size: 14px;
+    --icon-btn-size: 26px;
+    --icon-img-size: 14px;
+
+    --tab-font-size: 10px;
+    --tab-mb: 8px;
+
+    --label-font-size: 12px;
+    --label-line-height: 12px;
+    --value-font-size: 9px;
+    --value-line-height: 14px;
+    --row-padding: 3px 0;
+    --row-gap: 30px;
+
+    --desc-label-size: 9px;
+    --desc-text-size: 10px;
+    --desc-section-padding: 6px 0;
+    --show-more-size: 9px;
+
+    --empty-img-width: 5rem;
+    --empty-text-size: 0.625rem;
+    --empty-text-margin-top: 0.5rem;
+    --empty-content-padding: 12px;
+    --empty-content-font-size: 10px;
+  }
+
+}
+
+/* === LARGE CARD (400px+) === */
+@container preview (min-width: 400px) {
+  .preview-card {
+    --preview-padding: 24px;
+
+    --title-font-size: 18px;
+    --title-line-height: 26px;
+
+    --tag-font-size: 13px;
+    --tag-padding: 5px 14px;
+
+    --btn-height: 44px;
+    --btn-font-size: 15px;
+    --icon-btn-size: 44px;
+    --icon-img-size: 26px;
+
+    --value-font-size: 13px;
+    --value-line-height: 22px;
+    --row-gap: 30px;
+
+    --desc-text-size: 15px;
+  }
+}
+
+/* ============================================
+   VIEWPORT-BASED @media QUERIES (Overview tab)
+   ============================================ */
+
+/* Smaller/zoomed screens (≤1536px) — fluid scaling with clamp() */
+@media (max-width: 1536px) {
+  .preview-card {
+    --preview-padding: clamp(12px, 2vw, 20px);
+    --title-font-size: clamp(14px, 1.6vw, 16px);
+    --title-line-height: clamp(20px, 2.4vw, 24px);
+    --btn-height: clamp(36px, 4vw, 40px);
+    --btn-font-size: clamp(12px, 1.4vw, 14px);
+    --icon-btn-size: clamp(36px, 4vw, 40px);
+    --icon-img-size: clamp(20px, 2.2vw, 22px);
+    --tab-font-size: clamp(12px, 1.4vw, 14px);
+    --label-font-size: 12px;
+    --label-line-height: clamp(14px, 1.8vw, 18px);
+    --label-width: clamp(60px, 8vw, 78px);
+    --value-font-size: clamp(10px, 1.2vw, 12px);
+    --value-line-height: clamp(16px, 2vw, 20px);
+    --row-padding: clamp(4px, 0.6vw, 6px) 0;
+    --row-gap: 30px;
+    --desc-label-size: clamp(10px, 1.2vw, 12px);
+    --desc-text-size: clamp(12px, 1.4vw, 14px);
+    --desc-section-padding: clamp(8px, 1.2vw, 12px) 0;
+    --show-more-size: clamp(10px, 1.2vw, 12px);
+  }
+
+  .preview-overview-row {
+    flex-direction: row !important;
+    align-items: baseline !important;
+  }
+
+  .preview-overview-value {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+}
+
+/* Small tablets / iPad Mini (≤768px) — match 232px panel reference */
+@media (max-width: 768px) {
+  .preview-card {
+    --preview-padding: clamp(12px, 2.1vw, 16px);
+    --preview-radius: clamp(16px, 3.1vw, 24px);
+    --title-font-size: clamp(14px, 2.1vw, 16px);
+    --title-line-height: clamp(20px, 3.1vw, 24px);
+    --close-icon-size: clamp(20px, 3.1vw, 24px);
+    --btn-height: clamp(36px, 5.2vw, 40px);
+    --btn-font-size: clamp(12px, 1.8vw, 14px);
+    --icon-btn-size: clamp(36px, 5.2vw, 40px);
+    --icon-img-size: clamp(20px, 3.1vw, 22px);
+    --tab-font-size: clamp(12px, 1.8vw, 14px);
+    --label-font-size: 12px;
+    --label-line-height: clamp(16px, 2.3vw, 18px);
+    --label-width: clamp(55px, 10vw, 78px);
+    --value-font-size: clamp(11px, 1.6vw, 12px);
+    --value-line-height: clamp(18px, 2.6vw, 20px);
+    --row-padding: clamp(4px, 0.8vw, 6px) 0;
+    --row-gap: 30px;
+    --desc-label-size: clamp(11px, 1.6vw, 12px);
+    --desc-text-size: clamp(12px, 1.8vw, 14px);
+    --desc-section-padding: clamp(8px, 1.6vw, 12px) 0;
+    --show-more-size: clamp(11px, 1.6vw, 12px);
+  }
+
+  .preview-overview-row {
+    flex-direction: row !important;
+    align-items: baseline !important;
+  }
+
+  .preview-overview-value {
+    white-space: normal !important;
+    word-break: break-word;
+  }
+}

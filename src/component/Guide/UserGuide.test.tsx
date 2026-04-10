@@ -250,13 +250,13 @@ describe("UserGuide", () => {
         expect(screen.getByText(/Comprehensive Metadata:/)).toBeInTheDocument();
       });
 
-      it("renders Dataplex Universal Catalog link", () => {
+      it("renders Knowledge Catalog link", () => {
         render(<UserGuide />);
 
         const overviewButton = screen.getByRole("button", { name: /Overview/i });
         fireEvent.click(overviewButton);
 
-        const dataplexLink = screen.getByText("Dataplex Universal Catalog");
+        const dataplexLink = screen.getByText("Knowledge Catalog");
         expect(dataplexLink).toHaveAttribute(
           "href",
           "https://cloud.google.com/dataplex?e=48754805&hl=en"
@@ -587,7 +587,7 @@ describe("UserGuide", () => {
       fireEvent.click(overviewButton);
 
       // Check the Dataplex link
-      const dataplexLink = screen.getByText("Dataplex Universal Catalog");
+      const dataplexLink = screen.getByText("Knowledge Catalog");
       expect(dataplexLink.tagName).toBe("A");
       expect(dataplexLink).toHaveAttribute("rel", "noopener");
     });

@@ -1,7 +1,27 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
 import SideNav from './SideNav';
+
+// Create a mock Redux store with user state
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      user: (state = { mode: 'light' }) => state,
+    },
+  });
+
+// Custom render that wraps with Redux Provider
+const render = (ui: React.ReactElement, options?: any) => {
+  const store = createMockStore();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <Provider store={store}>{children}</Provider>
+  );
+  return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
 
 // Mock SVG imports
 vi.mock('../../assets/svg/annotations-icon-blue.svg', () => ({
@@ -62,14 +82,30 @@ const mockSelectedSubItem = {
   assets: 5,
 };
 
+// Mock FilterBar to avoid complex rendering in SideNav tests
+vi.mock('../Common/FilterBar', () => ({
+  default: ({ activeFilters, placeholder }: any) => (
+    <div data-testid="aspect-filter-input" data-placeholder={placeholder}>
+      {activeFilters.length > 0 && <span data-testid="filter-count">{activeFilters.length}</span>}
+    </div>
+  ),
+  FilterBarChips: ({ activeFilters }: any) => (
+    <div data-testid="filter-bar-chips">
+      {activeFilters.length > 0 && <span data-testid="chip-count">{activeFilters.length}</span>}
+    </div>
+  ),
+}));
+
 describe('SideNav', () => {
   let mockOnItemClick: ReturnType<typeof vi.fn>;
   let mockOnSubItemClick: ReturnType<typeof vi.fn>;
+  let mockOnFiltersChange: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockOnItemClick = vi.fn();
     mockOnSubItemClick = vi.fn();
+    mockOnFiltersChange = vi.fn();
   });
 
   afterEach(() => {
@@ -85,6 +121,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -99,6 +137,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -115,6 +155,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -131,6 +173,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -151,6 +195,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={[]}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -171,6 +217,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -194,6 +242,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -218,6 +268,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -246,6 +298,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -274,6 +328,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -296,6 +352,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -319,6 +377,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -343,6 +403,8 @@ describe('SideNav', () => {
           selectedSubItem={mockSelectedSubItem}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -373,6 +435,8 @@ describe('SideNav', () => {
           selectedSubItem={mockSelectedSubItem}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -392,6 +456,8 @@ describe('SideNav', () => {
           selectedSubItem={mockSelectedSubItem}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -411,6 +477,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -431,6 +499,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -463,6 +533,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -496,6 +568,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -516,6 +590,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -546,6 +622,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={annotationsWithMissingSubItems}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -566,6 +644,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -588,6 +668,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -604,6 +686,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -620,6 +704,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -650,6 +736,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -664,6 +752,8 @@ describe('SideNav', () => {
           selectedSubItem={mockSelectedSubItem}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -680,6 +770,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -703,6 +795,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={newAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -720,6 +814,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 
@@ -736,6 +832,8 @@ describe('SideNav', () => {
           selectedSubItem={null}
           onSubItemClick={mockOnSubItemClick}
           annotationsData={mockAnnotationsData}
+          filters={[]}
+          onFiltersChange={mockOnFiltersChange}
         />
       );
 

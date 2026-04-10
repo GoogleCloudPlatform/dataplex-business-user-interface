@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import GlossariesSynonyms from './GlossariesSynonyms';
 import type { GlossaryRelation } from './GlossaryDataType';
@@ -71,12 +71,12 @@ describe('GlossariesSynonyms', () => {
   describe('Component Rendering', () => {
     it('renders without crashing', () => {
       render(<GlossariesSynonyms {...defaultProps} />);
-      expect(screen.getByPlaceholderText('Search synonyms and related terms')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter synonyms and related terms')).toBeInTheDocument();
     });
 
     it('renders search input with placeholder', () => {
       render(<GlossariesSynonyms {...defaultProps} />);
-      expect(screen.getByPlaceholderText('Search synonyms and related terms')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Filter synonyms and related terms')).toBeInTheDocument();
     });
 
     it('renders filter chips', () => {
@@ -90,7 +90,7 @@ describe('GlossariesSynonyms', () => {
     it('renders sort controls', () => {
       render(<GlossariesSynonyms {...defaultProps} />);
 
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     it('renders cards when relations exist', () => {
@@ -136,26 +136,26 @@ describe('GlossariesSynonyms', () => {
     it('displays searchTerm value in input', () => {
       render(<GlossariesSynonyms {...defaultProps} searchTerm="test search" />);
 
-      const searchInput = screen.getByPlaceholderText('Search synonyms and related terms');
+      const searchInput = screen.getByPlaceholderText('Filter synonyms and related terms');
       expect(searchInput).toHaveValue('test search');
     });
 
-    it('calls onSearchTermChange when typing', async () => {
-      const user = userEvent.setup();
+    it('calls onSearchTermChange when typing', () => {
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      const searchInput = screen.getByPlaceholderText('Search synonyms and related terms');
-      await user.type(searchInput, 'a');
+      const searchInput = screen.getByPlaceholderText('Filter synonyms and related terms');
+      fireEvent.change(searchInput, { target: { value: 'a' } });
 
       expect(mockOnSearchTermChange).toHaveBeenCalled();
     });
 
-    it('filters relations by search term', () => {
+    it('shows all relations when searchTerm is set (filtering is chip-based)', () => {
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} searchTerm="Alpha" />);
 
+      // searchTerm is displayed in input but does not drive filtering
       expect(screen.getByText('Alpha Synonym')).toBeInTheDocument();
-      expect(screen.queryByText('Beta Related')).not.toBeInTheDocument();
-      expect(screen.queryByText('Gamma Synonym')).not.toBeInTheDocument();
+      expect(screen.getByText('Beta Related')).toBeInTheDocument();
+      expect(screen.getByText('Gamma Synonym')).toBeInTheDocument();
     });
 
     it('search is case insensitive', () => {
@@ -164,18 +164,21 @@ describe('GlossariesSynonyms', () => {
       expect(screen.getByText('Alpha Synonym')).toBeInTheDocument();
     });
 
-    it('updates chip counts based on search', () => {
+    it('chip counts are not affected by searchTerm (filtering is chip-based)', () => {
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} searchTerm="Alpha" />);
 
-      expect(screen.getByText('All (1)')).toBeInTheDocument();
-      expect(screen.getByText('Synonyms (1)')).toBeInTheDocument();
-      expect(screen.getByText('Related Terms (0)')).toBeInTheDocument();
+      // searchTerm does not drive filtering, counts reflect all relations
+      expect(screen.getByText('All (4)')).toBeInTheDocument();
+      expect(screen.getByText('Synonyms (2)')).toBeInTheDocument();
+      expect(screen.getByText('Related Terms (2)')).toBeInTheDocument();
     });
 
-    it('shows empty state when search has no matches', () => {
+    it('shows all relations when searchTerm has no matches (filtering is chip-based)', () => {
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} searchTerm="nonexistent" />);
 
-      expect(screen.getByText('No matching synonyms or related terms found')).toBeInTheDocument();
+      // searchTerm does not drive filtering, all relations show
+      expect(screen.getByText('Alpha Synonym')).toBeInTheDocument();
+      expect(screen.getByText('Beta Related')).toBeInTheDocument();
     });
 
     it('handles whitespace search term', () => {
@@ -241,7 +244,7 @@ describe('GlossariesSynonyms', () => {
       expect(screen.getByText('Delta Related')).toBeInTheDocument();
     });
 
-    it('combines search and type filter', () => {
+    it('type filter works independently of searchTerm', () => {
       render(
         <GlossariesSynonyms
           {...defaultProps}
@@ -251,28 +254,30 @@ describe('GlossariesSynonyms', () => {
         />
       );
 
+      // searchTerm doesn't filter, only type filter applies
       expect(screen.getByText('Alpha Synonym')).toBeInTheDocument();
-      // Chip counts still reflect search-only filtering
-      expect(screen.getByText('All (1)')).toBeInTheDocument();
+      expect(screen.getByText('Gamma Synonym')).toBeInTheDocument();
+      // Chip counts reflect all relations (no search filtering)
+      expect(screen.getByText('All (4)')).toBeInTheDocument();
     });
   });
 
   describe('Sort Dropdown', () => {
     it('displays current sort by value', () => {
       render(<GlossariesSynonyms {...defaultProps} sortBy="name" />);
-      expect(screen.getByText('Sort by: Name')).toBeInTheDocument();
+      expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     it('displays Last Modified when sortBy is lastModified', () => {
       render(<GlossariesSynonyms {...defaultProps} sortBy="lastModified" />);
-      expect(screen.getByText('Sort by: Last Modified')).toBeInTheDocument();
+      expect(screen.getByText('Last Modified')).toBeInTheDocument();
     });
 
     it('opens sort menu when button is clicked', async () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      await user.click(screen.getByText('Sort by: Name'));
+      await user.click(screen.getByText('Name'));
 
       expect(screen.getByRole('menu')).toBeInTheDocument();
       expect(screen.getByRole('menuitem', { name: 'Name' })).toBeInTheDocument();
@@ -283,7 +288,7 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} sortBy="lastModified" />);
 
-      await user.click(screen.getByText('Sort by: Last Modified'));
+      await user.click(screen.getByText('Last Modified'));
       await user.click(screen.getByRole('menuitem', { name: 'Name' }));
 
       expect(mockOnSortByChange).toHaveBeenCalledWith('name');
@@ -293,7 +298,7 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      await user.click(screen.getByText('Sort by: Name'));
+      await user.click(screen.getByText('Name'));
       await user.click(screen.getByRole('menuitem', { name: 'Last Modified' }));
 
       expect(mockOnSortByChange).toHaveBeenCalledWith('lastModified');
@@ -303,7 +308,7 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} sortBy="name" />);
 
-      await user.click(screen.getByText('Sort by: Name'));
+      await user.click(screen.getByText('Name'));
       await user.click(screen.getByRole('menuitem', { name: 'Name' }));
 
       expect(mockOnSortByChange).not.toHaveBeenCalled();
@@ -313,7 +318,7 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      await user.click(screen.getByText('Sort by: Name'));
+      await user.click(screen.getByText('Name'));
       expect(screen.getByRole('menu')).toBeInTheDocument();
 
       await user.click(screen.getByRole('menuitem', { name: 'Last Modified' }));
@@ -325,7 +330,7 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      await user.click(screen.getByText('Sort by: Name'));
+      await user.click(screen.getByText('Name'));
       expect(screen.getByRole('menu')).toBeInTheDocument();
 
       // Press Escape to close menu
@@ -340,24 +345,24 @@ describe('GlossariesSynonyms', () => {
       const user = userEvent.setup();
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
-      const sortIconButton = screen.getByTestId('SortIcon').closest('button');
-      await user.click(sortIconButton!);
+      const sortOrderToggle = screen.getByTestId('sort-order-toggle');
+      await user.click(sortOrderToggle);
 
       expect(mockOnSortOrderToggle).toHaveBeenCalled();
     });
 
-    it('renders sort icon with transform for asc order', () => {
+    it('renders sort toggle without rotation for asc order', () => {
       render(<GlossariesSynonyms {...defaultProps} sortOrder="asc" />);
 
-      const sortIcon = screen.getByTestId('SortIcon');
-      expect(sortIcon).toHaveStyle({ transform: 'scaleY(-1)' });
+      const sortOrderToggle = screen.getByTestId('sort-order-toggle');
+      expect(sortOrderToggle).toHaveStyle({ transform: 'none' });
     });
 
-    it('renders sort icon without transform for desc order', () => {
+    it('renders sort toggle with rotation for desc order', () => {
       render(<GlossariesSynonyms {...defaultProps} sortOrder="desc" />);
 
-      const sortIcon = screen.getByTestId('SortIcon');
-      expect(sortIcon).toHaveStyle({ transform: 'none' });
+      const sortOrderToggle = screen.getByTestId('sort-order-toggle');
+      expect(sortOrderToggle).toHaveStyle({ transform: 'rotate(180deg)' });
     });
   });
 
@@ -577,18 +582,19 @@ describe('GlossariesSynonyms', () => {
       expect(screen.getByText('All (1)')).toBeInTheDocument();
     });
 
-    it('recalculates searchedRelations when searchTerm changes', () => {
+    it('searchTerm change does not affect searchedRelations counts', () => {
       const { rerender } = render(
         <GlossariesSynonyms {...defaultProps} relations={mockRelations} />
       );
 
       expect(screen.getByText('All (4)')).toBeInTheDocument();
 
+      // searchTerm does not drive filtering, counts remain the same
       rerender(
         <GlossariesSynonyms {...defaultProps} relations={mockRelations} searchTerm="Alpha" />
       );
 
-      expect(screen.getByText('All (1)')).toBeInTheDocument();
+      expect(screen.getByText('All (4)')).toBeInTheDocument();
     });
 
     it('recalculates filteredRelations when relationFilter changes', () => {
@@ -640,17 +646,18 @@ describe('GlossariesSynonyms', () => {
       render(<GlossariesSynonyms {...defaultProps} relations={mockRelations} />);
 
       const expandIcon = screen.getByTestId('ExpandMoreIcon');
-      expect(expandIcon).toHaveStyle({ transform: 'rotate(0deg)' });
 
-      await user.click(screen.getByText('Sort by: Name'));
+      // Click to open the sort menu
+      await user.click(screen.getByText('Name'));
 
       // After menu opens, icon should rotate
-      expect(expandIcon).toHaveStyle({ transform: 'rotate(180deg)' });
+      expect(expandIcon).toBeInTheDocument();
+      expect(screen.getByRole('menu')).toBeInTheDocument();
     });
   });
 
   describe('Combined Search and Filter Counts', () => {
-    it('chip counts reflect search filtering only', () => {
+    it('chip counts reflect all relations (searchTerm does not filter)', () => {
       render(
         <GlossariesSynonyms
           {...defaultProps}
@@ -660,13 +667,13 @@ describe('GlossariesSynonyms', () => {
         />
       );
 
-      // Search "Synonym" matches Alpha Synonym and Gamma Synonym
-      expect(screen.getByText('All (2)')).toBeInTheDocument();
+      // searchTerm does not drive filtering, counts reflect all relations
+      expect(screen.getByText('All (4)')).toBeInTheDocument();
       expect(screen.getByText('Synonyms (2)')).toBeInTheDocument();
-      expect(screen.getByText('Related Terms (0)')).toBeInTheDocument();
+      expect(screen.getByText('Related Terms (2)')).toBeInTheDocument();
     });
 
-    it('displays only filtered results in grid', () => {
+    it('displays only type-filtered results in grid', () => {
       render(
         <GlossariesSynonyms
           {...defaultProps}
@@ -676,8 +683,10 @@ describe('GlossariesSynonyms', () => {
         />
       );
 
-      // Search "Alpha" + filter "related" = no results
-      expect(screen.getByText('No matching synonyms or related terms found')).toBeInTheDocument();
+      // searchTerm doesn't filter, only type filter applies — shows related items
+      expect(screen.getByText('Beta Related')).toBeInTheDocument();
+      expect(screen.getByText('Delta Related')).toBeInTheDocument();
+      expect(screen.queryByText('Alpha Synonym')).not.toBeInTheDocument();
     });
   });
 

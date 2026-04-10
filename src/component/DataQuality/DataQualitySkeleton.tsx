@@ -8,7 +8,7 @@ const DataQualitySkeleton: React.FC = () => {
       sx={{
         display: 'flex',
         gap: '0.125rem',
-        padding: '1.25rem',
+        padding: '0 1.25rem 1.25rem 1.25rem',
         height: '100%',
         minHeight: '31.25rem',
         marginLeft: '-1.25rem',

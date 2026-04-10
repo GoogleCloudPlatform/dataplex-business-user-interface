@@ -1,19 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
-  InputBase,
   Card,
   CardContent,
-  Button,
   Menu,
   MenuItem,
-  IconButton,
+  Tooltip,
 } from "@mui/material";
-import { Search, AccessTime, ExpandMore, Sort } from "@mui/icons-material";
+import { AccessTime, ExpandMore } from "@mui/icons-material";
 import { type GlossaryItem } from "./GlossaryDataType";
 import { getIcon } from "./glossaryUIHelpers";
 import { getFormattedDateTimePartsByDateTime } from "../../utils/resourceUtils";
+import FilterBar from '../Common/FilterBar';
+import type { ActiveFilter, PropertyConfig } from '../Common/FilterBar';
 
 interface GlossariesCategoriesTermsProps {
   mode: "categories" | "terms";
@@ -27,6 +27,11 @@ interface GlossariesCategoriesTermsProps {
   onItemClick: (id: string) => void;
 }
 
+const FILTER_PROPERTIES: PropertyConfig[] = [
+  { name: 'Name', mode: 'text' },
+  { name: 'Description', mode: 'text' },
+];
+
 const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
   mode,
   items,
@@ -39,10 +44,11 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
   onItemClick,
 }) => {
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
   const label = mode === "categories" ? "categories" : "terms";
 
-  const handleSortClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
     setSortAnchorEl(event.currentTarget);
   };
 
@@ -57,6 +63,38 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
     handleSortClose();
   };
 
+  // Apply active filters on top of parent-filtered items
+  const displayItems = useMemo(() => {
+    if (activeFilters.length === 0) return items;
+    return items.filter(item => {
+      // AND/OR logic: group by OR separators
+      const filterGroups: ActiveFilter[][] = [];
+      let currentGroup: ActiveFilter[] = [];
+      activeFilters.forEach((filter) => {
+        if (filter.isOr && currentGroup.length > 0) {
+          filterGroups.push(currentGroup);
+          currentGroup = [filter];
+        } else {
+          currentGroup.push(filter);
+        }
+      });
+      if (currentGroup.length > 0) filterGroups.push(currentGroup);
+
+      return filterGroups.some(group =>
+        group.every(filter =>
+          filter.values.some(value => {
+            const lower = value.toLowerCase();
+            switch (filter.property) {
+              case 'Name': return item.displayName.toLowerCase().includes(lower);
+              case 'Description': return (item.description || '').toLowerCase().includes(lower);
+              default: return item.displayName.toLowerCase().includes(lower) || (item.description || '').toLowerCase().includes(lower);
+            }
+          })
+        )
+      );
+    });
+  }, [items, activeFilters]);
+
   return (
     <Box sx={{ height: "100%" }}>
       <Box
@@ -67,108 +105,102 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
         }}
       >
         {/* Header Section (Search/Sort) */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            mb: 3,
-            flexShrink: 0,
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              backgroundColor: "#fff",
-              border: "1px solid #DADCE0",
-              borderRadius: "54px",
-              px: 1.5,
-              py: 0.5,
-              height: "32px",
-              width: "309px",
-              boxSizing: "border-box",
-            }}
-          >
-            <Search sx={{ color: "#575757", mr: 1, fontSize: 20 }} />
-            <InputBase
-              placeholder={`Search ${label}`}
-              value={searchTerm}
-              onChange={(e) => onSearchTermChange(e.target.value)}
-              sx={{
-                fontFamily: "Google Sans Text",
-                fontSize: "12px",
-                fontWeight: 500,
-                color: "#5E5E5E",
-                width: "100%",
-                letterSpacing: "0.1px",
-                "& ::placeholder": {
-                  opacity: 1,
-                  color: "#5E5E5E",
-                },
-              }}
-            />
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <IconButton
-              onClick={onSortOrderToggle}
-              sx={{ p: 0.5, mr: 0.5, color: "#1F1F1F" }}
-            >
-              <Sort
-                sx={{
-                  fontSize: 16,
-                  transform: sortOrder === "asc" ? "scaleY(-1)" : "none",
-                }}
-              />
-            </IconButton>
-
-            <Button
-              onClick={handleSortClick}
-              endIcon={
-                <ExpandMore
-                  sx={{
+        <Box sx={{ mb: 3, flexShrink: 0 }}>
+          <FilterBar
+            filterText={searchTerm}
+            onFilterTextChange={onSearchTermChange}
+            propertyNames={FILTER_PROPERTIES}
+            activeFilters={activeFilters}
+            onActiveFiltersChange={setActiveFilters}
+            marginLeft="0px"
+            placeholder={`Filter ${label}`}
+            showTextInFilterMenu
+            endContent={
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <Typography
+                  component="span"
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
                     color: "#1F1F1F",
-                    fontSize: 20,
-                    transform: sortAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 0.2s",
+                    whiteSpace: "nowrap",
+                    fontFamily: '"Google Sans Text", sans-serif',
                   }}
-                />
-              }
-              sx={{
-                textTransform: "none",
-                color: "#1F1F1F",
-                fontFamily: "Product Sans",
-                fontSize: "12px",
-                fontWeight: 400,
-                padding: 0,
-                minWidth: "auto",
-                "&:hover": { background: "transparent" },
-              }}
-            >
-              Sort by: {sortBy === "name" ? "Name" : "Last Modified"}
-            </Button>
-          </Box>
+                  onClick={handleSortClick}
+                >
+                  <ExpandMore
+                    sx={{
+                      fontSize: '20px',
+                      color: '#575757',
+                      transform: sortAnchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s ease',
+                    }}
+                  />
+                  {sortBy === "name" ? "Name" : "Last Modified"}
+                </Typography>
+                <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
+                  <span
+                    data-testid="sort-order-toggle"
+                    onClick={onSortOrderToggle}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out',
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill="#C2E7FF"/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill="#004A77"/>
+                    </svg>
+                  </span>
+                </Tooltip>
+              </div>
+            }
+          />
           <Menu
             anchorEl={sortAnchorEl}
             open={Boolean(sortAnchorEl)}
             onClose={handleSortClose}
-            MenuListProps={{ dense: true, sx: { py: 0.5 } }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             PaperProps={{
-              sx: {
-                borderRadius: "8px",
-                boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
+              style: {
+                marginTop: '4px',
+                borderRadius: '8px',
+                boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                minWidth: '140px',
               },
             }}
           >
             <MenuItem
               onClick={() => handleSortSelect("name")}
-              sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
+              sx={{
+                fontSize: "12px",
+                fontFamily: "Google Sans",
+                fontWeight: sortBy === "name" ? "500" : "400",
+                color: sortBy === "name" ? "#0B57D0" : "#1F1F1F",
+                backgroundColor: sortBy === "name" ? "#F8FAFD" : "transparent",
+                '&:hover': { backgroundColor: '#F1F3F4' },
+              }}
             >
               Name
             </MenuItem>
             <MenuItem
               onClick={() => handleSortSelect("lastModified")}
-              sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
+              sx={{
+                fontSize: "12px",
+                fontFamily: "Google Sans",
+                fontWeight: sortBy === "lastModified" ? "500" : "400",
+                color: sortBy === "lastModified" ? "#0B57D0" : "#1F1F1F",
+                backgroundColor: sortBy === "lastModified" ? "#F8FAFD" : "transparent",
+                '&:hover': { backgroundColor: '#F1F3F4' },
+              }}
             >
               Last Modified
             </MenuItem>
@@ -176,7 +208,7 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
         </Box>
 
         {/* Conditional Body: Empty State OR Grid */}
-        {items.length === 0 ? (
+        {displayItems.length === 0 ? (
           <Box
             sx={{
               display: "flex",
@@ -208,7 +240,7 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
               mt: -1,
             }}
           >
-            {items.map((item: GlossaryItem) => (
+            {displayItems.map((item: GlossaryItem) => (
               <Card
                 key={item.id}
                 variant="outlined"
@@ -250,9 +282,10 @@ const GlossariesCategoriesTerms: React.FC<GlossariesCategoriesTermsProps> = ({
                       noWrap
                       sx={{
                         fontFamily: "Google Sans",
-                        fontSize: "18px",
-                        fontWeight: 400,
+                        fontSize: "16px",
+                        fontWeight: 500,
                         lineHeight: "24px",
+                        letterSpacing: "0.15px",
                         color: "#1F1F1F",
                         overflow: "hidden",
                         textOverflow: "ellipsis",

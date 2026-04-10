@@ -8,7 +8,6 @@ const DataProfileSkeleton: React.FC = () => {
       sx={{
         flex: 1,
         position: 'relative',
-        marginTop: '20px',
       }}
     >
       <Box sx={{

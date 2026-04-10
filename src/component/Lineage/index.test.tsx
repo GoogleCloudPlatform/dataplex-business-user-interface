@@ -25,6 +25,15 @@ vi.mock('../../contexts/NotificationContext', () => ({
   })
 }));
 
+vi.mock('../../contexts/NoAccessContext', () => ({
+  useNoAccess: () => ({
+    isNoAccessOpen: false,
+    noAccessMessage: null,
+    triggerNoAccess: vi.fn(),
+    dismissNoAccess: vi.fn(),
+  }),
+}));
+
 // Mock react-redux
 vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
@@ -37,6 +46,7 @@ vi.mock("react-redux", () => ({
       entry: {
         lineageEntryItems: mockLineageEntry,
         lineageEntrystatus: mockLineageEntryStatus,
+        lineageEntryError: null,
       },
     };
     return selector(state);

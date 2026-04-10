@@ -1,5 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, beforeEach, it, describe, expect } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
 import SearchEntriesCard from './SearchEntriesCard';
 
 // Mock SVG imports
@@ -21,8 +24,6 @@ vi.mock('../../assets/svg/view_icon.svg', () => ({ default: 'view-icon.svg' }));
 vi.mock('../../assets/svg/fileset_icon.svg', () => ({ default: 'fileset-icon.svg' }));
 vi.mock('../../assets/svg/folder_icon.svg', () => ({ default: 'folder-icon.svg' }));
 vi.mock('../../assets/svg/function_icon.svg', () => ({ default: 'function-icon.svg' }));
-vi.mock('../../assets/svg/glossary_icon.svg', () => ({ default: 'glossary-icon.svg' }));
-vi.mock('../../assets/svg/glossary_category_icon.svg', () => ({ default: 'glossary-category-icon.svg' }));
 vi.mock('../../assets/svg/listing_icon.svg', () => ({ default: 'listing-icon.svg' }));
 vi.mock('../../assets/svg/look_icon.svg', () => ({ default: 'look-icon.svg' }));
 vi.mock('../../assets/svg/model_icon.svg', () => ({ default: 'model-icon.svg' }));
@@ -40,6 +41,25 @@ vi.mock('../Tags/Tag', () => ({
     <span data-testid="tag" style={css}>{text}</span>
   )
 }));
+
+// Custom render with Redux Provider and Router
+const createMockStore = () =>
+  configureStore({
+    reducer: {
+      entry: (state = { accessCheckCache: {} }) => state,
+      user: (state = { mode: 'light' }) => state,
+    },
+  });
+
+const render = (ui: React.ReactElement, options?: any) => {
+  const store = createMockStore();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <Provider store={store}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </Provider>
+  );
+  return rtlRender(ui, { wrapper: Wrapper, ...options });
+};
 
 describe('SearchEntriesCard', () => {
   const createMockEntry = (overrides: any = {}) => ({
@@ -179,7 +199,9 @@ describe('SearchEntriesCard', () => {
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[0]).toHaveTextContent('dataplex');
+        // "dataplex" maps to "Knowledge Catalog" which is then lowercased in the tag text
+        // (CSS textTransform: capitalize handles visual capitalization)
+        expect(tags[0]).toHaveTextContent('knowledge catalog');
       });
     });
 
@@ -318,8 +340,8 @@ describe('SearchEntriesCard', () => {
       await waitFor(() => {
         const innerBox = container.querySelector('.entriesHoverEffect');
         expect(innerBox).toBeInTheDocument();
-        // When not selected, borderRadius should be 0
-        expect(innerBox).toHaveStyle('border-radius: 0');
+        // When not selected, background should be white
+        expect(innerBox).toHaveStyle('background-color: rgb(255, 255, 255)');
       });
     });
   });
@@ -477,8 +499,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', expectedAlt);
+        expect(screen.getByAltText(expectedAlt)).toBeInTheDocument();
       });
     };
 
@@ -498,8 +519,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Code asset');
+        expect(screen.getByAltText('Code asset')).toBeInTheDocument();
       });
     });
 
@@ -519,8 +539,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Dashboard element');
+        expect(screen.getByAltText('Dashboard element')).toBeInTheDocument();
       });
     });
 
@@ -532,8 +551,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data exchange');
+        expect(screen.getByAltText('Data exchange')).toBeInTheDocument();
       });
     });
 
@@ -545,8 +563,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data source connection');
+        expect(screen.getByAltText('Data source connection')).toBeInTheDocument();
       });
     });
 
@@ -558,8 +575,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Data stream');
+        expect(screen.getByAltText('Data stream')).toBeInTheDocument();
       });
     });
 
@@ -575,8 +591,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Database schema');
+        expect(screen.getByAltText('Database schema')).toBeInTheDocument();
       });
     });
 
@@ -596,8 +611,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature group');
+        expect(screen.getByAltText('Feature group')).toBeInTheDocument();
       });
     });
 
@@ -609,8 +623,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature online store');
+        expect(screen.getByAltText('Feature online store')).toBeInTheDocument();
       });
     });
 
@@ -622,8 +635,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Feature view');
+        expect(screen.getByAltText('Feature view')).toBeInTheDocument();
       });
     });
 
@@ -640,7 +652,15 @@ describe('SearchEntriesCard', () => {
     });
 
     it('renders Glossary icon', async () => {
-      await testAssetIcon('Glossary', 'Glossary');
+      const entry = createMockEntry({
+        name: 'projects/test/locations/us/Glossary/test-entry',
+        entryType: 'single_word'
+      });
+      const { container } = render(<SearchEntriesCard entry={entry} />);
+
+      await waitFor(() => {
+        expect(container.querySelector('span.material-symbols-outlined')).toBeInTheDocument();
+      });
     });
 
     it('renders Glossary Category icon', async () => {
@@ -651,8 +671,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Glossary Category');
+        expect(screen.getByTestId('CategoryOutlinedIcon')).toBeInTheDocument();
       });
     });
 
@@ -664,8 +683,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Glossary Term');
+        expect(screen.getByTestId('ArticleOutlinedIcon')).toBeInTheDocument();
       });
     });
 
@@ -709,8 +727,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Unknown');
+        expect(screen.getByAltText('Unknown')).toBeInTheDocument();
       });
     });
   });
@@ -724,8 +741,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        const img = screen.getByRole('img');
-        expect(img).toHaveAttribute('alt', 'Table');
+        expect(screen.getByAltText('Table')).toBeInTheDocument();
       });
     });
 
@@ -753,29 +769,25 @@ describe('SearchEntriesCard', () => {
       });
     });
 
-    it('renders system tag with correct styling', async () => {
+    it('renders system tag with correct content', async () => {
       const entry = createMockEntry();
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[0]).toHaveStyle({
-          fontFamily: '"Google Sans Text", sans-serif',
-          color: '#004A77'
-        });
+        // System tag should display BigQuery for bigquery system
+        expect(tags[0]).toHaveTextContent('BigQuery');
       });
     });
 
-    it('renders entry type tag with correct styling', async () => {
+    it('renders entry type tag with correct content', async () => {
       const entry = createMockEntry();
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
         const tags = screen.getAllByTestId('tag');
-        expect(tags[1]).toHaveStyle({
-          fontFamily: '"Google Sans Text", sans-serif',
-          color: '#004A77'
-        });
+        // Entry type tag should display the extracted type
+        expect(tags[1]).toHaveTextContent('table');
       });
     });
   });

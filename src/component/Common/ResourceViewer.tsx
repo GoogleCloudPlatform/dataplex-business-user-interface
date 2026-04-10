@@ -1,18 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Box, Typography, ToggleButton, ToggleButtonGroup, Menu, MenuItem, IconButton, Tooltip } from '@mui/material';
-import { KeyboardArrowDown, InfoOutlined } from '@mui/icons-material';
-// Pagination icons (commented out — kept for future re-enabling)
+import { Box, Typography, ToggleButton, ToggleButtonGroup, Menu, MenuItem, Tooltip } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+// import { KeyboardArrowDown, InfoOutlined } from '@mui/icons-material';
 // import { ChevronLeftOutlined, ChevronRightOutlined } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import SearchEntriesCard from '../SearchEntriesCard/SearchEntriesCard';
-import FilterTag from '../Tags/FilterTag';
+// import FilterTag from '../Tags/FilterTag';
 import SearchTableView from '../SearchPage/SearchTableView';
 import ShimmerLoader from '../Shimmer/ShimmerLoader';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
-// import { fetchEntry } from '../../features/entry/entrySlice';
-import FilterChips from './FilterChips';
+import { fetchEntry, clearHistory } from '../../features/entry/entrySlice';
+// import FilterChips from './FilterChips';
+import SubmitAccess from '../SearchPage/SubmitAccess';
+import NotificationBar from '../SearchPage/NotificationBar';
+import { getName } from '../../utils/resourceUtils';
+import FilterChipCarousel from './FilterChipCarousel';
+import { useNoAccess } from '../../contexts/NoAccessContext';
 
 /**
  * @file ResourceViewer.tsx
@@ -120,8 +125,8 @@ interface ResourceViewerProps {
   onPreviewDataChange: (data: any | null) => void;
   
   // Filter props
-  selectedTypeFilter: string | null;
-  onTypeFilterChange: (filter: string | null) => void;
+  selectedTypeFilter?: string | null;
+  onTypeFilterChange?: (filter: string | null) => void;
   typeAliases: string[];
   
   // View mode props
@@ -137,12 +142,17 @@ interface ResourceViewerProps {
   showResultsCount?: boolean;
   customHeader?: React.ReactNode;
   customFilters?: React.ReactNode;
+  customFilterChips?: React.ReactNode;
   selectedFilters?: any[];
   onFiltersChange?: (filters: any[]) => void;
+  availableTypeAliases?: { name: string; count: number }[];
+  onTypeAliasClick?: (type: string) => void;
+  hideMostRelevant?: boolean;
   
   // Styling props
   containerStyle?: React.CSSProperties;
   contentStyle?: React.CSSProperties;
+  headerStyle?: React.CSSProperties;
   
   // Event handlers
   onViewDetails?: (entry: any) => void;
@@ -168,8 +178,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   previewData,
   onPreviewDataChange,
   selectedTypeFilter,
-  onTypeFilterChange,
-  typeAliases,
+  onTypeFilterChange: _onTypeFilterChange,
+  typeAliases: _typeAliases,
   viewMode,
   onViewModeChange,
   showFilters = true,
@@ -177,38 +187,55 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   showResultsCount = true,
   customHeader,
   customFilters,
+  customFilterChips,
   containerStyle,
   contentStyle,
+  headerStyle,
   onFavoriteClick,
-  selectedFilters = [],
-  onFiltersChange,
+  selectedFilters: _selectedFilters = [],
+  onFiltersChange: _onFiltersChange,
+  availableTypeAliases,
+  onTypeAliasClick,
+  hideMostRelevant = false,
   startIndex: _startIndex = 0,
   pageSize: _pageSize = 20,
   setPageSize,
   requestItemStore: _requestItemStore,
-  resourcesTotalSize,
-  handlePagination: _handlePagination
+  resourcesTotalSize: _resourcesTotalSize,
+  handlePagination: _handlePagination,
+  id_token
 }) => {
   // Navigation and auth hooks
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { triggerNoAccess } = useNoAccess();
   // const id_token = user?.token || '';
 
   const dispatch = useDispatch<AppDispatch>();
-  const searchFilters = useSelector((state: any) => state.search.searchFilters);
+  // const searchFilters = useSelector((state: any) => state.search.searchFilters);
+  // const searchTerm = useSelector((state: any) => state.search.searchTerm);
   // semanticSearch is now always true (commented out — kept for future re-enabling)
   // const semanticSearch = useSelector((state:any) => state.search.semanticSearch);
   const entryStatus = useSelector((state: any) => state.entry.status);
+  const entryItems = useSelector((state: any) => state.entry.items);
+  const mode = useSelector((state: any) => state.user.mode) as string;
+
+  // SubmitAccess modal state for card "Request Access" button
+  const [isCardSubmitAccessOpen, setIsCardSubmitAccessOpen] = useState(false);
+  const [cardAccessEntry, setCardAccessEntry] = useState<any>(null);
+  const [isCardNotificationVisible, setIsCardNotificationVisible] = useState(false);
+  const [cardNotificationMessage, setCardNotificationMessage] = useState('');
 
   // Sort state
-  const [sortBy, setSortBy] = useState<'name' | 'lastModified'>('lastModified');
+  const [sortBy, setSortBy] = useState<'mostRelevant' | 'name' | 'lastModified'>(hideMostRelevant ? 'name' : 'mostRelevant');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [sortMenuAnchor, setSortMenuAnchor] = useState<null | HTMLElement>(null);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   
   // Note: Preview panel is managed by parent components through previewData
 
-  // Handle failed resource status - navigate to login
+  // Handle failed resource status
   useEffect(() => {
     if (resourcesStatus === 'failed') {
       let subString = "INVALID_ARGUMENT:";
@@ -225,21 +252,31 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               <p style={{
                 margin: 0,
                 textAlign: 'center',
-                color: '#666',
+                color: mode === 'dark' ? '#9aa0a6' : '#666',
                 fontSize: '16px'
               }}>{(error?.message || error) + ' invalid arguments passed in search params'}</p>
           </div>);
+        }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+          // Show no-access popup instead of auto-logout for 403 errors
+          triggerNoAccess({
+            message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+          });
         }else{
           setPageSize(20);
           logout();
           navigate('/login');
         }
+      }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+        // Show no-access popup instead of auto-logout for 403 errors
+        triggerNoAccess({
+          message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+        });
       }else{
         logout();
         navigate('/login');
       }
     }
-  }, [resourcesStatus, logout, navigate]);
+  }, [resourcesStatus, logout, navigate, triggerNoAccess]);
 
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop } = event.currentTarget;
@@ -257,26 +294,34 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
     // Create a copy of the filtered array before sorting to avoid read-only errors
     const filteredCopy = [...resources];
 
+    // Skip sorting when "Most relevant" is selected (original API order)
+    if (sortBy === 'mostRelevant') {
+      return filteredCopy;
+    }
+
     // Sort the filtered resources
+    const direction = sortOrder === 'asc' ? 1 : -1;
     return filteredCopy.sort((a: any, b: any) => {
       if (sortBy === 'name') {
         const nameA = a.dataplexEntry.entrySource?.displayName?.toLowerCase() || '';
         const nameB = b.dataplexEntry.entrySource?.displayName?.toLowerCase() || '';
-        
+
         // Handle entries with no display name - put them at the bottom
         if (!nameA && !nameB) return 0;
-        if (!nameA) return 1;  // Put entries with no name at the bottom
-        if (!nameB) return -1; // Put entries with no name at the bottom
-        
-        return nameA.localeCompare(nameB);
+        if (!nameA) return 1;
+        if (!nameB) return -1;
+
+        return direction * nameA.localeCompare(nameB);
       } else if (sortBy === 'lastModified') {
-        const dateA = a.dataplexEntry.updateTime?.seconds || 0;
-        const dateB = b.dataplexEntry.updateTime?.seconds || 0;
-        return dateB - dateA; // Descending order (newest first)
+        const rawA = a.dataplexEntry.updateTime;
+        const rawB = b.dataplexEntry.updateTime;
+        const dateA = rawA ? (typeof rawA === 'string' ? new Date(rawA).getTime() : (rawA.seconds || 0) * 1000) : 0;
+        const dateB = rawB ? (typeof rawB === 'string' ? new Date(rawB).getTime() : (rawB.seconds || 0) * 1000) : 0;
+        return direction * (dateA - dateB);
       }
       return 0;
     });
-  }, [resources, selectedTypeFilter, sortBy]);
+  }, [resources, selectedTypeFilter, sortBy, sortOrder]);
 
   const filteredResources = filteredAndSortedResources;
 
@@ -290,7 +335,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
       return '-';
     }
 
-    const formatedDate = new Intl.DateTimeFormat('en-US', { month: "short", day: "numeric", year: "numeric" }).format(myDate);
+    const formatedDate = new Intl.DateTimeFormat('en-US', { month: "long", day: "numeric", year: "numeric" }).format(myDate);
     return (formatedDate);
   };
 
@@ -301,63 +346,50 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   };
 
   // Event handlers
-  const handleRemoveFilterTag = (filter: any) => {
-    if (!onFiltersChange) return;
-    const updated = selectedFilters.filter((f: any) => !(f.name === filter.name && f.type === filter.type));
-    if(filter.type === "system"){
-      const systemFilters = updated.filter((f: any) => f.type === 'system');
-      if (systemFilters.length === 0) {
-        // No system filters selected, set search type to 'All'
-        dispatch({ type: 'search/setSearchType', payload: { searchType: 'All' } });
-      } else if (systemFilters.length === 1) {
-        // One system filter selected, set search type to that filter
-        dispatch({ type: 'search/setSearchType', payload: { searchType: systemFilters[0].name } });
-      }
-    }
-    onTypeFilterChange(null);
-    onFiltersChange(updated);
-    dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
-  };
+  // const handleRemoveFilterTag = (filter: any) => {
+  //   if (!onFiltersChange) return;
+  //   const updated = selectedFilters.filter((f: any) => !(f.name === filter.name && f.type === filter.type));
+  //   if(filter.type === "system"){
+  //     const systemFilters = updated.filter((f: any) => f.type === 'system');
+  //     if (systemFilters.length === 0) {
+  //       dispatch({ type: 'search/setSearchType', payload: { searchType: 'All' } });
+  //     } else if (systemFilters.length === 1) {
+  //       dispatch({ type: 'search/setSearchType', payload: { searchType: systemFilters[0].name } });
+  //     }
+  //   }
+  //   onTypeFilterChange(null);
+  //   onFiltersChange(updated);
+  //   dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
+  // };
 
-  // Compute result count for a given selected filter based on current resources
-  const getFilterResultCount = (filter: any): string | undefined => {
-    try {
-      const type = String(filter.type || '').toLowerCase();
-      const name = String(filter.name || '');
-      if (!name) return undefined;
-      if (type === 'typealiases') {
-        //const key = name.replace(' ', '_').replace('/','').toLowerCase();
-        if(selectedFilters.length === 1){
-          return selectedFilters.find((f: any) => f.name === name && f.type === 'typeAliases') ? ""+resourcesTotalSize : undefined;
-        }
-        // return resources.filter((r: any) => (r?.dataplexEntry?.entryType || '').split('-').pop() === key).length > 0 ? 
-        // `${resources.filter((r: any) => (r?.dataplexEntry?.entryType || '').split('-').pop() === key).length}+`
-        // : undefined;
-      }
-      if (type === 'system') {
-        //const key = name.replace(' ', '_').replace('/','').toLowerCase();
-        if(selectedFilters.length === 1){
-          return selectedFilters.find((f: any) => f.name === name && f.type === 'system') ? ""+resourcesTotalSize : undefined;
-        }
-        // return resources.filter((r: any) => (r?.dataplexEntry?.entrySource?.system || '').split('-').pop() === key).length > 0 ?
-        // `${resources.filter((r: any) => String(r?.dataplexEntry?.entrySource?.system || '').toLowerCase() === key).length}+` 
-        // : undefined;
-      }
-      // For other types (e.g., aspectType, project), backend filtering may apply;
-      // data shape might not allow local counting reliably → omit count.
-      return undefined;
-    } catch {
-      return undefined;
-    }
-  };
-  const handleTypeFilterClick = (type: string) => {
-    const updated = selectedFilters.find((f: any) => (f.name === type && f.type === 'typeAliases'))
-      ? selectedFilters.filter((f: any) => !(f.name === type && f.type === 'typeAliases'))
-      : [...selectedFilters, { name: type, type: 'typeAliases' }];
-    onTypeFilterChange(null);
-    if(onFiltersChange) onFiltersChange(updated);
-    dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
-  };
+  // const getFilterResultCount = (filter: any): string | undefined => {
+  //   try {
+  //     const type = String(filter.type || '').toLowerCase();
+  //     const name = String(filter.name || '');
+  //     if (!name) return undefined;
+  //     if (type === 'typealiases') {
+  //       if(selectedFilters.length === 1){
+  //         return selectedFilters.find((f: any) => f.name === name && f.type === 'typeAliases') ? ""+resourcesTotalSize : undefined;
+  //       }
+  //     }
+  //     if (type === 'system') {
+  //       if(selectedFilters.length === 1){
+  //         return selectedFilters.find((f: any) => f.name === name && f.type === 'system') ? ""+resourcesTotalSize : undefined;
+  //       }
+  //     }
+  //     return undefined;
+  //   } catch {
+  //     return undefined;
+  //   }
+  // };
+  // const handleTypeFilterClick = (type: string) => {
+  //   const updated = selectedFilters.find((f: any) => (f.name === type && f.type === 'typeAliases'))
+  //     ? selectedFilters.filter((f: any) => !(f.name === type && f.type === 'typeAliases'))
+  //     : [...selectedFilters, { name: type, type: 'typeAliases' }];
+  //   onTypeFilterChange(null);
+  //   if(onFiltersChange) onFiltersChange(updated);
+  //   dispatch({ type: 'search/setSearchFilters', payload: { searchFilters: updated } });
+  // };
 
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'list' | 'table' | null) => {
     if (newMode !== null) {
@@ -374,10 +406,42 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
     const isAccessGranted = entryStatus === 'succeeded';
 
     if (isCurrentlyPreviewed && isAccessGranted) {
+      dispatch(clearHistory());
       navigate('/view-details');
     } else {
       onPreviewDataChange(clickedEntry);
     }
+  };
+
+  const handleNavigateToTab = (clickedEntry: any, tabName: string) => {
+    dispatch(clearHistory());
+    dispatch(fetchEntry({ entryName: clickedEntry.name, id_token }));
+    navigate('/view-details', { state: { tabName } });
+  };
+
+  const handleRequestAccessFromCard = (clickedEntry: any) => {
+    setCardAccessEntry(clickedEntry);
+    // Delay opening so SubmitAccess mounts at right:-500px first, then slides to right:0
+    requestAnimationFrame(() => {
+      setIsCardSubmitAccessOpen(true);
+    });
+  };
+
+  const handleCardSubmitAccessClose = () => {
+    setIsCardSubmitAccessOpen(false);
+    setTimeout(() => setCardAccessEntry(null), 300);
+  };
+
+  const handleCardSubmitSuccess = () => {
+    setIsCardSubmitAccessOpen(false);
+    setTimeout(() => setCardAccessEntry(null), 300);
+    setCardNotificationMessage('Request sent');
+    setIsCardNotificationVisible(true);
+    setTimeout(() => setIsCardNotificationVisible(false), 5000);
+  };
+
+  const handleCardCloseNotification = () => {
+    setIsCardNotificationVisible(false);
   };
 
   const handleFavoriteClick = (entry: any) => {
@@ -395,8 +459,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
     setSortMenuAnchor(null);
   };
 
-  const handleSortOptionSelect = (option: 'name' | 'lastModified') => {
+  const handleSortOptionSelect = (option: 'mostRelevant' | 'name' | 'lastModified') => {
     setSortBy(option);
+    if (option === 'mostRelevant') {
+      setSortOrder('asc');
+    }
     handleSortMenuClose();
   };
 
@@ -404,44 +471,23 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
   r => previewData && previewData.name === r.dataplexEntry.name
 );
 
-  let filterChips;
-
-  if(searchFilters.length > 0){
-    filterChips = (
-      <FilterChips 
-        selectedFilters={selectedFilters} 
-        getCount={(f)=>{ return getFilterResultCount(f)}}
-        handleRemoveFilterTag={(f) => handleRemoveFilterTag(f)}
-      />
-    );
-  }else{
-    filterChips=(<></>);
-  }
+  // let filterChips;
+  // if(searchFilters.length > 0){
+  //   filterChips = (
+  //     <FilterChips
+  //       selectedFilters={selectedFilters}
+  //       getCount={(f)=>{ return getFilterResultCount(f)}}
+  //       handleRemoveFilterTag={(f) => handleRemoveFilterTag(f)}
+  //     />
+  //   );
+  // }else{
+  //   filterChips=(<></>);
+  // }
 
   // Main content rendering
   let content;
 
-  if (resourcesStatus === 'loading') {
-    content = (
-      <div style={{ background: "#FFF", height:'calc(100vh - 3.9rem)', padding: "0px", borderRadius: "20px", margin: '0rem 1.25rem' }}>
-        <div style={{
-          display: 'block',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '20px',
-          background: '#ffffff',
-          margin: '0px 5px 0px 5px',
-          padding: "5px",
-          minHeight: 'calc(100vh - 3.9rem)',
-          maxHeight: 'calc(100vh - 3.9rem)',
-          overflowY: 'auto'
-        }}>
-          <ShimmerLoader count={6} type="list" />
-        </div>
-      </div>
-    );
-  } else if (resourcesStatus === 'succeeded') {
-    content = (<></>);
+  if (resourcesStatus === 'loading' || resourcesStatus === 'succeeded') {
     content = (
       <div
         onScroll={handleScroll}
@@ -449,8 +495,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
           display: 'block',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '20px',
-          background: '#ffffff',
+          borderRadius: '0px',
+          background: mode === 'dark' ? '#131314' : '#ffffff',
           margin: '0px 5px 0px 5px',
           padding: "0px 5px",
           minHeight: 'calc(100vh - 3.9rem)',
@@ -462,177 +508,104 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
         <div style={{ 
             position: 'sticky', 
             top: 0, 
-            zIndex: 10, 
-            backgroundColor: '#ffffff'
+            zIndex: 10,
+            backgroundColor: mode === 'dark' ? '#131314' : '#ffffff'
         }}>
         {/* Custom Header */}
         {customHeader}
 
-        {/* Filters Section */}
-        {showFilters && (
+        {/* Header Row — Filters, Results Count, Sort, View Toggle */}
+        {(showFilters || showResultsCount || showSortBy) && (
           <div style={{
-            padding: "10px 10px",
+            padding: previewData ? "10px 4px 8px 10px" : "10px 10px 8px 10px",
             display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexWrap: "wrap"
+            flexDirection: "column",
+            gap: "4px",
+            ...headerStyle,
           }}>
-            {customFilters}
-            {/* Selected filters from sidebar as tags */}
-            {filterChips}
-            
-            {filteredResources.length > 0 && (() => {
-              const availableTags = typeAliases.filter((item) =>
-                filteredResources.some((resource: any) => resource.dataplexEntry.entryType.includes('-' + item.toLowerCase()))
-              );
-              if (availableTags.length <= 0) return null;
-              return availableTags.map((item) => {
-                return selectedFilters.find((f) => f.name == item) ? (<></>) : (
-                  <FilterTag
-                    key={`type-${item}`}
-                    handleClick={() => handleTypeFilterClick(item)}
-                    handleClose={() => onTypeFilterChange(null)}
-                    showCloseButton={selectedTypeFilter === item}
-                    css={{
-                      margin: "0px",
-                      textTransform: "capitalize",
-                      fontFamily: '"Google Sans Text", sans-serif',
-                      fontWeight: 400,
-                      fontSize: '12px',
-                      letterSpacing: '0.83%',
-                      padding: '8px 13px',
-                      borderRadius: '59px',
-                      gap: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      backgroundColor: selectedTypeFilter === item ? '#E7F0FE' : 'transparent',
-                      color: selectedTypeFilter === item ? '#0E4DCA' : '#1F1F1F',
-                      border: selectedTypeFilter === item ? 'none' : '1px solid #DADCE0',
-                      height: '32px',
-                      whiteSpace: 'nowrap'
-                    }}
-                    text={`${item}`+ 
-                      (selectedFilters.length === 1 
-                        && selectedFilters.find((f: any) => f.name.toLowerCase() === item.toLowerCase()) 
-                        ? " ("+ resourcesTotalSize +")"  : ""
-                        // : "("+ filteredResources.filter((r: any) => r.dataplexEntry.entryType.split('-').pop() == item.toLowerCase()).length +"+)"
-                      )} />
-                )
-              });
-            })()}
-          </div>
-        )}
-
-        {/* Results and Sort Section */}
-        {(showResultsCount || showSortBy) && (
-          <div style={{
-            padding: "0px 10px 10px 10px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {/* {showResultsCount && (
-                <>
-                  <Typography component="span" style={{ margin: "0px 5px", fontSize: "14px", fontWeight: "500" }}>
-                    {filteredResources.length} results
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "24px",
+            }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "24px", minWidth: 0, flex: 1 }}>
+              {showFilters && customFilters}
+              {showResultsCount && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Typography component="span" style={{
+                    fontSize: "22px",
+                    fontWeight: "400",
+                    fontFamily: '"Google Sans", sans-serif',
+                    whiteSpace: "nowrap",
+                    color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                  }}>
+                    Search results
                   </Typography>
-                  <Typography component="span" style={{ margin: "0px 5px", fontSize: "14px", fontWeight: "500" }}>
-                    |
-                  </Typography>
-                </>
-              )} */}
-              {showSortBy && (
-                <>
-                  <Typography component="span" style={{ margin: "0px 5px", fontSize: "12px", fontWeight: "500" }}>
-                    Sort by:
-                  </Typography>
-                  <Typography 
-                    component="span" 
-                    style={{ 
-                      margin: "0px 5px", 
-                      fontSize: "12px", 
-                      fontWeight: "500", 
-                      display: "flex", 
-                      alignItems: "center",
-                      cursor: "pointer",
-                      color: "#1F1F1F"
-                    }}
-                    onClick={handleSortMenuClick}
-                  >
-                    {sortBy === 'name' ? 'Name' : 'Last Modified'} 
-                    <KeyboardArrowDown style={{ marginLeft: "2px" }} />
-                  </Typography>
-                </>
+                  {resourcesStatus === 'succeeded' && (
+                    <Typography component="span" style={{
+                      fontSize: "14px",
+                      fontWeight: "400",
+                      whiteSpace: "nowrap",
+                      color: mode === 'dark' ? '#9aa0a6' : '#575757',
+                    }}>
+                      (Top {filteredResources?.length || 0} results)
+                    </Typography>
+                  )}
+                </div>
               )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {/* <TablePagination
-                component="div"
-                count={100}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              /> */}
-              {/* <span style={{
-                fontFamily: '"Google Sans Text", sans-serif',
-                fontWeight: "500",
-                fontSize: "14px",
-                lineHeight: "1.5",
-              }}>Rows : 
-                <Select style={{ marginLeft: '5px', fontSize: '14px', height: '24px' }}
-                  disabled={resourcesTotalSize < 20 ? true : false}
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    console.log("Page size changed:", e.target.value);
-                    handlePagination('next', Number(e.target.value), true);
-                  }}
-                  size="small"
-                >
-                  {[10, 20, 50, 100].map((size) => (
-                    <MenuItem sx={{fontSize: '14px'}} key={size} value={size}>{size}</MenuItem>
-                  ))}
-                </Select>
-              </span> */}
-              <span style={{
-                  fontFamily: '"Google Sans Text", sans-serif',
-                  fontWeight: "500",
-                  fontSize: "14px",
-                  lineHeight: "1.5",
-                }}>
-                  Top 100 results
-                </span>
-              {/* Non-semantic pagination controls (commented out — kept for future re-enabling)
-              <IconButton
-                style={{padding: '0px', fontFamily: '"Google Sans Text", sans-serif',}}
-                disabled={requestItemStore.length > 0 && startIndex > 0 ? false : true}
-                onClick={() => {
-                  console.log("previos page clicked");
-                  handlePagination("previous", pageSize, false);
-                }}
-              >
-                <ChevronLeftOutlined style={{ color: '#0E4DCA', opacity: (requestItemStore.length > 0 && startIndex > 0) ? 1 : 0.5 }} />
-              </IconButton>
-              <span style={{
-                fontFamily: '"Google Sans Text", sans-serif',
-                fontWeight: "500",
-                fontSize: "14px",
-                lineHeight: "1.5",
-              }}>{`${startIndex+1} to ${startIndex + pageSize < resourcesTotalSize ? startIndex + pageSize : resourcesTotalSize} of ${resourcesTotalSize < 100 ? resourcesTotalSize : 'many'}`}</span>
-              <IconButton
-                style={{padding: '0px', fontFamily: '"Google Sans Text", sans-serif',}}
-                disabled={(startIndex + pageSize >= resourcesTotalSize) ? true : false}
-                onClick={() => {
-                  console.log("Next page clicked");
-                  handlePagination("next", pageSize, false);
-                }}
-              >
-                <ChevronRightOutlined style={{ color: '#0E4DCA' , opacity: (startIndex + pageSize >= resourcesTotalSize) ? 0.5 : 1 }} />
-              </IconButton>
-              */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+              {/* Sort Controls — right side */}
+              {showSortBy && viewMode !== 'table' && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Typography
+                    component="span"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                      whiteSpace: "nowrap",
+                      fontFamily: '"Google Sans Text", sans-serif',
+                    }}
+                    onClick={handleSortMenuClick}
+                  >
+                    <ExpandMoreIcon
+                      sx={{
+                        fontSize: '20px',
+                        color: mode === 'dark' ? '#9aa0a6' : '#575757',
+                        transform: Boolean(sortMenuAnchor) ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s ease',
+                      }}
+                    />
+                    {sortBy === 'mostRelevant' ? 'Most relevant' : sortBy === 'name' ? 'Name' : 'Last modified'}
+                  </Typography>
+                  {(hideMostRelevant || sortBy !== 'mostRelevant') && (
+                    <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
+                      <span
+                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        style={{
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                          transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.2s ease-in-out',
+                        }}
+                      >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="24" height="24" rx="12" fill={mode === 'dark' ? '#004a77' : '#C2E7FF'}/>
+                          <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill={mode === 'dark' ? '#8ab4f8' : '#004A77'}/>
+                        </svg>
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
+              )}
 
               {/* View Mode Toggle */}
               <ToggleButtonGroup
@@ -642,11 +615,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                 aria-label="view mode"
                 size="small"
                 sx={{
-                  width: '5rem', // 80px total width as per Figma
-                  height: '1.5rem', // 24px height as per Figma
-                  borderRadius: '1rem', // 16px - fully rounded
-                  border: '1px solid #E2E8F0',
-                  backgroundColor: '#FFFFFF',
+                  width: '5rem',
+                  height: '1.5rem',
+                  borderRadius: '40px',
+                  border: mode === 'dark' ? '1px solid #5f6368' : '1px solid #575757',
+                  backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
@@ -654,116 +627,110 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                   padding: 0,
                   '& .MuiToggleButton-root': {
                     border: 'none',
-                    borderRadius: '1rem', // 16px - fully rounded
-                    padding: '0px', // No padding as per Figma
-                    fontSize: 0, // Hide text, only show icons
+                    borderRadius: 0,
+                    padding: '0px',
+                    fontSize: 0,
                     fontWeight: 500,
                     fontFamily: '"Google Sans Text", sans-serif',
                     lineHeight: 1,
                     minWidth: 'auto',
-                    height: '1.5rem', // 24px
+                    height: '1.5rem',
                     margin: 0,
                     backgroundColor: 'transparent',
-                    color: '#64748B',
+                    color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.125rem', // 2px gap between check and icon
+                    gap: '0.125rem',
                     transition: 'all 0.2s ease-in-out',
+                    borderRight: mode === 'dark' ? '1px solid #5f6368' : '1px solid #575757',
                     '&:first-of-type': {
-                      borderTopRightRadius: 0,
-                      borderBottomRightRadius: 0,
+                      borderTopLeftRadius: '1rem',
+                      borderBottomLeftRadius: '1rem',
                     },
                     '&:last-of-type': {
-                      borderTopLeftRadius: 0,
-                      borderBottomLeftRadius: 0,
+                      borderTopRightRadius: '1rem',
+                      borderBottomRightRadius: '1rem',
+                      borderRight: 'none',
                     },
                     '&.Mui-selected': {
-                      width: '3.125rem', // 50px when selected (fits check + icon)
-                      backgroundColor: '#E8F0FE',
-                      color: '#0B57D0',
-                      borderColor: 'transparent',
-                      padding: '0 0.25rem', // 4px horizontal padding when selected
+                      width: '3.125rem',
+                      backgroundColor: mode === 'dark' ? '#004a77' : '#C2E7FF',
+                      color: mode === 'dark' ? '#c2e7ff' : '#0B57D0',
+                      borderRight: mode === 'dark' ? '1px solid #5f6368' : '1px solid #575757',
+                      padding: '0 0.25rem',
                       '& svg': {
-                        fill: '#0B57D0'
-                      }
-                    },
-                    '&:not(.Mui-selected)': {
-                      width: '1.875rem', // 30px when not selected (icon only)
-                      backgroundColor: 'transparent',
-                      color: '#64748B',
-                      borderColor: 'transparent',
-                      padding: '0', // No padding when not selected
-                      '& svg': {
-                        fill: '#64748B'
+                        fill: mode === 'dark' ? '#c2e7ff' : '#004A77'
                       },
                       '&:hover': {
-                        backgroundColor: '#F8FAFC',
-                        color: '#475569'
+                        backgroundColor: mode === 'dark' ? '#004a77' : '#C2E7FF',
+                      }
+                    },
+                    '&.Mui-selected:last-of-type': {
+                      borderRight: 'none',
+                    },
+                    '&:not(.Mui-selected)': {
+                      width: '1.875rem',
+                      backgroundColor: 'transparent',
+                      color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                      padding: '0',
+                      '& svg': {
+                        fill: mode === 'dark' ? '#e3e3e3' : '#1F1F1F'
+                      },
+                      '&:hover': {
+                        backgroundColor: mode === 'dark' ? '#3c4043' : '#F0F0F0',
+                        color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F'
                       }
                     }
                   }
                 }}
               >
-                <ToggleButton value="table" aria-label="table view">
-                  {viewMode === 'table' && (
-                    <img src="/assets/svg/check.svg" alt="Check" style={{ width: '16px', height: '16px', marginRight: '2px' }} />
+                <ToggleButton value="list" aria-label="card view">
+                  {viewMode === 'list' && (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '2px' }}>
+                      <path d="M5.86339 10.5833L3.08339 7.80333L2.13672 8.74333L5.86339 12.47L13.8634 4.47L12.9234 3.53L5.86339 10.5833Z" fill={mode === 'dark' ? '#c2e7ff' : '#0E4DCA'}/>
+                    </svg>
                   )}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M13.1368 13.1369V10.4486H2.86285V13.1369H13.1368ZM13.1368 9.42119V6.57872H2.86285V9.42119H13.1368ZM13.1368 5.55132V2.86297H2.86285V5.55132H13.1368ZM2.86285 14.1643C2.58887 14.1643 2.34915 14.0616 2.14367 13.8561C1.93819 13.6506 1.83545 13.4109 1.83545 13.1369V2.86297C1.83545 2.589 1.93819 2.34927 2.14367 2.14379C2.34915 1.93831 2.58887 1.83557 2.86285 1.83557H13.1368C13.4108 1.83557 13.6505 1.93831 13.856 2.14379C14.0615 2.34927 14.1642 2.589 14.1642 2.86297V13.1369C14.1642 13.4109 14.0615 13.6506 13.856 13.8561C13.6505 14.0616 13.4108 14.1643 13.1368 14.1643H2.86285Z" fill={viewMode === 'table' ? '#0B57D0' : '#64748B'}/>
-                    <rect x="5" y="2" width="1" height="12" fill={viewMode === 'table' ? '#0B57D0' : '#64748B'}/>
+                    <mask id="mask_card" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+                      <rect width="16" height="16" fill="#D9D9D9"/>
+                    </mask>
+                    <g mask="url(#mask_card)">
+                      <path d="M3.33333 7.33333C2.96667 7.33333 2.65278 7.20278 2.39167 6.94167C2.13056 6.68056 2 6.36667 2 6V3.33333C2 2.96667 2.13056 2.65278 2.39167 2.39167C2.65278 2.13056 2.96667 2 3.33333 2H12.6667C13.0333 2 13.3472 2.13056 13.6083 2.39167C13.8694 2.65278 14 2.96667 14 3.33333V6C14 6.36667 13.8694 6.68056 13.6083 6.94167C13.3472 7.20278 13.0333 7.33333 12.6667 7.33333H3.33333ZM3.33333 6H12.6667V3.33333H3.33333V6ZM3.33333 14C2.96667 14 2.65278 13.8694 2.39167 13.6083C2.13056 13.3472 2 13.0333 2 12.6667V10C2 9.63333 2.13056 9.31945 2.39167 9.05833C2.65278 8.79722 2.96667 8.66667 3.33333 8.66667H12.6667C13.0333 8.66667 13.3472 8.79722 13.6083 9.05833C13.8694 9.31945 14 9.63333 14 10V12.6667C14 13.0333 13.8694 13.3472 13.6083 13.6083C13.3472 13.8694 13.0333 14 12.6667 14H3.33333ZM3.33333 12.6667H12.6667V10H3.33333V12.6667Z" fill={viewMode === 'list' ? (mode === 'dark' ? '#c2e7ff' : '#004A77') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F')}/>
+                    </g>
                   </svg>
                 </ToggleButton>
-                <ToggleButton value="list" aria-label="list view">
-                  {viewMode === 'list' && (
-                    <img src="/assets/svg/check.svg" alt="Check" style={{ width: '16px', height: '16px', marginRight: '2px' }} />
+                <ToggleButton value="table" aria-label="table view">
+                  {viewMode === 'table' && (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '2px' }}>
+                      <path d="M5.86339 10.5833L3.08339 7.80333L2.13672 8.74333L5.86339 12.47L13.8634 4.47L12.9234 3.53L5.86339 10.5833Z" fill={mode === 'dark' ? '#c2e7ff' : '#0E4DCA'}/>
+                    </svg>
                   )}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 13V11H14V13H2ZM2 9V7H14V9H2ZM2 5V3H14V5H2Z" fill={viewMode === 'list' ? '#0B57D0' : '#64748B'}/>
+                    <mask id="mask_table" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+                      <rect width="16" height="16" fill="#D9D9D9"/>
+                    </mask>
+                    <g mask="url(#mask_table)">
+                      <path d="M3.33333 14C2.96667 14 2.65278 13.8694 2.39167 13.6083C2.13056 13.3472 2 13.0333 2 12.6667V3.33333C2 2.96667 2.13056 2.65278 2.39167 2.39167C2.65278 2.13056 2.96667 2 3.33333 2H12.6667C13.0333 2 13.3472 2.13056 13.6083 2.39167C13.8694 2.65278 14 2.96667 14 3.33333V12.6667C14 13.0333 13.8694 13.3472 13.6083 13.6083C13.3472 13.8694 13.0333 14 12.6667 14H3.33333ZM7.33333 10H3.33333V12.6667H7.33333V10ZM8.66667 10V12.6667H12.6667V10H8.66667ZM7.33333 8.66667V6H3.33333V8.66667H7.33333ZM8.66667 8.66667H12.6667V6H8.66667V8.66667ZM3.33333 4.66667H12.6667V3.33333H3.33333V4.66667Z" fill={viewMode === 'table' ? (mode === 'dark' ? '#c2e7ff' : '#004A77') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F')}/>
+                    </g>
                   </svg>
                 </ToggleButton>
               </ToggleButtonGroup>
-              
-              {/* Info Icon */}
-              <Tooltip 
-                title={previewData ? "Close Preview" : "Open Preview"}
-                placement="bottom"
-                arrow
-              >
-                <IconButton
-                  onClick={() => {
-                    if (previewData) {
-                      // Close the side panel
-                      onPreviewDataChange(null);
-                    } else {
-                      // Open preview panel with placeholder data to show empty state
-                      onPreviewDataChange({ isPlaceholder: true });
-                    }
-                  }}
-                  sx={{
-                    width: '24px',
-                    height: '24px',
-                    padding: '0',
-                    borderRadius: '50%',
-                    backgroundColor: previewData ? '#E7F0FE' : '#FFFFFF',
-                    minWidth: '20px',
-                    cursor: 'pointer',
-                    marginRight: '0.5rem',
-                    '&:hover': {
-                      backgroundColor: '#F8FAFC'
-                    }
-                  }}
-                >
-                  <InfoOutlined 
-                    sx={{ 
-                      fontSize: '20px',
-                      color: previewData ? '#0B57D0' : '#1f1f1f'
-                    }} 
-                  />
-                </IconButton>
-              </Tooltip>
+
             </div>
+            </div>
+            {customFilterChips}
           </div>
+        )}
+
+        {/* Type Alias Filter Chips Carousel */}
+        {showFilters && availableTypeAliases && onTypeAliasClick && (
+          <FilterChipCarousel
+            availableTypeAliases={availableTypeAliases}
+            selectedFilters={_selectedFilters}
+            onTypeAliasClick={onTypeAliasClick}
+            resourcesStatus={resourcesStatus}
+          />
         )}
 
         {/* Sort Menu */}
@@ -783,29 +750,46 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
             style: {
               marginTop: '4px',
               borderRadius: '8px',
-              boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              minWidth: '140px'
+              boxShadow: mode === 'dark' ? '0px 4px 6px -1px rgba(0, 0, 0, 0.4), 0px 2px 4px -1px rgba(0, 0, 0, 0.3)' : '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              minWidth: '140px',
+              backgroundColor: mode === 'dark' ? '#1e1f20' : '#FFFFFF',
             }
           }}
         >
-          <MenuItem 
+          {!hideMostRelevant && (
+            <MenuItem
+              onClick={() => handleSortOptionSelect('mostRelevant')}
+              sx={{
+                fontSize: '12px',
+                fontWeight: sortBy === 'mostRelevant' ? '500' : '400',
+                color: sortBy === 'mostRelevant' ? (mode === 'dark' ? '#8ab4f8' : '#0B57D0') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F'),
+                backgroundColor: sortBy === 'mostRelevant' ? (mode === 'dark' ? 'rgba(138,180,248,0.16)' : '#F8FAFD') : 'transparent',
+                '&:hover': { backgroundColor: mode === 'dark' ? '#3c4043' : '#F1F3F4' },
+              }}
+            >
+              Most relevant
+            </MenuItem>
+          )}
+          <MenuItem
             onClick={() => handleSortOptionSelect('name')}
-            style={{
+            sx={{
               fontSize: '12px',
               fontWeight: sortBy === 'name' ? '500' : '400',
-              color: sortBy === 'name' ? '#0B57D0' : '#1F1F1F',
-              backgroundColor: sortBy === 'name' ? '#F8FAFD' : 'transparent'
+              color: sortBy === 'name' ? (mode === 'dark' ? '#8ab4f8' : '#0B57D0') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F'),
+              backgroundColor: sortBy === 'name' ? (mode === 'dark' ? 'rgba(138,180,248,0.16)' : '#F8FAFD') : 'transparent',
+              '&:hover': { backgroundColor: mode === 'dark' ? '#3c4043' : '#F1F3F4' },
             }}
           >
             Name
           </MenuItem>
-          <MenuItem 
+          <MenuItem
             onClick={() => handleSortOptionSelect('lastModified')}
-            style={{
+            sx={{
               fontSize: '12px',
               fontWeight: sortBy === 'lastModified' ? '500' : '400',
-              color: sortBy === 'lastModified' ? '#0B57D0' : '#1F1F1F',
-              backgroundColor: sortBy === 'lastModified' ? '#F8FAFD' : 'transparent'
+              color: sortBy === 'lastModified' ? (mode === 'dark' ? '#8ab4f8' : '#0B57D0') : (mode === 'dark' ? '#e3e3e3' : '#1F1F1F'),
+              backgroundColor: sortBy === 'lastModified' ? (mode === 'dark' ? 'rgba(138,180,248,0.16)' : '#F8FAFD') : 'transparent',
+              '&:hover': { backgroundColor: mode === 'dark' ? '#3c4043' : '#F1F3F4' },
             }}
           >
             Last Modified
@@ -818,15 +802,19 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
             left: '-10px',
             right: '-10px',
             height: '1.5px',
-            background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent)',
+            background: mode === 'dark' ? 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent)' : 'linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent)',
             filter: 'blur(1px)',
             opacity: isScrolled ? 1 : 0,
             transition: 'opacity 0.2s ease-in-out',
           }}
         />
         </div>
-        {/* Resources List */}
-        {filteredResources.length > 0 ? (
+        {/* Resources List or Shimmer */}
+        {resourcesStatus === 'loading' ? (
+          <div style={{ padding: '10px' }}>
+            <ShimmerLoader count={6} type={viewMode === 'table' ? 'search-table' : 'search-card'} />
+          </div>
+        ) : filteredResources.length > 0 ? (
           viewMode === 'list' ? (
             filteredResources.map((resource: any, index: number) => {
               const isSelected = previewData && previewData.name === resource.dataplexEntry.name;
@@ -839,21 +827,25 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
                   onMouseEnter={() => setHoveredIndex(index)}
                   onMouseLeave={() => setHoveredIndex(null)}
                   sx={{
-                    backgroundColor: '#ffffff',
                     cursor: 'pointer',
-                    borderRadius: '8px',
                     padding: '0px',
-                    marginLeft: '-0.5rem'
+                    marginTop: index === 0 ? '10px' : '0px',
+                    marginBottom: '11px',
+                    marginLeft: '10px',
+                    marginRight: previewData ? '4px' : '10px',
                   }}
                 >
                   <SearchEntriesCard
                     index={index}
                     entry={resource.dataplexEntry}
                     hideTopBorderOnHover={hideTopBorder}
-                    sx={{ backgroundColor: 'transparent', borderRadius: isSelected ? '8px' : '0px', marginTop: isSelected ? '-1px' : '0px',  marginBottom: isSelected ? '-2px' : '0px' }}
+                    sx={{ backgroundColor: 'transparent' }}
                     isSelected={isSelected}
                     onDoubleClick={handleSearchEntriesDoubleClick}
                     disableHoverEffect={disableHoverEffect}
+                    onNavigateToTab={handleNavigateToTab}
+                    id_token={id_token}
+                    onRequestAccess={handleRequestAccessFromCard}
                   />
                 </Box>
               );
@@ -865,6 +857,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               onFavoriteClick={handleFavoriteClick}
               getFormatedDate={getFormatedDate}
               getEntryType={getEntryType}
+              previewOpen={!!previewData}
+              selectedEntryName={previewData?.name || null}
             />
           )
         ) : (
@@ -878,7 +872,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
             <p style={{
               margin: 0,
               textAlign: 'center',
-              color: '#575757',
+              color: mode === 'dark' ? '#9aa0a6' : '#575757',
               fontSize: '16px'
             }}>No Resources found</p>
           </div>
@@ -904,10 +898,18 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
               fontSize: '16px'
             }}>{(error?.message || error) + ' invalid arguments passed in search params'}</p>
         </div>);
+      }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+        triggerNoAccess({
+          message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+        });
       }else{
         logout();
         navigate('/login');
       }
+    }else if(error?.error?.code === 403 || error?.error?.status === 'PERMISSION_DENIED'){
+      triggerNoAccess({
+        message: 'You do not have permission to search resources. Please contact your administrator or sign in with a different account.',
+      });
     }else{
       logout();
       navigate('/login');
@@ -916,10 +918,49 @@ const ResourceViewer: React.FC<ResourceViewerProps> = ({
 
   return (
     <>
-      <div style={{ backgroundColor: "#F8FAFD", height: 'calc(100vh - 4rem)', position: "relative", ...containerStyle }}>
+      <div style={{ backgroundColor: mode === 'dark' ? '#131314' : '#F8FAFD', height: 'calc(100vh - 4.5rem)', position: "relative", ...containerStyle }}>
         {content}
       </div>
 
+      {/* Backdrop for card Request Access modal */}
+      {isCardSubmitAccessOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1200,
+            cursor: 'pointer',
+            animation: 'fadeIn 0.3s ease-in-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            }
+          }}
+          onClick={handleCardSubmitAccessClose}
+        />
+      )}
+      {/* SubmitAccess panel for card Request Access button */}
+      {cardAccessEntry && (
+        <SubmitAccess
+          isOpen={isCardSubmitAccessOpen}
+          onClose={handleCardSubmitAccessClose}
+          assetName={cardAccessEntry?.entrySource?.displayName?.length > 0 ? cardAccessEntry.entrySource.displayName : getName(cardAccessEntry?.name || '', '/')}
+          entry={entryItems}
+          onSubmitSuccess={handleCardSubmitSuccess}
+          previewData={cardAccessEntry}
+        />
+      )}
+
+      {/* Notification Bar */}
+      <NotificationBar
+        isVisible={isCardNotificationVisible}
+        onClose={handleCardCloseNotification}
+        message={cardNotificationMessage}
+      />
     </>
   );
 };

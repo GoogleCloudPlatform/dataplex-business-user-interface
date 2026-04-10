@@ -45,7 +45,6 @@ import {
  */
 
 interface DataProfileConfigurationsPanelProps {
-  isOpen: boolean;
   onClose: () => void;
   dataProfileScan: any;
 }
@@ -55,24 +54,16 @@ const capitalizeFirstLetter = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
-const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelProps> = ({ isOpen, onClose, dataProfileScan }) => {
+const DataProfileConfigurationsPanel: React.FC<DataProfileConfigurationsPanelProps> = ({ onClose, dataProfileScan }) => {
   const { date: updateDate, time: updateTime } = getFormattedDateTimeParts(dataProfileScan.jobs[0]?.startTime.seconds);
   return (
     <Box
       sx={{
-        position: 'fixed',
-        top: 0,
-        right: isOpen ? 0 : '-612px',
-        width: '612px',
-        height: '100vh',
-        backgroundColor: '#ffffff',
-        boxShadow: '-4px 0px 8px rgba(0, 0, 0, 0.1)',
-        zIndex: 1200,
-        transition: 'right 0.3s ease-in-out',
         display: 'flex',
         flexDirection: 'column',
         padding: '20px 0px 20px 20px',
-        gap: '20px'
+        gap: '20px',
+        height: '100%',
       }}
     >
       {/* Header */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Accordion,
   AccordionSummary,
@@ -8,16 +8,17 @@ import {
   Box,
   FormControlLabel,
   Checkbox,
-  // Tooltip,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckIcon from '@mui/icons-material/Check';
-import EditNoteIcon from '../../assets/svg/edit_note.svg';
+import CloseIcon from '@mui/icons-material/Close';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import BigQueryIcon from '../../assets/svg/BigQuery.svg';
 import AnalyticsHubIcon from '../../assets/svg/analytics-hub.svg';
 import CloudSQLIcon from '../../assets/svg/cloud-sql.svg';
 import DataformIcon from '../../assets/svg/dataform_logo.svg';
-import DatabaseIcon from '../../assets/svg/database_icon.svg';
 import OthersIcon from '../../assets/svg/others.svg';
 import CloudBigTableIcon from '../../assets/svg/CloudBigTable.svg';
 import CloudPubSubIcon from '../../assets/svg/cloudpub_sub.svg';
@@ -26,32 +27,10 @@ import CloudStorageIcon from '../../assets/svg/CloudStorage.svg';
 import DataplexIcon from '../../assets/svg/Dataplex.svg';
 import DataprocIcon from '../../assets/svg/Dataproc.svg';
 import VertexIcon from '../../assets/svg/vertex.svg';
-import BucketIcon from '../../assets/svg/bucket_icon.svg';
-import ClusterIcon from '../../assets/svg/cluster_icon.svg';
-import CodeAssetIcon from '../../assets/svg/code_asset_icon.svg';
-import ConnectionIcon from '../../assets/svg/connection_icon.svg';
-import DashboardIcon from '../../assets/svg/dashboard_icon.svg';
-import DashboardElementIcon from '../../assets/svg/dashboard_element_icon.svg';
-import DataExchangeIcon from '../../assets/svg/data_exchange_icon.svg';
-import DataStreamIcon from '../../assets/svg/data_stream_icon.svg';
-import DatabaseSchemaIcon from '../../assets/svg/database_schema_icon.svg';
-import DatasetIcon from '../../assets/svg/dataset_icon.svg';
-import ExploreIcon from '../../assets/svg/explore_icon.svg';
-import FeatureGroupIcon from '../../assets/svg/feature_group_icon.svg';
-import FeatureOnlineStoreIcon from '../../assets/svg/feature_online_store_icon.svg';
-import ViewIcon from '../../assets/svg/view_icon.svg';
-import FilesetIcon from '../../assets/svg/fileset_icon.svg';
-import FolderIcon from '../../assets/svg/folder_icon.svg';
-import FunctionIcon from '../../assets/svg/function_icon.svg';
-import GlossaryIcon from '../../assets/svg/glossary_icon.svg';
-import GlossaryCategoryIcon from '../../assets/svg/glossary_category_icon.svg';
-import ListingIcon from '../../assets/svg/listing_icon.svg';
-import LookIcon from '../../assets/svg/look_icon.svg';
-import ModelIcon from '../../assets/svg/model_icon.svg';
-import RepositoriesIcon from '../../assets/svg/repositories_icon.svg';
-import GenericIcon from '../../assets/svg/generic_icon.svg';
-import SchedulerIcon from '../../assets/svg/scheduler_icon.svg';
-import TableIcon from '../../assets/svg/table_icon.svg';
+import FilterAspectsIcon from '../../assets/svg/filter-aspects-icon.svg';
+import FilterAssetIcon from '../../assets/svg/filter-asset-icon.svg';
+import FilterProductIcon from '../../assets/svg/filter-product-icon.svg';
+import FilterProjectIcon from '../../assets/svg/filter-project-icon.svg';
 import { useAuth } from '../../auth/AuthProvider';
 import FilterAnnotationsMultiSelect from './FilterAnnotationsMultiSelect';
 import FilterSubAnnotationsPanel from './FilterSubAnnotationsPanel';
@@ -60,6 +39,9 @@ import { URLS } from '../../constants/urls';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
 import { getProjects } from '../../features/projects/projectsSlice';
+import { getAssetIcon } from '../../utils/resourceUtils';
+import DatabaseSchemaBlueIcon from '../../assets/svg/database_schema_icon_blue.svg';
+import { isGlossaryAssetType, getGlossaryMuiIcon, assetNameToGlossaryType } from '../../constants/glossaryIcons';
 
 /**
  * @file FilterDropdown.tsx
@@ -106,6 +88,11 @@ interface FilterProps {
   filters?: any[];
   onFilterChange: (selectedFilters: any[]) => void;
   isGlossary? : boolean;
+  onClose?: () => void;
+  availableTypeAliases?: { name: string; count: number }[];
+  onTypeAliasClick?: (type: string) => void;
+  resourcesTotalSize?: number;
+  resourcesStatus?: string;
 }
 
 // Function to get icon for product
@@ -129,7 +116,7 @@ const getProductIcon = (productName: string) => {
       return DataformIcon;
     case 'Dataplex':
       return DataplexIcon;
-    case 'Dataplex Universal Catalog':
+    case 'Knowledge Catalog':
       return DataplexIcon;
     case 'Dataproc Metastore':
       return DataprocIcon;
@@ -140,75 +127,24 @@ const getProductIcon = (productName: string) => {
   }
 };
 
-const getAssetIcon = (assetName: string) => {
-  switch (assetName) {
-    case 'Bucket':
-      return BucketIcon;
-    case 'Cluster':
-      return ClusterIcon;
-    case 'Code asset':
-      return CodeAssetIcon;
-    case 'Connection':
-      return ConnectionIcon;
-    case 'Dashboard':
-      return DashboardIcon;
-    case 'Dashboard element':
-      return DashboardElementIcon;
-    case 'Data exchange':
-      return DataExchangeIcon;
-    case 'Data source connection':
-      return ConnectionIcon;
-    case 'Data stream':
-      return DataStreamIcon;
-    case 'Database':
-      return DatabaseIcon;
-    case 'Database schema':
-      return DatabaseSchemaIcon;
-    case 'Dataset':
-      return DatasetIcon;
-    case 'Explore':
-      return ExploreIcon;
-    case 'Feature group':
-      return FeatureGroupIcon;
-    case 'Feature online store':
-      return FeatureOnlineStoreIcon;
-    case 'Feature view':
-      return ViewIcon;
-    case 'Fileset':
-      return FilesetIcon;
-    case 'Folder':
-      return FolderIcon;
-    case 'Function':
-      return FunctionIcon;
-    case 'Glossary':
-      return GlossaryIcon;
-    case 'Glossary Category':
-      return GlossaryCategoryIcon;
-    case 'Glossary Term':
-      return GlossaryIcon;
-    case 'Listing':
-      return ListingIcon;
-    case 'Look':
-      return LookIcon;
-    case 'Model':
-      return ModelIcon;
-    case 'Repository':
-      return RepositoriesIcon;
-    case 'View':
-      return ViewIcon;
-    case 'Resource':
-      return GenericIcon;
-    case 'Routine':
-      return SchedulerIcon;
-    case 'Table':
-      return TableIcon;
+
+const getSectionIcon = (title: string): string | null => {
+  switch (title) {
+    case 'Aspects':
+      return FilterAspectsIcon;
+    case 'Assets':
+      return FilterAssetIcon;
+    case 'Products':
+      return FilterProductIcon;
+    case 'Projects':
+      return FilterProjectIcon;
     default:
-      return GenericIcon;
+      return null;
   }
 };
 
 
-const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlossary = false }) => {
+const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlossary = false, onClose }) => {
   // const [anchorEl, setAnchorEl] = useState(null);
   // const [selectedCategory, setSelectedCategory] = useState(null);
 
@@ -378,7 +314,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
         "type": "system"
       },
       {
-        "name": "Dataplex Universal Catalog",
+        "name": "Knowledge Catalog",
         "type": "system"
       },
       {
@@ -398,8 +334,9 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
   };
   const { user } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
+  const mode = useSelector((state: any) => state.user.mode) as string;
   const searchTerm = useSelector((state: any) => state.search.searchTerm);
-  const searchType = useSelector((state: any) => state.search.searchType);
+  const searchSubmitted = useSelector((state: any) => state.search.searchSubmitted);
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
   const projectsList = useSelector((state: any) => state.projects.items);
   const [loading, setLoading] = useState(false);
@@ -417,11 +354,18 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
     defaultExpanded: false,
   };
   if(annotations && user?.appConfig && user?.appConfig.aspects && Array.isArray(user?.appConfig.aspects)){
-    annotations.items = user?.appConfig.aspects.map((aspect:any) => ({
-      name: aspect.dataplexEntry.entrySource.displayName || (aspect.dataplexEntry.name ? aspect.dataplexEntry.name.split('/').pop() : ''),
-      type: "aspectType",
-      data: aspect.dataplexEntry
-    }));
+    const seen = new Set<string>();
+    annotations.items = user?.appConfig.aspects
+      .map((aspect:any) => ({
+        name: aspect.dataplexEntry.entrySource.displayName || (aspect.dataplexEntry.name ? aspect.dataplexEntry.name.split('/').pop() : ''),
+        type: "aspectType",
+        data: aspect.dataplexEntry
+      }))
+      .filter((item: { name: string; type: string; data: Record<string, unknown> }) => {
+        if (seen.has(item.name)) return false;
+        seen.add(item.name);
+        return true;
+      });
   }
   if(projects && user?.appConfig && user?.appConfig.projects && Array.isArray(user?.appConfig.projects)){
     let plist:any = projectsLoaded ? projectsList : user?.appConfig.projects;
@@ -457,8 +401,9 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
   const [clickPosition, setClickPosition] = useState<{ top: number; right: number } | undefined>(undefined);
   const [subAnnotationData, setSubAnnotationData] = useState<any[]>([]);
   const [subAnnotationsloaded, setSubAnnotationsloaded] = useState(false);
-
   const [selectedFilters, setSelectedFilters] = useState<any[]>(filters ?? []);
+  const selectedFiltersRef = useRef(selectedFilters);
+  selectedFiltersRef.current = selectedFilters;
 
   useEffect(() => {
     if(!projectsLoaded) {
@@ -487,79 +432,64 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
     setSelectedFilters(filters ?? []);
   }, [filters]);
 
-  // Auto-select asset filters when search term matches asset names
+  // Auto-select/clear filters when search is explicitly submitted (Enter or autocomplete select)
   useEffect(() => {
+    if (!searchSubmitted) return;
     if (isGlossary) return;
-    if (searchTerm && searchType === 'All' && searchTerm.length >= 3) {
-      const matchingAssets = assets.items.filter((asset: any) => 
-        asset.name.toLowerCase() === (searchTerm.toLowerCase())
+
+    const currentFilters = selectedFiltersRef.current;
+
+    if (searchTerm && searchTerm.length >= 3) {
+      // Check for matching asset (typeAliases)
+      const matchingAsset = assets.items.find((asset: any) =>
+        asset.name.toLowerCase() === searchTerm.toLowerCase()
       );
-      
-      if (matchingAssets.length > 0) {
-        // Get current asset filters
-        const currentAssetFilters = selectedFilters.filter((f: any) => f.type === 'typeAliases');
-        
-        // Add matching assets that aren't already selected
-        const newAssetFilters = matchingAssets
-          .filter((asset: any) => !currentAssetFilters.some((f: any) => f.name === asset.name))
-          .map((asset: any) => ({
-            name: asset.name,
-            type: asset.type,
-            data: asset.data
-          }));
-        
-        if (newAssetFilters.length > 0) {
-          const updatedFilters = [...selectedFilters, ...newAssetFilters];
+
+      // Check for matching product (system), including aliases for renamed products
+      const PRODUCT_SEARCH_ALIASES: Record<string, string> = {
+        "dataplex universal catalog": "Knowledge Catalog",
+      };
+      const matchingProduct = products.items.find((product: any) =>
+        product.name.toLowerCase() === searchTerm.toLowerCase()
+      ) || products.items.find((product: any) =>
+        PRODUCT_SEARCH_ALIASES[searchTerm.toLowerCase()] === product.name
+      );
+
+      if (matchingAsset) {
+        // Clear ALL existing filters, set only the matching asset filter
+        const updatedFilters = [{ name: matchingAsset.name, type: matchingAsset.type, data: matchingAsset.data }];
+        if (JSON.stringify(updatedFilters) !== JSON.stringify(currentFilters)) {
           setSelectedFilters(updatedFilters);
           onFilterChange(updatedFilters);
         }
+      } else if (matchingProduct) {
+        // Clear ALL existing filters, set only the matching product filter
+        const updatedFilters = [{ name: matchingProduct.name, type: matchingProduct.type, data: matchingProduct.data }];
+        if (JSON.stringify(updatedFilters) !== JSON.stringify(currentFilters)) {
+          setSelectedFilters(updatedFilters);
+          onFilterChange(updatedFilters);
+        }
+      } else {
+        // No matching asset or product — clear typeAliases filters only
+        const nonAssetFilters = currentFilters.filter((f: any) => f.type !== 'typeAliases');
+        if (nonAssetFilters.length !== currentFilters.length) {
+          setSelectedFilters(nonAssetFilters);
+          onFilterChange(nonAssetFilters);
+        }
       }
-    }
-  }, [searchTerm, searchType, assets.items, selectedFilters, onFilterChange]);
-
-  // Clear asset filters when search term is cleared or search type changes from 'All'
-  useEffect(() => {
-    if (isGlossary) return;
-    if (!searchTerm || searchType !== 'All') {
-      const nonAssetFilters = selectedFilters.filter((f: any) => f.type !== 'typeAliases');
-      if (nonAssetFilters.length !== selectedFilters.length) {
+    } else {
+      // Search term empty/short — clear typeAliases filters
+      const nonAssetFilters = currentFilters.filter((f: any) => f.type !== 'typeAliases');
+      if (nonAssetFilters.length !== currentFilters.length) {
         setSelectedFilters(nonAssetFilters);
         onFilterChange(nonAssetFilters);
       }
     }
-  }, [searchTerm, searchType, selectedFilters, onFilterChange]);
 
-  // Auto-select product when specific product is selected from search bar
-  useEffect(() => {
-    if (searchType && searchType !== 'All') {
-      // Find the matching product in the products list
-      const matchingProduct = products.items.find((product: any) => 
-        product.name === searchType
-      );
-      
-      if (matchingProduct) {
-        // Get current product filters
-        const currentProductFilters = selectedFilters.filter((f: any) => f.type === 'system');
-        
-        // Check if this product is already selected
-        const isAlreadySelected = currentProductFilters.some((f: any) => f.name === searchType);
-        
-        if (!isAlreadySelected) {
-          // Remove any existing product filters and add the new one
-          const nonProductFilters = selectedFilters.filter((f: any) => f.type !== 'system');
-          const newProductFilter = {
-            name: matchingProduct.name,
-            type: matchingProduct.type,
-            data: matchingProduct.data
-          };
-          
-          const updatedFilters = [...nonProductFilters, newProductFilter];
-          setSelectedFilters(updatedFilters);
-          onFilterChange(updatedFilters);
-        }
-      }
-    }
-  }, [searchType, products.items, selectedFilters, onFilterChange]);
+    dispatch({ type: 'search/setSearchSubmitted', payload: false });
+  }, [searchSubmitted]);
+
+
 
   useEffect(() => {
     // Re-construct projects list
@@ -585,7 +515,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     'Aspects': false,
     'Assets': false,
-    'Products': isGlossary,
+    'Products': false,
     'Projects': false
   });
 
@@ -614,10 +544,13 @@ const handleCheckboxChange = (filter: any) => {
 
 
   const handleAccordionChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedSections(prev => ({
-      ...prev,
+    setExpandedSections({
+      'Products': false,
+      'Assets': false,
+      'Aspects': false,
+      'Projects': false,
       [panel]: isExpanded
-    }));
+    });
   };
 
   // Removed useEffect to prevent automatic filter changes on mount/unmount
@@ -663,11 +596,12 @@ const handleCheckboxChange = (filter: any) => {
     const currentFilter = filterData.find((f: any) => f.title === currentFilterType);
     if (!currentFilter) return;
 
-    // Convert selected items to filter format
-    const newFilters = selectedItems.map(item => ({
-      name: item,
-      type: currentFilter.items[0]?.type || 'typeAliases' // Use the type from the first item
-    }));
+    // Convert selected items to filter format, preserving existing subAnnotationData
+    const filterType = currentFilter.items[0]?.type || 'typeAliases';
+    const newFilters = selectedItems.map(item => {
+      const existing = selectedFilters.find(sf => sf.name === item && sf.type === filterType);
+      return existing ?? { name: item, type: filterType };
+    });
 
     // Remove existing filters of this type
     const filteredSelectedFilters = selectedFilters.filter((sf: any) => sf.type !== (currentFilter.items[0]?.type || 'typeAliases'));
@@ -683,6 +617,10 @@ const handleCheckboxChange = (filter: any) => {
     setShowMultiSelect(false);
     setCurrentFilterType('');
     setMultiselectPosition(null);
+    // Also close the sub-annotations panel if it's open
+    if (showSubAnnotationsPanel) {
+      handleCloseSubAnnotationsPanel();
+    }
   };
 
   // Mock data for sub-annotations - in real app this would come from API
@@ -704,9 +642,10 @@ const handleCheckboxChange = (filter: any) => {
     
     const transformedFields = data.metadataTemplate.recordFields?.map((r: any) => ({
       name: String(r.name || ''),
+      displayName: r.annotations?.displayName || undefined,
       type: r.type || 'string', // Default to string if type is not specified
-      enumValues: r.enumValues ? r.enumValues.map((val: any) => {
-        // Handle object values properly
+      enumValues: r.enumValues?.length ? r.enumValues.map((val: any) => {
+        // API returns enum values as objects with { name, index, deprecated }
         if (typeof val === 'object' && val !== null) {
           return val.name || val.value || val.label || JSON.stringify(val);
         }
@@ -724,14 +663,11 @@ const handleCheckboxChange = (filter: any) => {
     setSubAnnotationsloaded(false);
     getSubAnnotationsForAnnotation(data);
     
-    // Check if the parent annotation is already selected
-    const isParentSelected = selectedFilters.some(filter => 
+    // Restore previously applied sub-annotation values if they exist
+    const existingFilter = selectedFilters.find(filter =>
       filter.name === annotationName && filter.type === 'aspectType'
     );
-    
-    // If parent is selected, initialize with some default sub-annotations (or keep empty)
-    // In a real app, you might want to load previously selected sub-annotations from an API
-    setSelectedSubAnnotations(isParentSelected ? [] : []); // For now, always start empty
+    setSelectedSubAnnotations(existingFilter?.subAnnotationData ?? []);
     
     const rect = event.currentTarget.getBoundingClientRect();
     setClickPosition({ top: rect.top, right: rect.right });
@@ -814,285 +750,290 @@ const handleCheckboxChange = (filter: any) => {
         maxHeight: "100%"
       }}
     >
-      <Box sx={{ position: 'relative' }}>
-      <Box sx={{ flexGrow: 1, flexShrink: 1 }} style={{padding:"0.3125rem 0 0.3125rem 0.3125rem", marginTop:"1.25rem", paddingBottom:"1.5625rem", display: "flex", flexDirection: "column", flex: "0 0 auto"}}>
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        padding: isGlossary ? '0px' : '0px 16px 24px 20px',
+        gap: '20px',
+      }}>
+        {/* Header: Filters / Clear / X */}
         <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             width: "100%",
-            paddingRight: 0,
-            flex: "1 1 auto",
-            marginTop: "-20px"
+            position: isGlossary ? "relative" : "sticky",
+            top: 0,
+            zIndex: 1,
+            backgroundColor: isGlossary ? "transparent" : (mode === 'dark' ? '#282a2c' : '#F8FAFD'),
+            padding: isGlossary ? "0px" : "24px 0 0 0",
         }}>
-            <Typography sx={{fontWeight:"500", fontSize:"1rem", color:"#1F1F1F", flex: "0 1 auto", fontFamily: "Google sans text, sans-serif", marginLeft: '5px'}}>Filters</Typography>
-            <Button onClick={handleFilterClear} 
-              disabled={selectedFilters.length === 0}
-              sx={{
-                fontFamily: '"Google Sans Text", sans-serif',
-                fontWeight:"700", 
-                color:"#1f1f1f", 
-                fontSize:"0.75rem",
-                fontStyle:"normal", 
-                display: "flex",
-                marginRight: "8px",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0.25rem",
-                textTransform: "none",
-                minWidth: "auto",
-                height: "2rem",
-                flex: "0 0 auto",
-                '&.Mui-disabled': {
-                  color: '#1f1f1f',
-                  opacity: '30%',
-                },
-            }}>Clear</Button>
+            <Typography sx={{fontWeight: 500, fontSize: "16px", lineHeight: "24px", color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', fontFamily: '"Google Sans", sans-serif'}}>Filters</Typography>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '24px' }}>
+              <Button onClick={handleFilterClear}
+                disabled={selectedFilters.length === 0}
+                sx={{
+                  fontFamily: '"Google Sans", sans-serif',
+                  fontWeight: 700,
+                  color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                  fontSize: "12px",
+                  lineHeight: "16px",
+                  letterSpacing: "0.1px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0px",
+                  textTransform: "none",
+                  minWidth: "auto",
+                  opacity: 1,
+                  '&.Mui-disabled': {
+                    color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                    opacity: 0.3,
+                  },
+              }}>Clear</Button>
+              {onClose && (
+                <IconButton
+                  onClick={onClose}
+                  size="small"
+                  sx={{
+                    padding: '8px',
+                    color: mode === 'dark' ? '#9aa0a6' : '#575757',
+                    '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }
+                  }}
+                >
+                  <CloseIcon sx={{ fontSize: '16px' }} />
+                </IconButton>
+              )}
+            </div>
         </div>
-      </Box>
-      <Box
-        sx={{
-          height: '1px',
-          backgroundColor: '#E0E0E0',
-          marginLeft: '5px',
-          marginRight: '3.5px',
-        }}
-      />
-      <div style={{
-        fontSize:"0.75rem", 
-        display: "flex", 
-        flexDirection: "column", 
-        flex: "1 1 auto"
-      }}>
-        {filterData.map((filter:any) => 
+
+        {/* Accordion Sections */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          width: "100%",
+          padding: 0,
+        }}>
+        {filterData.map((filter:any) =>
           (
-            <Accordion 
-              key={filter.title} 
+            <Accordion
+              key={filter.title}
               expanded={expandedSections[filter.title] || filter.defaultExpanded}
               onChange={handleAccordionChange(filter.title)}
-              style={{background : "none", boxShadow:"none", margin: 0, flex: "0 0 auto"}}
               disableGutters
               sx={{
-                    background: "none",
-                    boxShadow: "none",
-                    '&:before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      backgroundColor: '#E0E0E0',
-                      height: '1px',
-                      left: '5px',
-                      right: '3.5px',
-                      opacity: 1,
-                    },
-                    borderTop: 'none',
+                    background: 'none',
+                    boxShadow: 'none',
+                    width: '100%',
+                    margin: 0,
+                    borderTop: `1px solid ${mode === 'dark' ? '#3c4043' : '#DADCE0'}`,
+                    '&:first-of-type': { borderTop: 'none' },
+                    borderRadius: '0 !important',
+                    '&:before': { display: 'none' },
+                    '&.Mui-expanded': { margin: 0 },
+                    '&:has(.MuiAccordionSummary-root:hover)': { borderColor: 'transparent' },
+                    '&:has(.MuiAccordionSummary-root:hover) + .MuiAccordion-root': { borderColor: 'transparent' },
                   }}
             >
               <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
+                expandIcon={<ExpandMoreIcon sx={{ color: mode === 'dark' ? '#9aa0a6' : '#575757', fontSize: '24px' }} />}
                 aria-controls={filter.title+"-content"}
                 id={filter.title+"-header"}
-                sx={{ padding:"0rem 0.7rem 0rem 0.65rem", flex: "0 0 auto", minHeight: 'auto',
-                  '& .MuiAccordionSummary-content': {
-                  lineHeight: '48px',
-                  margin: "14px -1.2px"
-                },
-                '& .MuiAccordionSummary-expandIconWrapper': {
-                  marginRight: '-3px',
-                },
-                  '&.Mui-expanded': { 
-                    minHeight: 'auto',
-                    '& .MuiAccordionSummary-content': {
-                   lineHeight: '48px',
-                   margin: "14px -1.2px"
-                  }
-               }}}
+                sx={{
+                  padding: '12px 4px',
+                  minHeight: 'unset !important',
+                  borderRadius: '8px',
+                  '& .MuiAccordionSummary-content': { margin: 0 },
+                  '&.Mui-expanded': { minHeight: 'unset !important' },
+                  '& .MuiAccordionSummary-expandIconWrapper': { marginRight: 0 },
+                  '&:hover': { backgroundColor: mode === 'dark' ? 'rgba(138, 180, 248, 0.16)' : '#D3E3FD' },
+                }}
               >
                 <div style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.5rem",
-                  flex: "0 1 auto",
+                  gap: "8px",
                 }}>
+                  {getSectionIcon(filter.title) && (
+                    <img
+                      src={getSectionIcon(filter.title)!}
+                      alt=""
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   <Typography component="span"
-                    sx={{fontWeight: expandedSections[filter.title] || filter.defaultExpanded ? 500 : 400, fontSize:"12px", lineHeight:"20px", color:"#1F1F1F", fontFamily:"Product Sans", letterSpacing:"0.1px"}}>
+                    sx={{fontWeight: 400, fontSize:"14px", lineHeight:"20px", color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F', fontFamily:'"Product Sans", sans-serif'}}>
                       {filter.title}
                   </Typography>
                 </div>
               </AccordionSummary>
               <AccordionDetails sx={{
-                paddingTop: 0,                 
-                paddingBottom: "0.5rem",       
-                paddingLeft: "0.5rem",         
-                paddingRight: "0.5rem",
-                flex: "1 1 auto",
-                overflowY: "hidden",
-                color:"#1F1F1F",
-                fontWeight:"400",
-                fontSize:"0.75rem",
+                padding: '0 0 8px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                fontWeight: '400',
               }}>
                 {
-                  (filter.title === 'Assets' || filter.title === 'Products' ? 
-                    // Sort assets and products to show selected items first
-                    filter.items : 
+                  (filter.title === 'Assets' || filter.title === 'Products' ?
+                    filter.items :
                     filter.items.slice(0, 10)
-                  ).map((item:any) => (
-                    <div key={`${filter.title}-${item.name}`} style={{
+                  ).map((item:any, index: number) => (
+                    <Box key={`${filter.title}-${item.name}-${index}`} sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      position: 'relative',
-                      flex: "0 0 auto",
-                      marginBottom: '0.125rem',
+                      width: '100%',
+                      height: '24px',
+                      gap: '8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      px: '4px',
+                      '&:hover': {
+                        backgroundColor: mode === 'dark' ? '#3c4043' : '#E7F0FE',
+                      },
                     }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        flex: '1 1 auto',
-                        paddingLeft: '0.45rem',
-                      }}>
-                        <FormControlLabel 
-                          control={
-                          <Checkbox 
-                            checked={selectedFilters.some(i => i.name === item.name && i.type === item.type)} 
-                            icon={
-                              <Box sx={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '4px',
-                                border: '2px solid var(--Text-Secondary, #575757)',
-                                opacity: 1,
-                              }} />
-                            }
-                            checkedIcon={
-                              <Box sx={{
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '4px',
-                                border: '2px solid #0E4DCA',
-                                backgroundColor: '#0E4DCA',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}>
-                                <CheckIcon sx={{ fontSize: '14px', color: '#FFFFFF' }} />
-                              </Box>
-                            }
-                            sx={{
-                              padding: '0.25rem',
-                              marginRight: '8px',
-                              '& .MuiSvgIcon-root': {
-                                width: '18px',
-                                height: '18px',
-                              },
-                            }}
-                          />}
-                          label={
-                            <div style={{
+                      <FormControlLabel
+                        control={
+                        <Checkbox
+                          checked={selectedFilters.some(i => i.name === item.name && i.type === item.type)}
+                          icon={
+                            <Box sx={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '4px',
+                              border: `2px solid ${mode === 'dark' ? '#9aa0a6' : '#575757'}`,
+                            }} />
+                          }
+                          checkedIcon={
+                            <Box sx={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '4px',
+                              border: `2px solid ${mode === 'dark' ? '#8ab4f8' : '#0E4DCA'}`,
+                              backgroundColor: mode === 'dark' ? '#8ab4f8' : '#0E4DCA',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.25rem',
-                              flex: '1 1 auto'
+                              justifyContent: 'center',
                             }}>
-                              {filter.title === 'Products' && getProductIcon(item.name) && (
-                                <img 
-                                  src={getProductIcon(item.name)!} 
-                                  alt={item.name} 
-                                  style={{
-                                    width: '1.25rem',
-                                    height: '1.25rem',
-                                    flex: '0 0 auto'
-                                  }}
-                                />
-                              )}
-                              {filter.title === 'Assets' && getAssetIcon(item.name) && (
-                                <img 
-                                  src={getAssetIcon(item.name)!} 
-                                  alt={item.name} 
-                                  style={{
-                                    width: '1.25rem',
-                                    height: '1.25rem',
-                                    flex: '0 0 auto',
-                                    opacity:1,
-                                  }}
-                                />
-                              )}
-                              {/* <Tooltip title={item.name} placement="top" arrow> */}
-                                <span style={{
-                                  flex: '1 1 auto',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  maxWidth: '8rem',
-                                  fontSize: '0.75rem',
-                                  color: '#1F1F1F',
-                                  fontWeight: '400',
-                                }}>
-                                  {item.name}
-                                </span>
-                              {/* </Tooltip> */}
-                            </div>
+                              <CheckIcon sx={{ fontSize: '14px', color: mode === 'dark' ? '#1e1f20' : '#FFFFFF' }} />
+                            </Box>
                           }
                           sx={{
-                            '& .MuiFormControlLabel-label': {
-                              fontWeight: '500' ,
-                              color: '#4c4c4c' ,
-                              fontSize: '0.75rem',
-                              display: 'flex',
-                              alignItems: 'center'
-                            }
+                            padding: '8px',
+                            '& .MuiSvgIcon-root': {
+                              width: '18px',
+                              height: '18px',
+                            },
                           }}
-                          onChange={() => handleCheckboxChange(item)}
-                          style={{ flex: '1 1 auto' }}
-                        />
-                      </div>
+                        />}
+                        label={
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            flex: '1 1 auto',
+                            overflow: 'hidden',
+                          }}>
+                            {filter.title === 'Products' && getProductIcon(item.name) && (
+                              <img
+                                src={getProductIcon(item.name)!}
+                                alt={item.name}
+                                style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                              />
+                            )}
+                            {filter.title === 'Assets' && isGlossaryAssetType(item.name) && (
+                              getGlossaryMuiIcon(assetNameToGlossaryType(item.name), {
+                                size: '16px',
+                                color: '#4285F4',
+                              })
+                            )}
+                            {filter.title === 'Assets' && !isGlossaryAssetType(item.name) && getAssetIcon(item.name) && (
+                              <img
+                                src={item.name === 'Database schema' ? DatabaseSchemaBlueIcon : getAssetIcon(item.name)!}
+                                alt={item.name}
+                                style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                              />
+                            )}
+                            <Tooltip title={item.name} disableHoverListener={item.name.length <= 20} arrow placement="top">
+                              <span style={{
+                                flex: '1 1 auto',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: '12px',
+                                lineHeight: '16px',
+                                color: mode === 'dark' ? '#e3e3e3' : '#1F1F1F',
+                                fontWeight: '400',
+                                fontFamily: '"Product Sans", sans-serif',
+                              }}>
+                                {item.name}
+                              </span>
+                            </Tooltip>
+                          </div>
+                        }
+                        sx={{
+                          margin: 0,
+                          flex: '1 1 auto',
+                          minWidth: 0,
+                          overflow: 'hidden',
+                          '& .MuiFormControlLabel-label': {
+                            flex: '1 1 auto',
+                            minWidth: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            overflow: 'hidden',
+                          },
+                        }}
+                        onChange={() => handleCheckboxChange(item)}
+                      />
                       {filter.title === 'Aspects' && (
-                        <img 
-                          src={EditNoteIcon} 
-                          alt="Edit Note" 
-                          style={{
-                            width: '1.25rem',
-                            height: '1.25rem',
-                            position: 'absolute',
-                            right: 0,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer',
-                            flex: '0 0 auto'
-                          }}
+                        <EditNoteOutlinedIcon
+                          data-testid="edit-note-icon"
+                          sx={{ fontSize: '16px', color: mode === 'dark' ? '#9aa0a6' : '#575757', cursor: 'pointer', flexShrink: 0 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleEditNoteClick(item.name,item.data, e);
+                            handleEditNoteClick(item.name, item.data, e);
                           }}
                         />
                       )}
-                    </div>
+                    </Box>
                   ))
                 }
                 {(filter.title !== 'Assets' && filter.title !== 'Products' && filter.items.length > 10) && (
                   <div style={{
                     display: 'flex',
-                    justifyContent: 'center',
+                    justifyContent: 'flex-start',
                     padding: 0,
-                    flex: '0 0 auto'
+                    marginTop: '4px',
                   }}>
                     <Button
                       onClick={(e) => handleViewAllItems(filter.title, e)}
                       sx={{
-                        color: '#0E4DCA',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
+                        color: mode === 'dark' ? '#8ab4f8' : '#0B57D0',
+                        fontSize: '12px',
+                        fontWeight: '400',
+                        fontFamily: '"Product Sans", sans-serif',
+                        lineHeight: '16px',
+                        letterSpacing: '0.1px',
                         textTransform: 'none',
-                        padding: '0.25rem 0.5rem',
+                        padding: '0',
+                        paddingLeft: '12px',
                         minWidth: 'auto',
-                        flex: '0 0 auto',
+                        justifyContent: 'flex-start',
                         '&:hover': {
                           backgroundColor: 'transparent',
-                          textDecoration: 'underline'
-                        }
+                          textDecoration: 'underline',
+                        },
                       }}
                     >
-                      See {filter.items.length - 10} more
+                      Show more
                     </Button>
                   </div>
                 )}
@@ -1115,6 +1056,22 @@ const handleCheckboxChange = (filter: any) => {
         isOpen={showMultiSelect}
         filterType={currentFilterType}
         position={multiselectPosition}
+        onEditNote={(optionName, iconTop, modalRight) => {
+          const currentFilter = filterData.find((f: { title: string }) => f.title === currentFilterType);
+          const item = currentFilter?.items.find((i: { name: string }) => i.name === optionName);
+          if (item) {
+            setSelectedAnnotationForSubPanel(item.name);
+            setSubAnnotationData([]);
+            setSubAnnotationsloaded(false);
+            getSubAnnotationsForAnnotation(item.data);
+            const existingFilter = selectedFilters.find(filter =>
+              filter.name === item.name && filter.type === 'aspectType'
+            );
+            setSelectedSubAnnotations(existingFilter?.subAnnotationData ?? []);
+            setClickPosition({ top: iconTop, right: modalRight });
+            setShowSubAnnotationsPanel(true);
+          }
+        }}
       />
     )}
 

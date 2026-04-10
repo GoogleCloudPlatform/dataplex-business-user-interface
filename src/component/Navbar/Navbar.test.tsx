@@ -48,7 +48,8 @@ vi.mock('react-redux', async () => {
         search: {
           searchTerm: '',
           searchFilters: {},
-          semanticSearch: false
+          semanticSearch: false,
+          isSearchFiltersOpen: false
         },
         user: {
           mode: 'light'
@@ -99,7 +100,7 @@ vi.mock('../SearchPage/NotificationBar', () => ({
       <div data-testid="notification-bar">
         <span data-testid="notification-message">{message}</span>
         <button data-testid="close-notification" onClick={onClose}>Close</button>
-        <button data-testid="undo-notification" onClick={onUndo}>Undo</button>
+        {onUndo && <button data-testid="undo-notification" onClick={onUndo}>Undo</button>}
       </div>
     );
   }
@@ -173,9 +174,9 @@ describe('Navbar', () => {
   it('renders the navbar with logo and user avatar', () => {
     renderNavbar();
 
-    expect(screen.getAllByText('Dataplex')).toHaveLength(1); // Mobile logo only when on /home
-    expect(screen.getByText('Universal Catalog')).toBeInTheDocument();
-    expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+    expect(screen.getAllByText('Knowledge')).toHaveLength(1); // Mobile logo only when on /home
+    expect(screen.getByText('Catalog')).toBeInTheDocument();
+    expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
     expect(screen.getByAltText('Test User')).toBeInTheDocument();
   });
 
@@ -184,7 +185,7 @@ describe('Navbar', () => {
 
     // Admin Panel icon is commented out in the actual component
     expect(screen.getByLabelText('Guide')).toBeInTheDocument();
-    expect(screen.getByLabelText('Help')).toBeInTheDocument();
+    expect(screen.getByLabelText('Feedback')).toBeInTheDocument();
   });
 
   it('renders search bar when searchBar prop is true', () => {
@@ -203,7 +204,7 @@ describe('Navbar', () => {
   it('navigates to home when logo is clicked', () => {
     renderNavbar();
     
-    const logos = screen.getAllByText('Dataplex');
+    const logos = screen.getAllByText('Knowledge');
     fireEvent.click(logos[0]); // Click the first logo (desktop version)
     
     expect(mockNavigate).toHaveBeenCalledWith('/home');
@@ -221,7 +222,7 @@ describe('Navbar', () => {
   it('opens feedback dialog when help icon is clicked', () => {
     renderNavbar();
 
-    const helpButton = screen.getByLabelText('Help');
+    const helpButton = screen.getByLabelText('Feedback');
     fireEvent.click(helpButton);
 
     // Help icon opens feedback dialog, not navigate
@@ -289,7 +290,7 @@ describe('Navbar', () => {
 
     // Admin Panel is commented out in the component
     expect(screen.getByText('Guide')).toBeInTheDocument();
-    expect(screen.getByText('Help')).toBeInTheDocument();
+    expect(screen.getByText('Feedback')).toBeInTheDocument();
   });
 
   it('calls handleNavSearch when search is submitted', () => {
@@ -319,14 +320,14 @@ describe('Navbar', () => {
     expect(screen.getByLabelText('Open settings')).toBeInTheDocument();
     // Admin Panel is commented out in the component
     expect(screen.getByLabelText('Guide')).toBeInTheDocument();
-    expect(screen.getByLabelText('Help')).toBeInTheDocument();
+    expect(screen.getByLabelText('Feedback')).toBeInTheDocument();
   });
 
   it('has proper alt text for images', () => {
     renderNavbar();
 
     // Only mobile logo on /home page (desktop logo uses different alt text)
-    expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+    expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
     expect(screen.getByAltText('Test User')).toBeInTheDocument();
   });
 
@@ -347,7 +348,7 @@ describe('Navbar', () => {
     );
 
     // Should still render without crashing
-    expect(screen.getAllByText('Dataplex')).toHaveLength(1); // Mobile logo
+    expect(screen.getAllByText('Knowledge')).toHaveLength(1); // Mobile logo
   });
 
   it('uses default props when not provided', () => {
@@ -370,7 +371,7 @@ describe('Navbar', () => {
         renderNavbar();
 
         // Desktop logo should be visible
-        const desktopLogos = screen.getAllByAltText('Dataplex Universal Catalog');
+        const desktopLogos = screen.getAllByAltText('Knowledge Catalog');
         expect(desktopLogos.length).toBeGreaterThan(0);
       });
 
@@ -379,7 +380,7 @@ describe('Navbar', () => {
         renderNavbar();
 
         // Only mobile logo should be present
-        const logos = screen.queryAllByAltText('Dataplex Universal Catalog');
+        const logos = screen.queryAllByAltText('Knowledge Catalog');
         // Mobile logo always renders, desktop logo should not
         expect(logos.length).toBeLessThanOrEqual(1);
       });
@@ -388,7 +389,7 @@ describe('Navbar', () => {
         mockLocation = { pathname: '/guide' };
         renderNavbar();
 
-        const logos = screen.queryAllByAltText('Dataplex Universal Catalog');
+        const logos = screen.queryAllByAltText('Knowledge Catalog');
         expect(logos.length).toBeLessThanOrEqual(1);
       });
 
@@ -396,7 +397,7 @@ describe('Navbar', () => {
         mockLocation = { pathname: '/admin-panel' };
         renderNavbar();
 
-        const logos = screen.queryAllByAltText('Dataplex Universal Catalog');
+        const logos = screen.queryAllByAltText('Knowledge Catalog');
         expect(logos.length).toBeLessThanOrEqual(1);
       });
     });
@@ -486,7 +487,7 @@ describe('Navbar', () => {
     it('opens feedback dialog when desktop Help icon is clicked', () => {
       renderNavbar();
 
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
 
       const feedbackDialog = screen.getByTestId('send-feedback');
@@ -501,7 +502,7 @@ describe('Navbar', () => {
       fireEvent.click(menuButton);
 
       // Click Help in mobile menu
-      const helpMenuItem = screen.getByText('Help');
+      const helpMenuItem = screen.getByText('Feedback');
       fireEvent.click(helpMenuItem);
 
       const feedbackDialog = screen.getByTestId('send-feedback');
@@ -512,7 +513,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Open feedback dialog
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
 
       // Close it
@@ -527,7 +528,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Open feedback dialog
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
 
       // Submit feedback
@@ -552,7 +553,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Submit feedback
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
       const submitButton = screen.getByTestId('submit-feedback');
       fireEvent.click(submitButton);
@@ -566,7 +567,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Show notification
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
       const submitButton = screen.getByTestId('submit-feedback');
       fireEvent.click(submitButton);
@@ -582,7 +583,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Show notification
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
       const submitButton = screen.getByTestId('submit-feedback');
       fireEvent.click(submitButton);
@@ -601,7 +602,7 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Show notification
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
       fireEvent.click(helpButton);
       const submitButton = screen.getByTestId('submit-feedback');
       fireEvent.click(submitButton);
@@ -635,7 +636,7 @@ describe('Navbar', () => {
         </Provider>
       );
 
-      const logos = screen.getAllByText('Dataplex');
+      const logos = screen.getAllByText('Knowledge');
       fireEvent.click(logos[0]); // Click desktop logo
 
       expect(mockUpdateUser).toHaveBeenCalledWith(
@@ -673,7 +674,7 @@ describe('Navbar', () => {
       );
 
       // Click mobile logo since desktop logo doesn't render on /home without condition
-      const logos = screen.getAllByText('Dataplex');
+      const logos = screen.getAllByText('Knowledge');
       fireEvent.click(logos[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith('/home');
@@ -697,14 +698,6 @@ describe('Navbar', () => {
   });
 
   describe('Redux integration', () => {
-    it('dispatches searchResourcesByTerm on component mount', () => {
-      mockDispatch.mockClear();
-      renderNavbar();
-
-      // Should dispatch on mount via useEffect
-      expect(mockDispatch).toHaveBeenCalled();
-    });
-
     it('dispatches setItemsStoreData before search', () => {
       renderNavbar({ searchBar: true });
 
@@ -775,7 +768,7 @@ describe('Navbar', () => {
       expect(screen.getByText('Guide')).toBeInTheDocument();
 
       // Menu is open
-      expect(screen.getByText('Help')).toBeInTheDocument();
+      expect(screen.getByText('Feedback')).toBeInTheDocument();
     });
 
     it('mobile menu Guide item navigates correctly', () => {
@@ -799,7 +792,7 @@ describe('Navbar', () => {
     it('handles multiple rapid logo clicks', () => {
       renderNavbar();
 
-      const logos = screen.getAllByText('Dataplex');
+      const logos = screen.getAllByText('Knowledge');
       fireEvent.click(logos[0]);
       fireEvent.click(logos[0]);
       fireEvent.click(logos[0]);
@@ -811,7 +804,7 @@ describe('Navbar', () => {
     it('handles opening feedback dialog multiple times', () => {
       renderNavbar();
 
-      const helpButton = screen.getByLabelText('Help');
+      const helpButton = screen.getByLabelText('Feedback');
 
       // Open
       fireEvent.click(helpButton);
@@ -849,8 +842,8 @@ describe('Navbar', () => {
       renderNavbar();
 
       // Mobile logo uses text labels, not an img tag
-      expect(screen.getByText('Dataplex')).toBeInTheDocument();
-      expect(screen.getByText('Universal Catalog')).toBeInTheDocument();
+      expect(screen.getByText('Knowledge')).toBeInTheDocument();
+      expect(screen.getByText('Catalog')).toBeInTheDocument();
     });
 
     it('renders correctly with all props combinations', () => {

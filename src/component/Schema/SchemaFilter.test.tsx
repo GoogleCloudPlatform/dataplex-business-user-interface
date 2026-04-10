@@ -85,7 +85,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("renders filter text input", () => {
@@ -129,7 +129,7 @@ describe("SchemaFilter", () => {
       );
 
       // Component should render without error with sx prop
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("calls onFilteredEntryChange on initial render", () => {
@@ -202,7 +202,7 @@ describe("SchemaFilter", () => {
       expect(input).toHaveValue("");
     });
 
-    it("filters by name field", async () => {
+    it("filters by name field (default property on Enter)", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -214,9 +214,10 @@ describe("SchemaFilter", () => {
 
       const input = screen.getByPlaceholderText("Enter property name or value");
       fireEvent.change(input, { target: { value: "email" } });
+      fireEvent.keyDown(input, { key: "Enter" });
 
       await waitFor(() => {
-        // Check that filtered entry is called with filtered data
+        // Pressing Enter with no selected property creates a Name chip (default)
         const lastCall =
           mockOnFilteredEntryChange.mock.calls[
             mockOnFilteredEntryChange.mock.calls.length - 1
@@ -224,11 +225,12 @@ describe("SchemaFilter", () => {
         const filteredValues =
           lastCall.aspects["123.global.schema"].data.fields.fields.listValue
             .values;
-        expect(filteredValues.length).toBeLessThan(defaultSchemaFields.length);
+        // Should match 'email' field by name
+        expect(filteredValues.length).toBe(1);
       });
     });
 
-    it("filters by type field (case insensitive)", async () => {
+    it("filters by type field via dropdown selection", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -238,8 +240,18 @@ describe("SchemaFilter", () => {
         />
       );
 
-      const input = screen.getByPlaceholderText("Enter property name or value");
-      fireEvent.change(input, { target: { value: "int64" } });
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
+      await waitFor(() => {
+        expect(screen.getByText("Type")).toBeInTheDocument();
+      });
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
+      await waitFor(() => {
+        expect(screen.getByText("INT64")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("INT64").closest("li")!);
+
+      // Close menu
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
       await waitFor(() => {
         const lastCall =
@@ -254,7 +266,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("filters by mode field", async () => {
+    it("filters by mode field via dropdown selection", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -264,8 +276,18 @@ describe("SchemaFilter", () => {
         />
       );
 
-      const input = screen.getByPlaceholderText("Enter property name or value");
-      fireEvent.change(input, { target: { value: "REQUIRED" } });
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
+      await waitFor(() => {
+        expect(screen.getByText("Mode")).toBeInTheDocument();
+      });
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
+      await waitFor(() => {
+        expect(screen.getByText("REQUIRED")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("REQUIRED").closest("li")!);
+
+      // Close menu
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
       await waitFor(() => {
         const lastCall =
@@ -280,7 +302,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("filters by description field", async () => {
+    it("filters by description field via text input", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -290,8 +312,16 @@ describe("SchemaFilter", () => {
         />
       );
 
-      const input = screen.getByPlaceholderText("Enter property name or value");
+      // Click on search input to open menu (text properties only visible via search trigger)
+      fireEvent.click(screen.getByPlaceholderText("Enter property name or value"));
+      await waitFor(() => {
+        expect(screen.getByText("Description")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("Description").closest('[role="menuitem"]')!);
+
+      const input = screen.getByPlaceholderText("Enter Description value...");
       fireEvent.change(input, { target: { value: "Primary" } });
+      fireEvent.keyDown(input, { key: "Enter" });
 
       await waitFor(() => {
         const lastCall =
@@ -305,7 +335,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("filters by metaDataType field", async () => {
+    it("filters by metaDataType field via dropdown selection", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -315,8 +345,18 @@ describe("SchemaFilter", () => {
         />
       );
 
-      const input = screen.getByPlaceholderText("Enter property name or value");
-      fireEvent.change(input, { target: { value: "primitive" } });
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
+      await waitFor(() => {
+        expect(screen.getByText("Metadata Type")).toBeInTheDocument();
+      });
+      fireEvent.mouseEnter(screen.getByText("Metadata Type").closest('[role="menuitem"]')!);
+      await waitFor(() => {
+        expect(screen.getByText("PRIMITIVE")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("PRIMITIVE").closest("li")!);
+
+      // Close menu
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
       await waitFor(() => {
         const lastCall =
@@ -331,7 +371,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("filters by defaultValue field", async () => {
+    it("filters by defaultValue field via dropdown selection", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -341,8 +381,18 @@ describe("SchemaFilter", () => {
         />
       );
 
-      const input = screen.getByPlaceholderText("Enter property name or value");
-      fireEvent.change(input, { target: { value: "true" } });
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
+      await waitFor(() => {
+        expect(screen.getByText("Default Value")).toBeInTheDocument();
+      });
+      fireEvent.mouseEnter(screen.getByText("Default Value").closest('[role="menuitem"]')!);
+      await waitFor(() => {
+        expect(screen.getByText("true")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText("true").closest("li")!);
+
+      // Close menu
+      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
       await waitFor(() => {
         const lastCall =
@@ -377,7 +427,7 @@ describe("SchemaFilter", () => {
       fireEvent.click(filterButton!);
 
       await waitFor(() => {
-        expect(screen.getByText("Select Property to Filter")).toBeInTheDocument();
+        expect(screen.getByText("Name")).toBeInTheDocument();
       });
     });
 
@@ -391,14 +441,14 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
-        expect(screen.getByText("Select Property to Filter")).toBeInTheDocument();
+        expect(screen.getByText("Name")).toBeInTheDocument();
       });
     });
 
-    it("shows all property names in menu (non-preview mode)", async () => {
+    it("shows only dropdown/both property names in filter icon menu (non-preview mode)", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -409,7 +459,8 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      // Filter icon menu should only show dropdown/both properties, not text-only
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Name")).toBeInTheDocument();
@@ -417,7 +468,8 @@ describe("SchemaFilter", () => {
         expect(screen.getByText("Metadata Type")).toBeInTheDocument();
         expect(screen.getByText("Mode")).toBeInTheDocument();
         expect(screen.getByText("Default Value")).toBeInTheDocument();
-        expect(screen.getByText("Description")).toBeInTheDocument();
+        // Description is text-only, so it should NOT appear in filter icon menu
+        expect(screen.queryByText("Description")).not.toBeInTheDocument();
       });
     });
 
@@ -432,7 +484,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Name")).toBeInTheDocument();
@@ -455,23 +507,23 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
-        expect(screen.getByText("Filter by: Type")).toBeInTheDocument();
+        // Sub-menu values should be visible on hover
         expect(screen.getByText("INT64")).toBeInTheDocument();
         expect(screen.getByText("STRING")).toBeInTheDocument();
         expect(screen.getByText("BOOLEAN")).toBeInTheDocument();
       });
     });
 
-    it("shows back button when property is selected", async () => {
+    it("shows sub-menu values when property is hovered", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -481,45 +533,16 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
-        expect(screen.getByText("← Back to Properties")).toBeInTheDocument();
-      });
-    });
-
-    it("goes back to properties when back button is clicked", async () => {
-      const entry = createMockEntry("123", defaultSchemaFields);
-
-      render(
-        <SchemaFilter
-          entry={entry}
-          onFilteredEntryChange={mockOnFilteredEntryChange}
-        />
-      );
-
-      fireEvent.click(screen.getByText("Filter"));
-
-      await waitFor(() => {
-        expect(screen.getByText("Type")).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText("Type"));
-
-      await waitFor(() => {
-        expect(screen.getByText("← Back to Properties")).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByText("← Back to Properties"));
-
-      await waitFor(() => {
-        expect(screen.getByText("Select Property to Filter")).toBeInTheDocument();
+        expect(screen.getByText("INT64")).toBeInTheDocument();
       });
     });
 
@@ -533,10 +556,10 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
-        expect(screen.getByText("Select Property to Filter")).toBeInTheDocument();
+        expect(screen.getByText("Name")).toBeInTheDocument();
       });
 
       // Press Escape to close the menu
@@ -545,7 +568,7 @@ describe("SchemaFilter", () => {
 
       await waitFor(() => {
         expect(
-          screen.queryByText("Select Property to Filter")
+          screen.queryByText("Name")
         ).not.toBeInTheDocument();
       });
     });
@@ -566,13 +589,13 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
@@ -596,13 +619,13 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
@@ -638,13 +661,13 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
@@ -669,26 +692,19 @@ describe("SchemaFilter", () => {
       );
 
       // First selection
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
       });
       const int64MenuItem = screen.getByText("INT64").closest("li");
       fireEvent.click(int64MenuItem!);
 
-      // Go back to properties
-      fireEvent.click(screen.getByText("← Back to Properties"));
-
-      await waitFor(() => {
-        expect(screen.getByText("Select Property to Filter")).toBeInTheDocument();
-      });
-
-      // Select Type again
-      fireEvent.click(screen.getByText("Type"));
+      // Hover Type again to re-enter sub-menu
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       // INT64 should be pre-selected
       await waitFor(() => {
@@ -727,11 +743,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
@@ -757,11 +773,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
@@ -787,11 +803,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
@@ -799,16 +815,22 @@ describe("SchemaFilter", () => {
       const requiredMenuItem = screen.getByText("REQUIRED").closest("li");
       fireEvent.click(requiredMenuItem!);
 
-      // Close menu to see chips
-      fireEvent.keyDown(document.body, { key: "Escape" });
+      // Close menu by clicking backdrop
+      const backdrop = document.querySelector('.MuiBackdrop-root');
+      if (backdrop) fireEvent.click(backdrop);
 
       await waitFor(() => {
         expect(screen.getByText("Mode:")).toBeInTheDocument();
+        // Verify menu is closed by checking buttons are accessible
+        expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
       });
 
-      // Find and click the × button
-      const removeButton = screen.getByText("×").closest("button");
-      fireEvent.click(removeButton!);
+      // Find and click the chip close button (CloseIcon inside chip area)
+      const chipCloseButtons = screen.getAllByRole('button').filter(btn => {
+        const svg = btn.querySelector('[data-testid="CloseIcon"]');
+        return svg && btn.closest('[class*="MuiBox-root"]');
+      });
+      fireEvent.click(chipCloseButtons[chipCloseButtons.length - 1]);
 
       await waitFor(() => {
         expect(screen.queryByText("Mode:")).not.toBeInTheDocument();
@@ -826,23 +848,19 @@ describe("SchemaFilter", () => {
       );
 
       // Add first filter (Mode)
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
       const requiredMenuItem = screen.getByText("REQUIRED").closest("li");
       fireEvent.click(requiredMenuItem!);
 
-      // Go back and add second filter (Type)
-      fireEvent.click(screen.getByText("← Back to Properties"));
-      await waitFor(() => {
-        expect(screen.getByText("Type")).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText("Type"));
+      // Hover Type to add second filter
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
       });
@@ -896,11 +914,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
@@ -932,11 +950,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
       });
@@ -972,7 +990,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
       expect(mockOnFilteredEntryChange).toHaveBeenCalledWith(entry);
     });
 
@@ -984,7 +1002,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("handles missing aspects", () => {
@@ -997,7 +1015,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("handles entry with undefined entryType", () => {
@@ -1010,7 +1028,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("handles fields with missing optional properties", () => {
@@ -1037,7 +1055,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
 
     it("filters properties that have no valid data", async () => {
@@ -1056,13 +1074,13 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
 
       await waitFor(() => {
-        // Description and Default Value should not appear since all values are '-'
+        // Description is text-mode so it is hidden from filter icon menu; Default Value has no valid data so also hidden
         expect(screen.queryByText("Description")).not.toBeInTheDocument();
         expect(screen.queryByText("Default Value")).not.toBeInTheDocument();
-        // But other properties should appear
+        // Dropdown/both properties should appear
         expect(screen.getByText("Name")).toBeInTheDocument();
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
@@ -1092,7 +1110,7 @@ describe("SchemaFilter", () => {
         />
       );
 
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
   });
 
@@ -1111,11 +1129,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Name")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Name"));
+      fireEvent.mouseEnter(screen.getByText("Name").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         expect(screen.getByText("id")).toBeInTheDocument();
@@ -1136,11 +1154,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Mode")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Mode"));
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
@@ -1158,11 +1176,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         const menuItems = screen.getAllByRole("menuitem");
@@ -1185,11 +1203,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Default Value")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Default Value"));
+      fireEvent.mouseEnter(screen.getByText("Default Value").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
         // Should show actual values, not '-'
@@ -1204,7 +1222,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("excludes '-' from Description options", async () => {
+    it("Description is text-mode and enters text input on click", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -1214,16 +1232,16 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      // Text properties are accessible via search input click, not filter icon
+      fireEvent.click(screen.getByPlaceholderText("Enter property name or value"));
       await waitFor(() => {
         expect(screen.getByText("Description")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Description"));
+      // Clicking Description enters text-input mode (no submenu)
+      fireEvent.click(screen.getByText("Description").closest('[role="menuitem"]')!);
 
       await waitFor(() => {
-        // Should show actual descriptions
-        expect(screen.getByText("Primary key")).toBeInTheDocument();
-        expect(screen.getByText("User name")).toBeInTheDocument();
+        expect(screen.getByPlaceholderText("Enter Description value...")).toBeInTheDocument();
       });
     });
   });
@@ -1244,23 +1262,19 @@ describe("SchemaFilter", () => {
       );
 
       // Add Type filter
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
       });
       const int64Item = screen.getByText("INT64").closest("li");
       fireEvent.click(int64Item!);
 
-      // Go back and add Mode filter
-      fireEvent.click(screen.getByText("← Back to Properties"));
-      await waitFor(() => {
-        expect(screen.getByText("Mode")).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText("Mode"));
+      // Hover Mode to add Mode filter
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("REQUIRED")).toBeInTheDocument();
       });
@@ -1298,35 +1312,27 @@ describe("SchemaFilter", () => {
       );
 
       // Add Type filter with INT64
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("INT64")).toBeInTheDocument();
       });
       const int64Item = screen.getByText("INT64").closest("li");
       fireEvent.click(int64Item!);
 
-      // Go back and add Mode filter
-      fireEvent.click(screen.getByText("← Back to Properties"));
-      await waitFor(() => {
-        expect(screen.getByText("Mode")).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText("Mode"));
+      // Hover Mode to add Mode filter
+      fireEvent.mouseEnter(screen.getByText("Mode").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("NULLABLE")).toBeInTheDocument();
       });
       const nullableItem = screen.getByText("NULLABLE").closest("li");
       fireEvent.click(nullableItem!);
 
-      // Now go back and update Type filter by adding STRING
-      fireEvent.click(screen.getByText("← Back to Properties"));
-      await waitFor(() => {
-        expect(screen.getByText("Type")).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText("Type"));
+      // Hover Type to update Type filter by adding STRING
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("STRING")).toBeInTheDocument();
       });
@@ -1355,11 +1361,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Metadata Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Metadata Type"));
+      fireEvent.mouseEnter(screen.getByText("Metadata Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("PRIMITIVE")).toBeInTheDocument();
       });
@@ -1385,11 +1391,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Default Value")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Default Value"));
+      fireEvent.mouseEnter(screen.getByText("Default Value").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("0")).toBeInTheDocument();
       });
@@ -1414,7 +1420,7 @@ describe("SchemaFilter", () => {
       });
     });
 
-    it("filters by Description property", async () => {
+    it("filters by Description property via text input", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -1424,20 +1430,16 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      // Click search input to open menu (text properties visible via search trigger)
+      fireEvent.click(screen.getByPlaceholderText("Enter property name or value"));
       await waitFor(() => {
         expect(screen.getByText("Description")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Description"));
-      await waitFor(() => {
-        expect(screen.getByText("Primary key")).toBeInTheDocument();
-      });
+      fireEvent.click(screen.getByText("Description").closest('[role="menuitem"]')!);
 
-      const primaryKeyItem = screen.getByText("Primary key").closest("li");
-      fireEvent.click(primaryKeyItem!);
-
-      // Close menu
-      fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+      const input = screen.getByPlaceholderText("Enter Description value...");
+      fireEvent.change(input, { target: { value: "Primary key" } });
+      fireEvent.keyDown(input, { key: "Enter" });
 
       await waitFor(() => {
         expect(screen.getByText("Description:")).toBeInTheDocument();
@@ -1454,11 +1456,11 @@ describe("SchemaFilter", () => {
         />
       );
 
-      fireEvent.click(screen.getByText("Filter"));
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Name")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Name"));
+      fireEvent.mouseEnter(screen.getByText("Name").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("id")).toBeInTheDocument();
       });
@@ -1515,7 +1517,7 @@ describe("SchemaFilter", () => {
       );
 
       // The Filter text should be clickable
-      expect(screen.getByText("Filter")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter property name or value")).toBeInTheDocument();
     });
   });
 
@@ -1524,7 +1526,7 @@ describe("SchemaFilter", () => {
   // ==========================================================================
 
   describe("Integration Tests", () => {
-    it("complete workflow: filter by text, add property filter, clear all", async () => {
+    it("complete workflow: filter by text chip, add property filter, clear all", async () => {
       const entry = createMockEntry("123", defaultSchemaFields);
 
       render(
@@ -1534,30 +1536,21 @@ describe("SchemaFilter", () => {
         />
       );
 
-      // Step 1: Text filter
+      // Step 1: Text filter via Enter (creates global search chip without property key)
       const input = screen.getByPlaceholderText("Enter property name or value");
-      fireEvent.change(input, { target: { value: "INT" } });
+      fireEvent.change(input, { target: { value: "id" } });
+      fireEvent.keyDown(input, { key: "Enter" });
 
       await waitFor(() => {
-        const lastCall =
-          mockOnFilteredEntryChange.mock.calls[
-            mockOnFilteredEntryChange.mock.calls.length - 1
-          ][0];
-        const filteredValues =
-          lastCall.aspects["123.global.schema"].data.fields.fields.listValue
-            .values;
-        expect(filteredValues.length).toBe(2); // id and age
+        expect(screen.getByText("id")).toBeInTheDocument();
       });
 
-      // Step 2: Clear text and add property filter
-      const closeButton = screen.getByTestId("CloseIcon").closest("button");
-      fireEvent.click(closeButton!);
-
-      fireEvent.click(screen.getByText("Filter"));
+      // Step 2: Add property filter via dropdown
+      fireEvent.click(screen.getByTestId("FilterListIcon").closest("button")!);
       await waitFor(() => {
         expect(screen.getByText("Type")).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByText("Type"));
+      fireEvent.mouseEnter(screen.getByText("Type").closest('[role="menuitem"]')!);
       await waitFor(() => {
         expect(screen.getByText("BOOLEAN")).toBeInTheDocument();
       });
@@ -1576,6 +1569,7 @@ describe("SchemaFilter", () => {
 
       await waitFor(() => {
         expect(screen.queryByText("Type:")).not.toBeInTheDocument();
+        expect(screen.queryByText("Name:")).not.toBeInTheDocument();
       });
     });
   });

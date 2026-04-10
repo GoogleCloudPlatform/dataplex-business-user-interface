@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -13,7 +13,8 @@ import {
   InputAdornment,
   Tooltip
 } from '@mui/material';
-import { FilterList, Close } from '@mui/icons-material';
+import { FilterList, Close, KeyboardArrowRight } from '@mui/icons-material';
+import OverflowTooltip from '../Common/OverflowTooltip';
 
 /**
  * @file TableFilter.tsx
@@ -52,33 +53,48 @@ interface TableFilterProps {
   data: any[];
   columns: string[];
   onFilteredDataChange: (filteredData: any[]) => void;
+  /** Filter bar visual variant: "pill" (rounded, default) or "classic" (rectangular top-bar) */
+  variant?: 'pill' | 'classic';
 }
 
 const TableFilter: React.FC<TableFilterProps> = ({
   data,
   columns,
-  onFilteredDataChange
+  onFilteredDataChange,
+  variant = 'pill'
 }) => {
   const [filterText, setFilterText] = useState('');
   const [isFilterExpanded, setIsFilterExpanded] = useState(true);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedProperty, setSelectedProperty] = useState<string>('');
+  const [hoveredProperty, setHoveredProperty] = useState<string | null>(null);
+  const [subMenuAnchorEl, setSubMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<Array<{property: string, values: string[]}>>([]);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterBarRef = React.useRef<HTMLDivElement>(null);
+
+  // Unwrap nested objects like { value: "2012-01-03" } to their inner value
+  const resolveValue = (val: any): string => {
+    if (val == null) return '';
+    if (typeof val === 'object' && val.value !== undefined) return String(val.value);
+    if (typeof val === 'object') return '';
+    return String(val);
+  };
 
   // Get unique values for selected property with error handling
   const getPropertyValues = (property: string) => {
     const values = new Set<string>();
-    
+
     try {
       if (!Array.isArray(data) || data.length === 0) {
         return [];
       }
-      
+
       data.forEach((row: any, index: number) => {
         try {
           if (row && typeof row === 'object' && row[property] !== undefined && row[property] !== null) {
-            values.add(String(row[property]));
+            const resolved = resolveValue(row[property]);
+            if (resolved) values.add(resolved);
           }
         } catch (rowError) {
           console.warn(`Error processing row ${index} for property ${property}:`, rowError);
@@ -88,7 +104,7 @@ const TableFilter: React.FC<TableFilterProps> = ({
       console.error('Error getting property values:', error);
       return [];
     }
-    
+
     return Array.from(values).sort();
   };
 
@@ -108,10 +124,10 @@ const TableFilter: React.FC<TableFilterProps> = ({
             if (!row || typeof row !== 'object') {
               return false;
             }
-            
+
             return activeFilters.every(filter => {
               try {
-                const cellValue = String(row[filter.property] ?? '');
+                const cellValue = resolveValue(row[filter.property]);
                 return filter.values.includes(cellValue);
               } catch (filterError) {
                 console.warn(`Error applying filter for property ${filter.property} on row ${index}:`, filterError);
@@ -132,10 +148,10 @@ const TableFilter: React.FC<TableFilterProps> = ({
             if (!row || typeof row !== 'object') {
               return false;
             }
-            
+
             return columns.some((col) => {
               try {
-                return String(row[col] ?? '').toLowerCase().includes(filterText.toLowerCase());
+                return resolveValue(row[col]).toLowerCase().includes(filterText.toLowerCase());
               } catch (colError) {
                 console.warn(`Error searching column ${col} on row ${index}:`, colError);
                 return false;
@@ -186,14 +202,11 @@ const TableFilter: React.FC<TableFilterProps> = ({
   // Handle focus management for accessibility
   React.useEffect(() => {
     if (filterAnchorEl) {
-      // Menu is open - ensure focus is properly managed
       const menuElement = document.querySelector('[role="menu"]');
       if (menuElement) {
-        // Remove aria-hidden from menu when open
         menuElement.removeAttribute('aria-hidden');
       }
     } else {
-      // Menu is closed - ensure no focus remains on menu items
       const menuItems = document.querySelectorAll('[role="menuitem"]');
       menuItems.forEach(item => {
         if (item instanceof HTMLElement) {
@@ -203,49 +216,73 @@ const TableFilter: React.FC<TableFilterProps> = ({
     }
   }, [filterAnchorEl]);
 
+  // Cleanup hover timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
   // Filter event handlers
-  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
-    setFilterAnchorEl(event.currentTarget);
+  const handleFilterClick = () => {
+    setFilterAnchorEl(filterBarRef.current);
   };
 
   const handleFilterClose = () => {
     setFilterAnchorEl(null);
+    setHoveredProperty(null);
+    setSubMenuAnchorEl(null);
   };
 
-  const handlePropertySelect = (property: string) => {
-    setSelectedProperty(property);
-    
-    // Check if this property already has an active filter and pre-select those values
+  // Hover handlers for cascading menu
+  const handlePropertyMouseEnter = (property: string, event: React.MouseEvent<HTMLElement>) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoveredProperty(property);
+    setSubMenuAnchorEl(event.currentTarget);
     const existingFilter = activeFilters.find(f => f.property === property);
     setSelectedValues(existingFilter ? existingFilter.values : []);
   };
 
+  const handlePropertyMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredProperty(null);
+      setSubMenuAnchorEl(null);
+    }, 300);
+  };
+
+  const handleSubMenuMouseEnter = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+  };
+
+  const handleSubMenuMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredProperty(null);
+      setSubMenuAnchorEl(null);
+    }, 300);
+  };
+
   const handleValueToggle = (value: string) => {
-    const newSelectedValues = selectedValues.includes(value) 
+    const newSelectedValues = selectedValues.includes(value)
       ? selectedValues.filter(v => v !== value)
       : [...selectedValues, value];
-    
+
     setSelectedValues(newSelectedValues);
-    
+
     // Auto-apply filter when values change
-    if (selectedProperty && newSelectedValues.length > 0) {
-      // Check if this property already has an active filter
-      const existingFilterIndex = activeFilters.findIndex(f => f.property === selectedProperty);
-      
+    if (hoveredProperty && newSelectedValues.length > 0) {
+      const existingFilterIndex = activeFilters.findIndex(f => f.property === hoveredProperty);
+
       if (existingFilterIndex >= 0) {
-        // Update existing filter
-        setActiveFilters(prev => prev.map((filter, index) => 
-          index === existingFilterIndex 
+        setActiveFilters(prev => prev.map((filter, index) =>
+          index === existingFilterIndex
             ? { ...filter, values: newSelectedValues }
             : filter
         ));
       } else {
-        // Add new filter
-        setActiveFilters(prev => [...prev, { property: selectedProperty, values: newSelectedValues }]);
+        setActiveFilters(prev => [...prev, { property: hoveredProperty, values: newSelectedValues }]);
       }
-    } else if (selectedProperty && newSelectedValues.length === 0) {
-      // Remove filter if no values are selected
-      setActiveFilters(prev => prev.filter(f => f.property !== selectedProperty));
+    } else if (hoveredProperty && newSelectedValues.length === 0) {
+      setActiveFilters(prev => prev.filter(f => f.property !== hoveredProperty));
     }
   };
 
@@ -254,10 +291,11 @@ const TableFilter: React.FC<TableFilterProps> = ({
   };
 
   const handleClearFilters = () => {
-    setSelectedProperty('');
     setSelectedValues([]);
     setActiveFilters([]);
     setFilterAnchorEl(null);
+    setHoveredProperty(null);
+    setSubMenuAnchorEl(null);
     setFilterText('');
     setIsFilterExpanded(true);
   };
@@ -270,50 +308,45 @@ const TableFilter: React.FC<TableFilterProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
-          padding: '8px 16px 8px 10px',
-          border: '1px solid #DADCE0',
-          borderTopRightRadius: '8px',
-          borderTopLeftRadius: '8px',
-          backgroundColor: '#FFFFFF',
-          margin: '6px 0px 0px 0px',
-          borderBottom: 'none'
+          ...(variant === 'classic'
+            ? { padding: '8px 16px 8px 10px', border: '1px solid #DADCE0', borderTopRightRadius: '8px', borderTopLeftRadius: '8px', backgroundColor: '#FFFFFF', margin: '6px 0px 0px 0px', borderBottom: 'none' }
+            : { padding: '0px', backgroundColor: '#FFFFFF' }),
         }}>
           {/* Filter Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', height: '19px'  }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Tooltip title="Filter by selecting property and values" arrow>
+          <Box ref={filterBarRef} sx={variant === 'classic'
+            ? { display: 'flex', alignItems: 'center', gap: '4px', height: '19px' }
+            : { display: 'flex', alignItems: 'center', gap: '12px', height: '32px', border: '1px solid #DADCE0', borderRadius: '54px', padding: '8px 4px 8px 2px', boxSizing: 'border-box', width: '280px', minWidth: '280px', marginLeft: '20px' }
+          }>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <Tooltip title="Filter by selecting property and values" slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -4] } }] } }}>
                 <IconButton
                   size="small"
                   onClick={handleFilterClick}
                   sx={{
-                    padding: '4px 4px 5px 4px',
+                    padding: '4px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
                     '&:hover': {
                       backgroundColor: '#E8F4FF'
                     }
                   }}
                 >
-                  <FilterList sx={{ fontSize: '16px', color: '#1f1f1f' }} />
+                  <FilterList sx={{ fontSize: '20px', color: '#1f1f1f' }} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Filter by selecting property and values" arrow>
-                <Typography 
-                  variant="heading2Medium"
-                  onClick={handleFilterClick}
-                  sx={{
-                    fontFamily: 'Google Sans Text, sans-serif',
-                    fontWeight: 500,
-                    fontSize: '12px',
-                    lineHeight: '1.67em',
-                    color: '1f1f1f',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline'
-                    }
-                  }}
-                >
-                  Filter
-                </Typography>
-              </Tooltip>
+              <Typography
+                {...(variant === 'classic' ? { variant: 'heading2Medium' as any } : {})}
+                sx={{
+                  fontFamily: 'Google Sans Text, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '12px',
+                  lineHeight: '1.67em',
+                  color: '#1F1F1F',
+                }}
+              >
+                Filter
+              </Typography>
             </Box>
             <TextField
               value={filterText}
@@ -343,8 +376,9 @@ const TableFilter: React.FC<TableFilterProps> = ({
                   color: '#1F1F1F'
                 },
                 '& .MuiInputBase-input::placeholder': {
-                  color: '#575757',
-                  opacity: 1
+                  ...(variant === 'classic'
+                    ? { color: '#575757', opacity: 1 }
+                    : { color: '#5E5E5E', opacity: 1, fontFamily: '"Google Sans", sans-serif', fontWeight: 400, fontSize: '12px', lineHeight: '16px', letterSpacing: '0.1px' }),
                 }
               }}
               InputProps={{
@@ -370,6 +404,7 @@ const TableFilter: React.FC<TableFilterProps> = ({
                   textTransform: 'none',
                   padding: '2px 8px',
                   minWidth: 'auto',
+                  marginLeft: '-20px',
                   '&:hover': { backgroundColor: 'transparent', textDecoration: 'underline' }
                 }}
               >
@@ -377,14 +412,15 @@ const TableFilter: React.FC<TableFilterProps> = ({
               </Button>
             )}
           </Box>
-          
+
           {/* Active Filter Chips */}
           {activeFilters.length > 0 && (
-            <Box sx={{ 
-              display: 'flex', 
-              flexWrap: 'wrap', 
+            <Box sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
               gap: '6px',
-              paddingTop: '4px'
+              paddingTop: '4px',
+              marginLeft: variant === 'pill' ? '20px' : '0px'
             }}>
               {activeFilters.map((filter) => (
                 <Box
@@ -400,15 +436,15 @@ const TableFilter: React.FC<TableFilterProps> = ({
                     fontSize: '11px'
                   }}
                 >
-                  <Typography sx={{ 
-                    fontSize: '12px', 
+                  <Typography sx={{
+                    fontSize: '12px',
                     fontWeight: 500,
                     color: '#0E4DCA'
                   }}>
                     {filter.property}:
                   </Typography>
-                  <Typography sx={{ 
-                    fontSize: '12px', 
+                  <Typography sx={{
+                    fontSize: '12px',
                     color: '#1F1F1F'
                   }}>
                     {filter.values.join(', ')}
@@ -427,8 +463,8 @@ const TableFilter: React.FC<TableFilterProps> = ({
                       }
                     }}
                   >
-                    <Box sx={{ 
-                      fontSize: '12px', 
+                    <Box sx={{
+                      fontSize: '12px',
                       fontWeight: 'bold',
                       lineHeight: 1
                     }}>
@@ -442,7 +478,7 @@ const TableFilter: React.FC<TableFilterProps> = ({
         </Box>
       </Collapse>
 
-      {/* Filter Dropdown Menu */}
+      {/* Level 1: Property List Dropdown */}
       <Menu
         anchorEl={filterAnchorEl}
         open={Boolean(filterAnchorEl)}
@@ -450,124 +486,163 @@ const TableFilter: React.FC<TableFilterProps> = ({
         disableAutoFocus
         disableEnforceFocus
         disableRestoreFocus
-        PaperProps={{
-          sx: {
-            maxHeight: 300,
-            width: 250,
-            borderRadius: '8px',
-          },
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
         }}
         slotProps={{
           paper: {
             'aria-hidden': !Boolean(filterAnchorEl) ? 'true' : undefined,
+            style: {
+              width: filterBarRef.current ? `${filterBarRef.current.offsetWidth}px` : '350px',
+              minWidth: filterBarRef.current ? `${filterBarRef.current.offsetWidth}px` : '350px',
+              maxWidth: 'none',
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0px 2px 8.4px rgba(0, 0, 0, 0.15)',
+              borderRadius: '12px',
+              padding: '0px',
+              marginTop: '4px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+            },
           }
         }}
+        MenuListProps={{ disablePadding: true }}
       >
-        {!selectedProperty ? (
-          // Show property names as headers
-          <>
-            <MenuItem
-              sx={{
-                fontSize: "12px",
-                fontWeight: 500,
-                backgroundColor: "transparent !important",
-                borderBottom: "1px solid #E0E0E0",
-                height: "32px",
-                minHeight: "32px",
-                paddingTop: 0,
-                paddingBottom: 1,
-                "&.Mui-disabled": {
-                  opacity: 1,
-                  color: "#575757 !important",
-                  backgroundColor: "transparent !important",
-                },
-              }}
-              disabled
-            >
-              <ListItemText primary="Select Property to Filter" primaryTypographyProps={{
-          fontSize: '12px', fontWeight: 500
-        }}/>
-            </MenuItem>
-            {columns
-              .filter(property =>
-                data.some(row => row && row[property] != null && String(row[property]).trim() !== '')
-              )
-              .map((property) => (
-              <MenuItem 
-                key={property} 
-                onClick={() => handlePropertySelect(property)}
-                sx={{ 
-                  fontSize: '12px',
-                  '&:hover': { backgroundColor: '#F5F5F5' }
+        {columns
+          .filter(property =>
+            data.some(row => row && row[property] != null && resolveValue(row[property]).trim() !== '')
+          )
+          .map((property) => {
+            const isActive = activeFilters.some(f => f.property === property);
+            const isHovered = hoveredProperty === property;
+            return (
+              <MenuItem
+                key={property}
+                onMouseEnter={(e) => handlePropertyMouseEnter(property, e)}
+                onMouseLeave={handlePropertyMouseLeave}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  gap: '12px',
+                  height: '45px',
+                  minHeight: '45px',
+                  backgroundColor: isActive || isHovered ? '#EDF2FC' : 'transparent',
+                  '&:hover': { backgroundColor: '#EDF2FC' },
+                  '&:first-of-type': { borderRadius: '12px 12px 0 0' },
+                  '&:last-of-type': { borderRadius: '0 0 12px 12px' },
                 }}
-                tabIndex={Boolean(filterAnchorEl) ? 0 : -1}
               >
-                <ListItemText primary={property} primaryTypographyProps={{
-          fontSize: '12px',
-        }}/>
-              </MenuItem>
-            ))}
-          </>
-        ) : (
-          // Show values for selected property
-          <>
-            <MenuItem 
-              onClick={() => setSelectedProperty('')}
-              sx={{ 
-                fontSize: '12px', 
-                fontWeight: 600,
-                backgroundColor: '#F8F9FA',
-                borderBottom: '1px solid #E0E0E0',
-                marginTop: '-8px',
-                paddingTop: 1.30,
-                paddingBottom: 1.30,
-              }}
-              tabIndex={Boolean(filterAnchorEl) ? 0 : -1}
-            >
-              <ListItemText primary={`← Back to Properties`} primaryTypographyProps={{
-          fontSize: '12px',
-        }}/>
-            </MenuItem>
-            <MenuItem 
-              sx={{ 
-                fontSize: '12px', 
-                fontWeight: 600, 
-                backgroundColor: '#F8F9FA',
-                borderBottom: '1px solid #E0E0E0'
-              }}
-              disabled
-              tabIndex={-1}
-            >
-              <ListItemText primary={`Filter by: ${selectedProperty}`} primaryTypographyProps={{
-          fontSize: '12px',
-        }}/>
-            </MenuItem>
-            {getPropertyValues(selectedProperty).map((value) => (
-              <MenuItem 
-                key={value} 
-                onClick={() => handleValueToggle(value)}
-                sx={{ 
-                  fontSize: '12px',
-                  paddingTop: '2px',
-                  paddingBottom: '2px',
-                  paddingLeft: '8px',
-                  paddingRight: '8px',
-                  minHeight: 'auto',
-                  '&:hover': { backgroundColor: '#F5F5F5' }
-                }}
-                tabIndex={Boolean(filterAnchorEl) ? 0 : -1}
-              >
-                <Checkbox 
-                  checked={selectedValues.includes(value)}
-                  size="small"
-                  sx={{ marginRight: '8px' }}
-                  tabIndex={-1}
+                <ListItemText
+                  primary={
+                    <OverflowTooltip text={property}>
+                      <Typography
+                        sx={{
+                          fontFamily: 'Google Sans, sans-serif',
+                          fontSize: '14px',
+                          lineHeight: '20px',
+                          letterSpacing: '0.25px',
+                          color: '#44464F',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {property}
+                      </Typography>
+                    </OverflowTooltip>
+                  }
                 />
-                <ListItemText primary={value} sx={{ '& .MuiTypography-root': { fontSize: '12px' } }}/>
+                <KeyboardArrowRight sx={{ fontSize: '18px', color: '#44464F', marginLeft: 'auto', flexShrink: 0 }} />
               </MenuItem>
-            ))}
-          </>
-        )}
+            );
+          })}
+      </Menu>
+
+      {/* Level 2: Value Checkboxes Sub-Menu */}
+      <Menu
+        anchorEl={subMenuAnchorEl}
+        open={Boolean(subMenuAnchorEl) && Boolean(hoveredProperty)}
+        onClose={() => { setHoveredProperty(null); setSubMenuAnchorEl(null); }}
+        disableAutoFocus
+        disableEnforceFocus
+        disableRestoreFocus
+        sx={{ pointerEvents: 'none' }}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          onMouseEnter: handleSubMenuMouseEnter,
+          onMouseLeave: handleSubMenuMouseLeave,
+          sx: {
+            pointerEvents: 'auto',
+            width: '281px',
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0px 2px 8.4px rgba(0, 0, 0, 0.15)',
+            borderRadius: '12px',
+            padding: '0px',
+            maxHeight: '300px',
+            overflowY: 'auto',
+          }
+        }}
+        MenuListProps={{ disablePadding: true }}
+      >
+        {hoveredProperty && getPropertyValues(hoveredProperty).map((value) => (
+          <MenuItem
+            key={value}
+            onClick={() => handleValueToggle(value)}
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: '8px 12px',
+              gap: '12px',
+              height: '45px',
+              minHeight: '45px',
+              '&:hover': { backgroundColor: '#EDF2FC' },
+            }}
+          >
+            <Checkbox
+              checked={selectedValues.includes(value)}
+              size="small"
+              sx={{
+                padding: 0,
+                '&.Mui-checked': { color: '#0E4DCA' },
+              }}
+            />
+            <ListItemText
+              primary={
+                <OverflowTooltip text={value}>
+                  <Typography
+                    sx={{
+                      fontFamily: 'Roboto, sans-serif',
+                      fontSize: '14px',
+                      lineHeight: '20px',
+                      letterSpacing: '0.25px',
+                      color: '#44464F',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {value}
+                  </Typography>
+                </OverflowTooltip>
+              }
+            />
+          </MenuItem>
+        ))}
       </Menu>
     </>
   );

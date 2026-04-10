@@ -35,7 +35,7 @@ const initializeGmailClient = async (accessToken) => {
 };
 
 // Email template for access request
-const createAccessRequestEmail = (assetName, message, requesterEmail, projectId) => {
+const createAccessRequestEmail = (assetName, message, requesterEmail, projectId, isDataProductRequest, accessGroup) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -194,6 +194,13 @@ const createAccessRequestEmail = (assetName, message, requesterEmail, projectId)
           </div>
         </div>
         
+        ${isDataProductRequest ? `
+          <div class="section">
+            <div class="section-title">Request for Data Products and Access group</div>
+           <div class="info-value">${accessGroup?.displayName || 'N/A'} - ${accessGroup?.accessGroupEmail || 'No Email provided.'}</div>
+          </div>
+        ` : ''}
+
         <div class="section">
           <div class="section-title">Request Message</div>
           <div class="message-section">
@@ -211,7 +218,7 @@ const createAccessRequestEmail = (assetName, message, requesterEmail, projectId)
         </div>
         
         <div class="footer">
-          <p>This is an automated notification from Dataplex Universal Catalog.</p>
+          <p>This is an automated notification from Knowledge Catalog.</p>
           <p>You can manage access permissions directly in the 
             <a href="https://console.cloud.google.com/iam-admin/iam?project=${projectId}" class="console-link" style="color:#fff !important" target="_blank">
               Google Cloud Console
@@ -393,7 +400,7 @@ const createFeedbackEmail = ( message, requesterEmail, projectId) => {
         </div>
         
         <div class="footer">
-          <p>This is an automated notification from Dataplex Universal Catalog.</p>
+          <p>This is an automated notification from Knowledge Catalog.</p>
           <p>You can manage access permissions directly in the 
             <a href="https://console.cloud.google.com/iam-admin/iam?project=${projectId}" class="console-link" target="_blank">
               Google Cloud Console
@@ -430,12 +437,12 @@ const createGmailMessage = (to, subject, htmlContent, fromEmail) => {
 };
 
 // Send access request email using Gmail API
-const sendAccessRequestEmail = async (accessToken, assetName, message, requesterEmail, projectId, projectAdmin = []) => {
+const sendAccessRequestEmail = async (accessToken, assetName, message, requesterEmail, projectId, projectAdmin = [], isDataProductRequest = false, accessGroup = '') => {
     try {
     
     await initializeGmailClient(accessToken);
 
-    const emailContent = createAccessRequestEmail(assetName, message, requesterEmail, projectId);
+    const emailContent = createAccessRequestEmail(assetName, message, requesterEmail, projectId, isDataProductRequest, accessGroup);
     const fromEmail = requesterEmail
     
     // Use projectAdmin emails if available, otherwise fall back to test email

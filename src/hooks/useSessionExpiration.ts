@@ -1,7 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../auth/AuthProvider';
-import { useNotification } from '../contexts/NotificationContext';
-import { isAuthNotificationShown, setAuthNotificationShown } from '../services/authErrorService';
 
 interface SessionExpirationConfig {
   checkInterval?: number; // milliseconds
@@ -9,11 +7,31 @@ interface SessionExpirationConfig {
   onTokenExpired?: () => void;
 }
 
+/**
+ * Synchronously checks if the stored token is expired.
+ * Used for initial state to prevent flash of content on new tab load.
+ */
+function getInitialExpirationState(): { isExpired: boolean; reason: 'session_expired' | 'token_expired' | 'unauthorized' } {
+  try {
+    const storedData = JSON.parse(localStorage.getItem('sessionUserData') || 'null');
+    if (storedData?.tokenExpiry) {
+      const now = Date.now() / 1000;
+      if (storedData.tokenExpiry < now) {
+        return { isExpired: true, reason: 'token_expired' };
+      }
+    }
+    return { isExpired: false, reason: 'session_expired' };
+  } catch {
+    return { isExpired: false, reason: 'session_expired' };
+  }
+}
+
 export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
   const { user } = useAuth();
-  const { showError, showWarning } = useNotification();
-  const [isExpired, setIsExpired] = useState(false);
-  const [expirationReason, setExpirationReason] = useState<'session_expired' | 'token_expired' | 'unauthorized'>('session_expired');
+  const [isExpired, setIsExpired] = useState(() => getInitialExpirationState().isExpired);
+  const [expirationReason, setExpirationReason] = useState<'session_expired' | 'token_expired' | 'unauthorized'>(
+    () => getInitialExpirationState().reason
+  );
   
   const {
     checkInterval = 30000, // Check every 30 seconds by default
@@ -34,15 +52,8 @@ export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
       const storedData = JSON.parse(localStorage.getItem('sessionUserData') || 'null');
       if (storedData?.tokenExpiry && storedData.tokenExpiry < now) {
         setExpirationReason('token_expired');
-        if (!isAuthNotificationShown()) {
-          setAuthNotificationShown(true);
-          showError('Your access token has expired. You will be redirected to the login page.', 5000);
-        }
-        // Delay the expiration to allow user to see the notification
-        setTimeout(() => {
-          setIsExpired(true);
-          onTokenExpired?.();
-        }, 2000);
+        setIsExpired(true);
+        onTokenExpired?.();
         return;
       }
 
@@ -55,15 +66,8 @@ export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
       const storedToken = localStorage.getItem('sessionUserData');
       if (!storedToken) {
         setExpirationReason('session_expired');
-        if (!isAuthNotificationShown()) {
-          setAuthNotificationShown(true);
-          showWarning('Your session has expired. You will be redirected to the login page.', 5000);
-        }
-        // Delay the expiration to allow user to see the notification
-        setTimeout(() => {
-          setIsExpired(true);
-          onSessionExpired?.();
-        }, 2000);
+        setIsExpired(true);
+        onSessionExpired?.();
         return;
       }
 
@@ -89,11 +93,14 @@ export const useSessionExpiration = (config: SessionExpirationConfig = {}) => {
     return () => clearInterval(interval);
   }, [checkTokenValidity, checkInterval, user]);
 
-  // Reset expiration state when user changes
+  // Reset expiration state only when user actually changes (e.g., fresh login),
+  // not on initial mount where the expired token user is loaded from storage
+  const prevUserRef = useRef(user);
   useEffect(() => {
-    if (user) {
+    if (user && user !== prevUserRef.current) {
       setIsExpired(false);
     }
+    prevUserRef.current = user;
   }, [user]);
 
   const resetExpiration = useCallback(() => {

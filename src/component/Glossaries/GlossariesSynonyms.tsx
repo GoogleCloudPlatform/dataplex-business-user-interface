@@ -2,24 +2,22 @@ import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
-  InputBase,
   Chip,
   Card,
   CardContent,
-  Button,
   Menu,
   MenuItem,
-  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
-  Search,
   AccessTime,
   ExpandMore,
-  Sort,
 } from "@mui/icons-material";
 import { type GlossaryRelation } from "./GlossaryDataType";
 import { getIcon } from "./glossaryUIHelpers";
 import { getFormattedDateTimePartsByDateTime } from "../../utils/resourceUtils";
+import FilterBar from '../Common/FilterBar';
+import type { ActiveFilter, PropertyConfig } from '../Common/FilterBar';
 
 interface GlossariesSynonymsProps {
   relations: GlossaryRelation[];
@@ -34,6 +32,11 @@ interface GlossariesSynonymsProps {
   onItemClick: (id: string) => void;
 }
 
+const FILTER_PROPERTIES: PropertyConfig[] = [
+  { name: 'Name', mode: 'text' },
+  { name: 'Description', mode: 'text' },
+];
+
 const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
   relations,
   searchTerm,
@@ -47,8 +50,9 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
   onItemClick,
 }) => {
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
-  const handleSortClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
     setSortAnchorEl(event.currentTarget);
   };
 
@@ -79,25 +83,76 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
     });
   };
 
-  // searchedRelations is used for chip counts (only search filter applied)
+  // searchedRelations is used for chip counts (type filter not applied)
   const searchedRelations = useMemo(() => {
-    if (!searchTerm.trim()) return relations;
-    return relations.filter((r) =>
-      r.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [relations, searchTerm]);
+    if (activeFilters.length === 0) return relations;
+    return relations.filter((r) => {
+      const filterGroups: ActiveFilter[][] = [];
+      let currentGroup: ActiveFilter[] = [];
+      activeFilters.forEach((filter) => {
+        if (filter.isOr && currentGroup.length > 0) {
+          filterGroups.push(currentGroup);
+          currentGroup = [filter];
+        } else {
+          currentGroup.push(filter);
+        }
+      });
+      if (currentGroup.length > 0) filterGroups.push(currentGroup);
 
-  // filteredRelations is used for display (search + type filter applied)
-  const filteredRelations = useMemo(() => {
-    const filtered = relations.filter((r) => {
-      const matchesSearch = r.displayName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesType = relationFilter === "all" || r.type === relationFilter;
-      return matchesSearch && matchesType;
+      return filterGroups.some(group =>
+        group.every(filter =>
+          filter.values.some(value => {
+            const lower = value.toLowerCase();
+            switch (filter.property) {
+              case 'Name': return r.displayName.toLowerCase().includes(lower);
+              case 'Description': return (r.description || '').toLowerCase().includes(lower);
+              default: return r.displayName.toLowerCase().includes(lower) || (r.description || '').toLowerCase().includes(lower);
+            }
+          })
+        )
+      );
     });
+  }, [relations, activeFilters]);
+
+  // filteredRelations is used for display (type filter + active filters applied)
+  const filteredRelations = useMemo(() => {
+    let filtered = relations.filter((r) => {
+      const matchesType = relationFilter === "all" || r.type === relationFilter;
+      return matchesType;
+    });
+
+    // Apply active filters (from FilterBar chips)
+    if (activeFilters.length > 0) {
+      filtered = filtered.filter(r => {
+        const filterGroups: ActiveFilter[][] = [];
+        let currentGroup: ActiveFilter[] = [];
+        activeFilters.forEach((filter) => {
+          if (filter.isOr && currentGroup.length > 0) {
+            filterGroups.push(currentGroup);
+            currentGroup = [filter];
+          } else {
+            currentGroup.push(filter);
+          }
+        });
+        if (currentGroup.length > 0) filterGroups.push(currentGroup);
+
+        return filterGroups.some(group =>
+          group.every(filter =>
+            filter.values.some(value => {
+              const lower = value.toLowerCase();
+              switch (filter.property) {
+                case 'Name': return r.displayName.toLowerCase().includes(lower);
+                case 'Description': return (r.description || '').toLowerCase().includes(lower);
+                default: return r.displayName.toLowerCase().includes(lower) || (r.description || '').toLowerCase().includes(lower);
+              }
+            })
+          )
+        );
+      });
+    }
+
     return sortItems(filtered);
-  }, [relations, searchTerm, relationFilter, sortBy, sortOrder]);
+  }, [relations, relationFilter, activeFilters, sortBy, sortOrder]);
 
   return (
     <Box
@@ -108,149 +163,147 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
       }}
     >
       {/* Header Section (Search/Chips) */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          mb: 3,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              bgcolor: "#fff",
-              border: "1px solid #dadce0",
-              borderRadius: "24px",
-              px: 2,
-              py: 0.5,
-              width: 300,
-              height: 32,
-            }}
-          >
-            <Search sx={{ color: "#5f6368", mr: 1, fontSize: 20 }} />
-            <InputBase
-              placeholder="Search synonyms and related terms"
-              value={searchTerm}
-              onChange={(e) => onSearchTermChange(e.target.value)}
-              sx={{
-                fontSize: "0.875rem",
-                width: "100%",
-                "& ::placeholder": {
-                  opacity: 100,
-                  color: "#5E5E5E",
-                  fontSize: 12,
-                  fontWeight: 500,
-                },
-              }}
-            />
-          </Box>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Chip
-              label={`All (${searchedRelations.length})`}
-              onClick={() => onRelationFilterChange("all")}
-              sx={{
-                fontSize: 12,
-                bgcolor: relationFilter === "all" ? "#e8f0fe" : "transparent",
-                color: relationFilter === "all" ? "#1967d2" : "#1F1F1F",
-                fontWeight: relationFilter === "all" ? 500 : 300,
-                border: relationFilter === "all" ? "none" : "1px solid #dadce0",
-              }}
-            />
-            <Chip
-              label={`Synonyms (${
-                searchedRelations.filter((r) => r.type === "synonym").length
-              })`}
-              onClick={() => onRelationFilterChange("synonym")}
-              sx={{
-                fontSize: 12,
-                bgcolor:
-                  relationFilter === "synonym" ? "#e8f0fe" : "transparent",
-                color: relationFilter === "synonym" ? "#1967d2" : "#1F1F1F",
-                fontWeight: relationFilter === "synonym" ? 500 : 300,
-                border:
-                  relationFilter === "synonym" ? "none" : "1px solid #dadce0",
-              }}
-            />
-            <Chip
-              label={`Related Terms (${
-                searchedRelations.filter((r) => r.type === "related").length
-              })`}
-              onClick={() => onRelationFilterChange("related")}
-              sx={{
-                fontSize: 12,
-                bgcolor:
-                  relationFilter === "related" ? "#e8f0fe" : "transparent",
-                color: relationFilter === "related" ? "#1967d2" : "#1F1F1F",
-                fontWeight: relationFilter === "related" ? 500 : 300,
-                border:
-                  relationFilter === "related" ? "none" : "1px solid #dadce0",
-              }}
-            />
-          </Box>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center" }}>
-          <IconButton
-            onClick={onSortOrderToggle}
-            sx={{ p: 0.5, mr: 0.5, color: "#1F1F1F" }}
-          >
-            <Sort
-              sx={{
-                fontSize: 16,
-                transform: sortOrder === "asc" ? "scaleY(-1)" : "none",
-              }}
-            />
-          </IconButton>
-
-          <Button
-            onClick={handleSortClick}
-            endIcon={
-              <ExpandMore
-                sx={{
-                  color: "#1F1F1F",
-                  fontSize: 20,
-                  transform: sortAnchorEl ? "rotate(180deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s",
-                }}
-              />
-            }
-            sx={{
-              textTransform: "none",
-              color: "#1F1F1F",
-              fontFamily: "Product Sans",
-              fontSize: "12px",
-              fontWeight: 400,
-              padding: 0,
-              minWidth: "auto",
-              "&:hover": { background: "transparent" },
-            }}
-          >
-            Sort by: {sortBy === "name" ? "Name" : "Last Modified"}
-          </Button>
-        </Box>
+      <Box sx={{ mb: 3 }}>
+        <FilterBar
+          filterText={searchTerm}
+          onFilterTextChange={onSearchTermChange}
+          propertyNames={FILTER_PROPERTIES}
+          activeFilters={activeFilters}
+          onActiveFiltersChange={setActiveFilters}
+          marginLeft="0px"
+          placeholder="Filter synonyms and related terms"
+          showTextInFilterMenu
+          endContent={
+            <Box sx={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Chip
+                  label={`All (${searchedRelations.length})`}
+                  onClick={() => onRelationFilterChange("all")}
+                  sx={{
+                    fontSize: 12,
+                    bgcolor: relationFilter === "all" ? "#e8f0fe" : "transparent",
+                    color: relationFilter === "all" ? "#1967d2" : "#1F1F1F",
+                    fontWeight: relationFilter === "all" ? 500 : 300,
+                    border: relationFilter === "all" ? "none" : "1px solid #dadce0",
+                  }}
+                />
+                <Chip
+                  label={`Synonyms (${
+                    searchedRelations.filter((r) => r.type === "synonym").length
+                  })`}
+                  onClick={() => onRelationFilterChange("synonym")}
+                  sx={{
+                    fontSize: 12,
+                    bgcolor:
+                      relationFilter === "synonym" ? "#e8f0fe" : "transparent",
+                    color: relationFilter === "synonym" ? "#1967d2" : "#1F1F1F",
+                    fontWeight: relationFilter === "synonym" ? 500 : 300,
+                    border:
+                      relationFilter === "synonym" ? "none" : "1px solid #dadce0",
+                  }}
+                />
+                <Chip
+                  label={`Related Terms (${
+                    searchedRelations.filter((r) => r.type === "related").length
+                  })`}
+                  onClick={() => onRelationFilterChange("related")}
+                  sx={{
+                    fontSize: 12,
+                    bgcolor:
+                      relationFilter === "related" ? "#e8f0fe" : "transparent",
+                    color: relationFilter === "related" ? "#1967d2" : "#1F1F1F",
+                    fontWeight: relationFilter === "related" ? 500 : 300,
+                    border:
+                      relationFilter === "related" ? "none" : "1px solid #dadce0",
+                  }}
+                />
+              </Box>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <Typography
+                  component="span"
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    color: "#1F1F1F",
+                    whiteSpace: "nowrap",
+                    fontFamily: '"Google Sans Text", sans-serif',
+                  }}
+                  onClick={handleSortClick}
+                >
+                  <ExpandMore
+                    sx={{
+                      fontSize: '20px',
+                      color: '#575757',
+                      transform: sortAnchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s ease',
+                    }}
+                  />
+                  {sortBy === "name" ? "Name" : "Last Modified"}
+                </Typography>
+                <Tooltip title={sortOrder === 'asc' ? 'Sort large to small' : 'Sort small to large'} arrow>
+                  <span
+                    data-testid="sort-order-toggle"
+                    onClick={onSortOrderToggle}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                      transform: sortOrder === 'desc' ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease-in-out',
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="24" rx="12" fill="#C2E7FF"/>
+                      <path d="M11.168 15.4818L11.168 5.33594L12.8346 5.33594L12.8346 15.4818L17.5013 10.8151L18.668 12.0026L12.0013 18.6693L5.33464 12.0026L6.5013 10.8151L11.168 15.4818Z" fill="#004A77"/>
+                    </svg>
+                  </span>
+                </Tooltip>
+              </div>
+            </Box>
+          }
+        />
         <Menu
           anchorEl={sortAnchorEl}
           open={Boolean(sortAnchorEl)}
           onClose={handleSortClose}
-          MenuListProps={{ dense: true, sx: { py: 0.5 } }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           PaperProps={{
-            sx: {
-              borderRadius: "8px",
-              boxShadow: "0px 2px 8px rgba(0,0,0,0.15)",
+            style: {
+              marginTop: '4px',
+              borderRadius: '8px',
+              boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              minWidth: '140px',
             },
           }}
         >
           <MenuItem
             onClick={() => handleSortSelect("name")}
-            sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
+            sx={{
+              fontSize: "12px",
+              fontFamily: "Google Sans",
+              fontWeight: sortBy === "name" ? "500" : "400",
+              color: sortBy === "name" ? "#0B57D0" : "#1F1F1F",
+              backgroundColor: sortBy === "name" ? "#F8FAFD" : "transparent",
+              '&:hover': { backgroundColor: '#F1F3F4' },
+            }}
           >
             Name
           </MenuItem>
           <MenuItem
             onClick={() => handleSortSelect("lastModified")}
-            sx={{ fontSize: "13px", fontFamily: "Google Sans" }}
+            sx={{
+              fontSize: "12px",
+              fontFamily: "Google Sans",
+              fontWeight: sortBy === "lastModified" ? "500" : "400",
+              color: sortBy === "lastModified" ? "#0B57D0" : "#1F1F1F",
+              backgroundColor: sortBy === "lastModified" ? "#F8FAFD" : "transparent",
+              '&:hover': { backgroundColor: '#F1F3F4' },
+            }}
           >
             Last Modified
           </MenuItem>
@@ -340,9 +393,10 @@ const GlossariesSynonyms: React.FC<GlossariesSynonymsProps> = ({
                       noWrap
                       sx={{
                         fontFamily: "Google Sans",
-                        fontSize: "18px",
-                        fontWeight: 400,
+                        fontSize: "16px",
+                        fontWeight: 500,
                         lineHeight: "24px",
+                        letterSpacing: "0.15px",
                         color: "#1F1F1F",
                         overflow: "hidden",
                         textOverflow: "ellipsis",

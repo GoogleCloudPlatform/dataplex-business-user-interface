@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { vi, beforeEach, beforeAll, it, describe, expect } from 'vitest';
@@ -68,7 +68,7 @@ vi.mock('../../auth/AuthProvider', () => ({
 }));
 
 // Mock Redux store
-const createMockStore = (initialState: { search?: Record<string, unknown>; projects?: Record<string, unknown> } = {}) => {
+const createMockStore = (initialState: { search?: Record<string, unknown>; projects?: Record<string, unknown>; user?: Record<string, unknown> } = {}) => {
   const defaultState = {
     search: {
       searchTerm: '',
@@ -79,13 +79,18 @@ const createMockStore = (initialState: { search?: Record<string, unknown>; proje
       isloaded: false,
       items: [],
       ...(initialState.projects || {})
+    },
+    user: {
+      mode: 'light',
+      ...(initialState.user || {})
     }
   };
 
   return configureStore({
     reducer: {
       search: (state = defaultState.search) => state,
-      projects: (state = defaultState.projects) => state
+      projects: (state = defaultState.projects) => state,
+      user: (state = defaultState.user) => state
     },
     preloadedState: defaultState
   });
@@ -471,7 +476,7 @@ describe('FilterDropdown', () => {
     if (annotationsAccordion) {
       fireEvent.click(annotationsAccordion);
       
-      const editIcons = screen.getAllByAltText('Edit Note');
+      const editIcons = screen.getAllByTestId('edit-note-icon');
       expect(editIcons.length).toBeGreaterThan(0);
     }
   });
@@ -498,7 +503,7 @@ describe('FilterDropdown', () => {
     });
 
     // Find and click the edit icon
-    const editIcon = screen.getAllByAltText('Edit Note')[0];
+    const editIcon = screen.getAllByTestId('edit-note-icon')[0];
     fireEvent.click(editIcon);
 
     // Verify sub-annotations panel opens
@@ -557,11 +562,12 @@ describe('FilterDropdown', () => {
     }
   });
 
-  it('auto-selects assets when search term matches', async () => {
+  it('auto-selects assets when search is submitted with matching term', async () => {
     renderFilterDropdown({}, {
       search: {
-        searchTerm: 'dataset',
-        searchType: 'All'
+        searchTerm: 'Dataset',
+        searchType: 'All',
+        searchSubmitted: true
       }
     });
 
@@ -575,11 +581,12 @@ describe('FilterDropdown', () => {
     });
   });
 
-  it('auto-selects product when search type is set', async () => {
+  it('auto-selects product when search is submitted with matching product name', async () => {
     renderFilterDropdown({}, {
       search: {
-        searchTerm: '',
-        searchType: 'BigQuery'
+        searchTerm: 'BigQuery',
+        searchType: 'All',
+        searchSubmitted: true
       }
     });
 
@@ -593,7 +600,7 @@ describe('FilterDropdown', () => {
     });
   });
 
-  it('clears asset filters when search term is cleared', async () => {
+  it('clears asset filters when search is submitted with empty term', async () => {
     const initialFilters = [
       { name: 'Dataset', type: 'typeAliases', data: {} }
     ];
@@ -601,7 +608,8 @@ describe('FilterDropdown', () => {
     renderFilterDropdown({ filters: initialFilters }, {
       search: {
         searchTerm: '',
-        searchType: 'All'
+        searchType: 'All',
+        searchSubmitted: true
       }
     });
 
@@ -727,7 +735,7 @@ describe('FilterDropdown', () => {
     if (annotationsAccordion) {
       fireEvent.click(annotationsAccordion);
       
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
       
       const applyButton = screen.getByText('Apply');
@@ -920,7 +928,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -942,7 +950,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
 
         // Should not crash when API fails
         expect(() => fireEvent.click(editIcon)).not.toThrow();
@@ -983,8 +991,8 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        // Should show "See 5 more" button (15 - 10 = 5)
-        expect(screen.getByText('See 5 more')).toBeInTheDocument();
+        // Should show "Show more" button
+        expect(screen.getByText('Show more')).toBeInTheDocument();
       }
     });
   });
@@ -1075,7 +1083,7 @@ describe('FilterDropdown', () => {
         expect(screen.getByAltText('Cloud Spanner')).toBeInTheDocument();
         expect(screen.getByAltText('Cloud SQL')).toBeInTheDocument();
         expect(screen.getByAltText('Dataform')).toBeInTheDocument();
-        expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+        expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
         expect(screen.getByAltText('Dataproc Metastore')).toBeInTheDocument();
         expect(screen.getByAltText('Vertex AI')).toBeInTheDocument();
         expect(screen.getByAltText('Others')).toBeInTheDocument();
@@ -1167,7 +1175,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1213,7 +1221,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1244,7 +1252,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1270,7 +1278,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1304,7 +1312,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1449,8 +1457,8 @@ describe('FilterDropdown', () => {
       const productsAccordion = screen.getByText('Products').closest('[role="button"]');
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
-        // Dataplex and Dataplex Universal Catalog both use DataplexIcon
-        expect(screen.getByAltText('Dataplex Universal Catalog')).toBeInTheDocument();
+        // Dataplex and Knowledge Catalog both use DataplexIcon
+        expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
       }
     });
 
@@ -1568,19 +1576,19 @@ describe('FilterDropdown', () => {
       }
     });
 
-    it('handles selecting Dataplex Universal Catalog product', () => {
+    it('handles selecting Knowledge Catalog product', () => {
       renderFilterDropdown();
 
       const productsAccordion = screen.getByText('Products').closest('[role="button"]');
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
 
-        const dataplexCheckbox = screen.getByLabelText('Dataplex Universal Catalog');
+        const dataplexCheckbox = screen.getByLabelText('Knowledge Catalog');
         fireEvent.click(dataplexCheckbox);
 
         expect(mockOnFilterChange).toHaveBeenCalledWith([
           expect.objectContaining({
-            name: 'Dataplex Universal Catalog',
+            name: 'Knowledge Catalog',
             type: 'system'
           })
         ]);
@@ -1828,7 +1836,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -1862,7 +1870,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2122,7 +2130,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2143,7 +2151,7 @@ describe('FilterDropdown', () => {
         // Verify all products are visible and icons exist
         const productNames = [
           'Analytics Hub', 'BigQuery', 'Cloud BigTable', 'Cloud Pub/Sub',
-          'Cloud Spanner', 'Cloud SQL', 'Dataform', 'Dataplex Universal Catalog',
+          'Cloud Spanner', 'Cloud SQL', 'Dataform', 'Knowledge Catalog',
           'Dataproc Metastore', 'Vertex AI', 'Others'
         ];
 
@@ -2293,7 +2301,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2333,7 +2341,7 @@ describe('FilterDropdown', () => {
         fireEvent.click(annotationsAccordion);
 
         // Click second edit icon
-        const editIcons = screen.getAllByAltText('Edit Note');
+        const editIcons = screen.getAllByTestId('edit-note-icon');
         if (editIcons.length > 1) {
           fireEvent.click(editIcons[1]);
 
@@ -2519,7 +2527,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2549,7 +2557,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
 
         // Mock getBoundingClientRect
         const originalGetBoundingClientRect = editIcon.getBoundingClientRect;
@@ -2794,7 +2802,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2837,7 +2845,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -2916,7 +2924,7 @@ describe('FilterDropdown', () => {
         fireEvent.click(annotationsAccordion);
 
         // Click first edit icon - tests handleEditNoteClick
-        const editIcons = screen.getAllByAltText('Edit Note');
+        const editIcons = screen.getAllByTestId('edit-note-icon');
         fireEvent.click(editIcons[0]);
 
         await waitFor(() => {
@@ -2948,7 +2956,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcons = screen.getAllByAltText('Edit Note');
+        const editIcons = screen.getAllByTestId('edit-note-icon');
         fireEvent.click(editIcons[0]);
 
         await waitFor(() => {
@@ -2977,7 +2985,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3012,7 +3020,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3065,7 +3073,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3097,7 +3105,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3125,7 +3133,7 @@ describe('FilterDropdown', () => {
       if (annotationsAccordion) {
         fireEvent.click(annotationsAccordion);
 
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3269,7 +3277,7 @@ describe('FilterDropdown', () => {
       if (assetsAccordion) {
         fireEvent.click(assetsAccordion);
         // Assets section shows all items, no "See X more" button
-        expect(screen.queryByText(/See \d+ more/)).not.toBeInTheDocument();
+        expect(screen.queryByText('Show more')).not.toBeInTheDocument();
       }
     });
 
@@ -3280,7 +3288,7 @@ describe('FilterDropdown', () => {
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
         // Products section shows all items, no "See X more" button
-        expect(screen.queryByText(/See \d+ more/)).not.toBeInTheDocument();
+        expect(screen.queryByText('Show more')).not.toBeInTheDocument();
       }
     });
   });
@@ -3304,7 +3312,7 @@ describe('FilterDropdown', () => {
         fireEvent.click(annotationsAccordion);
 
         // Click edit icon - should not toggle the parent checkbox
-        const editIcon = screen.getAllByAltText('Edit Note')[0];
+        const editIcon = screen.getAllByTestId('edit-note-icon')[0];
         fireEvent.click(editIcon);
 
         await waitFor(() => {
@@ -3386,7 +3394,7 @@ describe('FilterDropdown', () => {
 
       // With 15 aspects and 15 projects in mock, both accordions may show "See X more" buttons
       // Use getAllByText and select the first one (Aspects comes first in rendering order)
-      const seeMoreButtons = screen.getAllByText(/See \d+ more/);
+      const seeMoreButtons = screen.getAllByText('Show more');
       expect(seeMoreButtons.length).toBeGreaterThan(0);
       const aspectsSeeMoreButton = seeMoreButtons[0];
       fireEvent.click(aspectsSeeMoreButton);
@@ -3411,7 +3419,7 @@ describe('FilterDropdown', () => {
 
       // With 15 aspects and 15 projects in mock, both accordions may show "See X more" buttons
       // Use getAllByText and select the last one (Projects comes after Aspects in rendering order)
-      const seeMoreButtons = screen.getAllByText(/See \d+ more/);
+      const seeMoreButtons = screen.getAllByText('Show more');
       expect(seeMoreButtons.length).toBeGreaterThan(0);
       const projectsSeeMoreButton = seeMoreButtons[seeMoreButtons.length - 1];
       fireEvent.click(projectsSeeMoreButton);
@@ -3435,7 +3443,7 @@ describe('FilterDropdown', () => {
       });
 
       // Get all "See X more" buttons and click the first one (Aspects)
-      const seeMoreButtons = screen.getAllByText(/See \d+ more/);
+      const seeMoreButtons = screen.getAllByText('Show more');
       expect(seeMoreButtons.length).toBeGreaterThan(0);
       fireEvent.click(seeMoreButtons[0]);
 
@@ -3466,7 +3474,7 @@ describe('FilterDropdown', () => {
       });
 
       // Get all "See X more" buttons and click the first one (Aspects)
-      const seeMoreButtons = screen.getAllByText(/See \d+ more/);
+      const seeMoreButtons = screen.getAllByText('Show more');
       expect(seeMoreButtons.length).toBeGreaterThan(0);
       fireEvent.click(seeMoreButtons[0]);
 
@@ -3508,7 +3516,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon to open sub-annotations panel
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       // Wait for panel to open
@@ -3547,7 +3555,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       await waitFor(() => {
@@ -3599,7 +3607,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       await waitFor(() => {
@@ -3646,7 +3654,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       await waitFor(() => {
@@ -3696,7 +3704,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon to trigger getSubAnnotationsForAnnotation
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       // Panel should open with transformed enum values
@@ -3735,7 +3743,7 @@ describe('FilterDropdown', () => {
       });
 
       // Click edit icon
-      const editIcon = screen.getAllByAltText('Edit Note')[0];
+      const editIcon = screen.getAllByTestId('edit-note-icon')[0];
       fireEvent.click(editIcon);
 
       await waitFor(() => {
@@ -3743,6 +3751,288 @@ describe('FilterDropdown', () => {
       });
 
       expect(axios.post).toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================================
+  // searchSubmitted Effect Tests (New Behavior)
+  // ==========================================================================
+
+  describe('searchSubmitted auto-select behavior', () => {
+    it('clears ALL existing filters and sets matching asset on submission', async () => {
+      // Start with existing filters from different categories
+      const initialFilters = [
+        { name: 'BigQuery', type: 'system', data: {} },
+        { name: 'project-1', type: 'project', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: 'Table',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({
+            name: 'Table',
+            type: 'typeAliases'
+          })
+        ]);
+      });
+
+      // Verify only the matching asset filter is set (all others cleared)
+      const lastCall = mockOnFilterChange.mock.calls[mockOnFilterChange.mock.calls.length - 1][0];
+      expect(lastCall).toHaveLength(1);
+    });
+
+    it('clears ALL existing filters and sets matching product on submission', async () => {
+      // Start with existing asset filter
+      const initialFilters = [
+        { name: 'Table', type: 'typeAliases', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: 'BigQuery',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({
+            name: 'BigQuery',
+            type: 'system'
+          })
+        ]);
+      });
+
+      // Verify only the matching product filter is set
+      const lastCall = mockOnFilterChange.mock.calls[mockOnFilterChange.mock.calls.length - 1][0];
+      expect(lastCall).toHaveLength(1);
+    });
+
+    it('clears only typeAliases filters when term does not match any asset or product', async () => {
+      const initialFilters = [
+        { name: 'Cluster', type: 'typeAliases', data: {} },
+        { name: 'project-1', type: 'project', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: 'random data term',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({
+            name: 'project-1',
+            type: 'project'
+          })
+        ]);
+      });
+    });
+
+    it('clears typeAliases when search term is too short on submission', async () => {
+      const initialFilters = [
+        { name: 'Table', type: 'typeAliases', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: 'ab',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockOnFilterChange).toHaveBeenCalledWith([]);
+      });
+    });
+
+    it('does not auto-select in glossary mode', async () => {
+      renderFilterDropdown({ isGlossary: true }, {
+        search: {
+          searchTerm: 'Dataset',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      // In glossary mode, searchSubmitted effect is skipped
+      await waitFor(() => {
+        // Give it time to potentially fire
+      });
+
+      // onFilterChange should NOT have been called for auto-selection
+      const autoSelectCalls = mockOnFilterChange.mock.calls.filter(
+        (call) => call[0].length === 1 && call[0][0]?.name === 'Dataset'
+      );
+      expect(autoSelectCalls.length).toBe(0);
+    });
+
+    it('does not fire auto-select when searchSubmitted is false', async () => {
+      renderFilterDropdown({}, {
+        search: {
+          searchTerm: 'Dataset',
+          searchType: 'All',
+          searchSubmitted: false
+        }
+      });
+
+      // Wait to ensure nothing fires
+      await act(async () => {});
+
+      // onFilterChange should not be called for auto-selection
+      expect(mockOnFilterChange).not.toHaveBeenCalled();
+    });
+
+    it('dispatches setSearchSubmitted false after processing', async () => {
+      renderFilterDropdown({}, {
+        search: {
+          searchTerm: 'Table',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockDispatch).toHaveBeenCalledWith({
+          type: 'search/setSearchSubmitted',
+          payload: false
+        });
+      });
+    });
+
+    it('prefers asset match over product match when both exist', async () => {
+      // If a term matches both an asset and a product, asset should win
+      // (assets are checked first in the code)
+      renderFilterDropdown({}, {
+        search: {
+          searchTerm: 'Cluster',
+          searchType: 'All',
+          searchSubmitted: true
+        }
+      });
+
+      await waitFor(() => {
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({
+            name: 'Cluster',
+            type: 'typeAliases'
+          })
+        ]);
+      });
+    });
+  });
+
+  // ==========================================================================
+  // handleCheckboxChange with Empty Search Term Tests
+  // ==========================================================================
+
+  describe('handleCheckboxChange with stale filter cleanup', () => {
+    it('clears stale typeAliases when search term is empty and user clicks a filter', () => {
+      // Scenario: user searched "cluster" (auto-selected Cluster filter),
+      // then cleared search term and clicks BigQuery checkbox
+      const initialFilters = [
+        { name: 'Cluster', type: 'typeAliases', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: '',
+          searchType: 'All'
+        }
+      });
+
+      const productsAccordion = screen.getByText('Products').closest('[role="button"]');
+      if (productsAccordion) {
+        fireEvent.click(productsAccordion);
+
+        const bigqueryCheckbox = screen.getByLabelText('BigQuery');
+        fireEvent.click(bigqueryCheckbox);
+
+        // Cluster (typeAliases) should be removed, only BigQuery should remain
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({
+            name: 'BigQuery',
+            type: 'system'
+          })
+        ]);
+
+        // Verify Cluster was removed
+        const lastCall = mockOnFilterChange.mock.calls[mockOnFilterChange.mock.calls.length - 1][0];
+        expect(lastCall.some((f: any) => f.name === 'Cluster')).toBe(false);
+      }
+    });
+
+    it('preserves typeAliases when search term is non-empty and user clicks a filter', () => {
+      // Scenario: user searched "cluster" (Cluster auto-selected), then clicks BigQuery
+      const initialFilters = [
+        { name: 'Cluster', type: 'typeAliases', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: 'cluster',
+          searchType: 'All'
+        }
+      });
+
+      const productsAccordion = screen.getByText('Products').closest('[role="button"]');
+      if (productsAccordion) {
+        fireEvent.click(productsAccordion);
+
+        const bigqueryCheckbox = screen.getByLabelText('BigQuery');
+        fireEvent.click(bigqueryCheckbox);
+
+        // Both Cluster and BigQuery should be present (appended)
+        expect(mockOnFilterChange).toHaveBeenCalledWith([
+          expect.objectContaining({ name: 'Cluster', type: 'typeAliases' }),
+          expect.objectContaining({ name: 'BigQuery', type: 'system' })
+        ]);
+      }
+    });
+
+    it('clears multiple stale typeAliases when search term is empty', () => {
+      const initialFilters = [
+        { name: 'Cluster', type: 'typeAliases', data: {} },
+        { name: 'Table', type: 'typeAliases', data: {} },
+        { name: 'project-1', type: 'project', data: {} }
+      ];
+
+      renderFilterDropdown({ filters: initialFilters }, {
+        search: {
+          searchTerm: '',
+          searchType: 'All'
+        }
+      });
+
+      const productsAccordion = screen.getByText('Products').closest('[role="button"]');
+      if (productsAccordion) {
+        fireEvent.click(productsAccordion);
+
+        const bigqueryCheckbox = screen.getByLabelText('BigQuery');
+        fireEvent.click(bigqueryCheckbox);
+
+        // Both typeAliases should be cleared, project kept, BigQuery added
+        const lastCall = mockOnFilterChange.mock.calls[mockOnFilterChange.mock.calls.length - 1][0];
+        expect(lastCall).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ name: 'project-1', type: 'project' }),
+            expect.objectContaining({ name: 'BigQuery', type: 'system' })
+          ])
+        );
+        expect(lastCall.some((f: any) => f.type === 'typeAliases')).toBe(false);
+      }
     });
   });
 });
