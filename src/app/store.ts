@@ -11,9 +11,9 @@ import lineageReducer from '../features/lineage/lineageSlice';
 import projectsReducer from '../features/projects/projectsSlice';
 import glossariesReducer from '../features/glossaries/glossariesSlice';
 import dataProductsReducer from '../features/dataProducts/dataProductsSlice';
+import adminReducer from '../features/admin/adminSlice';
 import { loadStateFromStorage, saveStateToStorage } from '../utils/persistence';
 import { authMiddleware } from '../middleware/authMiddleware';
-import insightsReducer from '../features/tableInsights/tableInsightsSlice';
 
 
 // Load persisted state from localStorage
@@ -33,7 +33,7 @@ const store = configureStore({
     projects:projectsReducer,
     glossaries: glossariesReducer,
     dataProducts: dataProductsReducer,
-    insights: insightsReducer,
+    admin: adminReducer,
   },
   preloadedState: persistedState,
   middleware: (getDefaultMiddleware) => 

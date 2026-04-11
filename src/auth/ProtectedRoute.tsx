@@ -4,10 +4,12 @@ import { useAuth } from './AuthProvider';
 
 type Props = {
   children: React.ReactElement;
+  adminOnly?: boolean;
 };
 
-export const ProtectedRoute = ({ children }: Props) => {
+export const ProtectedRoute = ({ children, adminOnly }: Props) => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/" />;
+  if (adminOnly && !user.isAdmin) return <Navigate to="/home" />;
   return children;
 };

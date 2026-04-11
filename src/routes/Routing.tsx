@@ -7,7 +7,7 @@ interface RootState {
     token?: string;
   };
 }
-import LoginV2 from '../component/Auth/Login/LoginV2';
+import Login from '../component/Auth/Login/Login';
 import Layout from '../component/Layout/Layout';
 import Home from '../component/Home/Home';
 import { useSelector } from 'react-redux';
@@ -15,17 +15,21 @@ import SearchPage from '../component/SearchPage/SearchPage';
 import { Email, Info } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import ViewDetails from '../component/ViewDetails/ViewDetails';
-import AdminPanel from '../component/AdminPanel/AdminPanel';
 import { useAuth } from '../auth/AuthProvider';
 import { ProtectedRoute } from '../auth/ProtectedRoute';
-import { RedirectGuard } from '../auth/RedirectGuard';
 import BrowseByAnnotation from '../component/BrowseByAnnotation/BrowseByAnnotation';
 import SessionExpirationWrapper from '../component/Auth/SessionExpirationWrapper';
 import UserGuide from '../component/Guide/UserGuide';
+import DataProductPage from '../component/DataProduct/DataProductPage';
+import DataProductManager from '../component/DataProduct/DataProductManager';
+import PermissionsPanel from '../component/AdminPanel/PermissionsPanel';
 import Glossaries from '../component/Glossaries/Glossaries';
+import ChatPage from '../component/ConversationalAnalytics/ChatPage';
 import DataProducts from '../component/DataProducts/DataProducts';
 import DataProductsDetailView from '../component/DataProducts/DataProductsDetailView';
-
+import AccessRequestsDashboard from '../component/AccessRequests/AccessRequestsDashboard';
+import AdminAccessManagement from '../component/AdminPanel/AdminAccessManagement';
+import GlobalChatPage from '../component/GlobalChat/GlobalChatPage';
 const Routing = () => {
   // state to hold the user object
   // and a function to update it
@@ -47,9 +51,9 @@ const Routing = () => {
     const shouldRedirect = location.pathname === '/' || location.pathname === '/login';
 
     if (userState && shouldRedirect) {
-      if(userState.userData?.hasRole) {
+      if (userState.userData?.hasRole) {
         navigate('/home')
-      }else{
+      } else {
         navigate('/login');
       }
     }
@@ -72,12 +76,9 @@ const Routing = () => {
       <Route
         path="/login"
         element={
-          <RedirectGuard isAuthenticated={!!(user && user.email)}>
-            {user && user.email ?
-              <Navigate to="/home" replace />
-              : <LoginV2 />
-            }
-          </RedirectGuard>
+          user && user.email ?
+            <Navigate to="/home" replace />
+            : <Login />
         }
       />
 
@@ -96,37 +97,51 @@ const Routing = () => {
       <Route
         path="/search"
         element={
-            <ProtectedRoute>
-              <SessionExpirationWrapper>
-                <Layout searchBar={true} searchNavigate={false}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: '95vh',
-                    backgroundColor: '#F8FAFD',
-                  }}>
-                    <SearchPage />
-                  </div>
-                </Layout>
-              </SessionExpirationWrapper>
-            </ProtectedRoute>
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true} searchNavigate={false}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '95vh',
+                  backgroundColor: '#F8FAFD',
+                }}>
+                  <SearchPage />
+                </div>
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/permission-required"
         element={
-            <ProtectedRoute>
+          <ProtectedRoute>
             <>
-              <div style={{ padding: '20px', width:"800px", margin:"100px auto 0",  }}>
-                <img src="/assets/images/cs-studio-logo-main.png" alt="CS Studio Logo" style={{width:"300px"}} />
+              <div style={{ padding: '20px', width: "800px", margin: "100px auto 0", }}>
+                <img src="/assets/images/cs-studio-logo-main.png" alt="CS Studio Logo" style={{ width: "300px" }} />
                 <h1>Permission Required</h1>
-                <p style={{fontSize:"20px"}}>You do not have the required permissions to access this app.<br />
-                <Info style={{position:"relative",top:"5px"}}/> You would be needing at least <label>"dataplex.viewer"</label> role to access this app<br />
-                Please contact admin for the access <Email style={{position:"relative",top:"5px"}}/> {import.meta.env.VITE_ADMIN_EMAIL}</p>
-                <Button variant="outlined" onClick={handleSignOut}  style={{color:"#333", background:"white", borderRadius:"20px"}}>SignOut</Button>
+                <p style={{ fontSize: "20px" }}>You do not have the required permissions to access this app.<br />
+                  <Info style={{ position: "relative", top: "5px" }} /> You would be needing at least <label>"dataplex.viewer"</label> role to access this app<br />
+                  Please contact admin for the access <Email style={{ position: "relative", top: "5px" }} /> {import.meta.env.VITE_ADMIN_EMAIL}</p>
+                <Button variant="outlined" onClick={handleSignOut} style={{ color: "#333", background: "white", borderRadius: "20px" }}>SignOut</Button>
               </div>
             </>
-            </ProtectedRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/access-requests"
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <div style={{ padding: '20px', width: "90%", margin: "0 auto", maxWidth: "1400px" }}>
+                  <AccessRequestsDashboard />
+                </div>
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
         }
       />
       <Route
@@ -142,12 +157,24 @@ const Routing = () => {
         }
       />
       <Route
-        path="/admin-panel"
+        path="/admin-permissions"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute adminOnly={true}>
             <SessionExpirationWrapper>
               <Layout searchBar={true}>
-                <AdminPanel />
+                <PermissionsPanel />
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-access"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <AdminAccessManagement />
               </Layout>
             </SessionExpirationWrapper>
           </ProtectedRoute>
@@ -159,13 +186,19 @@ const Routing = () => {
           <ProtectedRoute>
             <SessionExpirationWrapper>
               <Layout searchBar={true}>
-                <BrowseByAnnotation />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: '95vh',
+                  backgroundColor: '#F8FAFD',
+                }}>
+                  <BrowseByAnnotation />
+                </div>
               </Layout>
             </SessionExpirationWrapper>
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/glossaries"
         element={
@@ -205,7 +238,7 @@ const Routing = () => {
         }
       />
 
-     <Route
+      <Route
         path="/guide"
         element={
           <ProtectedRoute>
@@ -230,35 +263,84 @@ const Routing = () => {
         }
       />
       <Route
+        path="/data-products-manager" // Renamed from /data-products to avoid conflict with DataProducts route
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <DataProductManager />
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chat-analytics"
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <ChatPage />
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/global-chat"
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <GlobalChatPage />
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/data-product/:id"
+        element={
+          <ProtectedRoute>
+            <SessionExpirationWrapper>
+              <Layout searchBar={true}>
+                <DataProductPage />
+              </Layout>
+            </SessionExpirationWrapper>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/help-support"
         element={
           <ProtectedRoute>
             <SessionExpirationWrapper>
               <Layout searchBar={true}>
-                <div style={{ padding: '20px', width:"1000px", margin:"100px auto 0",  }}>
-                    <div className="logo-container">
-                      <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="CS Studio Logo" className="navbar-logo-img" />
-                      <label style={{fontSize:"24px", fontWeight:800, color:"#0E4DCA"}}>Knowledge Catalog</label>
-                      <label style={{fontSize:"24px", fontWeight:600, color:"#0E4DCA", margin:"0px 3px 0px"}}>|</label>
-                      <label style={{fontSize:"22px", fontWeight:600, color:"#0E4DCA", margin:"0px 3px 0px"}}>Buisness Interface</label>
-                    </div>
-                    <h1>For help contact over these email</h1>
-                    <div style={{ borderBottom: "1px solid #DADCE0", padding: '0.875rem 0', gap: '0.25rem'}}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                        <div style={{ flex: '1 1 0', width: '50%' }}>
-                          <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Admin/Support Contact Email</div>
-                          <div style={{ textDecoration:"underline", color: "#0E4DCA", fontSize: "1rem", fontWeight: "600", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {import.meta.env.VITE_SUPPORT_EMAIL || import.meta.env.VITE_ADMIN_EMAIL}
-                          </div>
+                <div style={{ padding: '20px', width: "1000px", margin: "100px auto 0", }}>
+                  <div className="logo-container">
+                    <img src="/assets/svg/catalog-studio-logo-figma-585de1.svg" alt="CS Studio Logo" className="navbar-logo-img" />
+                    <label style={{ fontSize: "24px", fontWeight: 800, color: "#0E4DCA" }}>Dataplex</label>
+                    <label style={{ fontSize: "24px", fontWeight: 600, color: "#0E4DCA", margin: "0px 3px 0px" }}>|</label>
+                    <label style={{ fontSize: "22px", fontWeight: 600, color: "#0E4DCA", margin: "0px 3px 0px" }}>Buisness Interface</label>
+                  </div>
+                  <h1>For help contact over these email</h1>
+                  <div style={{ borderBottom: "1px solid #DADCE0", padding: '0.875rem 0', gap: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div style={{ flex: '1 1 0', width: '50%' }}>
+                        <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Admin/Support Contact Email</div>
+                        <div style={{ textDecoration: "underline", color: "#0E4DCA", fontSize: "1rem", fontWeight: "600", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          {import.meta.env.VITE_SUPPORT_EMAIL || import.meta.env.VITE_ADMIN_EMAIL}
                         </div>
-                        <div style={{ flex: '1 1 0', width: '50%'  }}>
-                          <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Knowledge Catalog Business Interface Support</div>
-                          <div style={{ textDecoration:"underline", color: "#0E4DCA", fontSize: "1rem", fontWeight: "600", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            dataplex-interface-feedback@google.com
-                          </div>
+                      </div>
+                      <div style={{ flex: '1 1 0', width: '50%' }}>
+                        <div style={{ color: "#575757", fontSize: "1.6875rem", fontWeight: "500", fontFamily: '"Google Sans Text",sans-serif' }}>Dataplex Business Inteface Support</div>
+                        <div style={{ textDecoration: "underline", color: "#0E4DCA", fontSize: "1rem", fontWeight: "600", fontFamily: '"Google Sans Text",sans-serif', marginTop: "0.125rem", textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          dataplex-interface-feedback@google.com
                         </div>
                       </div>
                     </div>
+                  </div>
                 </div>
               </Layout>
             </SessionExpirationWrapper>

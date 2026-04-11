@@ -1,0 +1,14 @@
+.data-product-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.data-product-card.selected {
+  background-color: #E8F0FE;
+}
+
+.data-product-card:hover {
+  transform: translateY(-2px);
+}
+
+
+

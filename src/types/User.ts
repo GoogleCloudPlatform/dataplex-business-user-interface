@@ -10,4 +10,9 @@ export interface User {
   permissions: string[] | undefined;
   iamDisplayRole?: string | undefined; // "Owner" | "Admin" | "Editor" | "Viewer" | "No Dataplex Role"
   appConfig: any;
+  role?: any;
+  isAdmin?: boolean;
+  isDataOwner?: boolean;
+  ownedDatasets?: { projectId: string; datasetId: string }[];
+  hasAdminCapabilities?: boolean;
 };
