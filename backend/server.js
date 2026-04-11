@@ -6,6 +6,22 @@ const { VertexAI } = require('@google-cloud/vertexai');
 const express = require('express');
 const fs = require('fs').promises;
 const { GoogleAuth, OAuth2Client } = require('google-auth-library');
+
+// Allows passing a user's OAuth token directly to Dataplex for native semantic search
+class CustomGoogleAuth extends GoogleAuth {
+  constructor(token) {
+    super();
+    this.token = token;
+  }
+  async getClient() {
+    const client = new OAuth2Client();
+    client.setCredentials({ access_token: this.token });
+    return client;
+  }
+  async getUniverseDomain() {
+    return 'googleapis.com';
+  }
+}
 const { google } = require('googleapis');
 console.log('[STARTUP] Loading Google Cloud clients...');
 const { CatalogServiceClient, DataScanServiceClient, protos, DataplexServiceClient } = require('@google-cloud/dataplex');
@@ -3534,8 +3550,10 @@ app.post('/api/v1/search', async (req, res) => {
     const isAdmin = await checkUserAdminRole(userEmail);
     console.log(`[SEARCH] Is Admin (User/IAM)? ${isAdmin}`);
 
-    // Fetch ALL results (Service Account Scope) - search across all projects
-    const client = new CatalogServiceClient();
+    // Use user's OAuth token for native semantic search (same as official UI)
+    const userToken = req.headers.authorization?.split(' ')[1];
+    const searchAuth = userToken ? new CustomGoogleAuth(userToken) : undefined;
+    const client = new CatalogServiceClient(searchAuth ? { auth: searchAuth } : {});
     const allProjects = getAllProjects();
     const location = 'global';
 
