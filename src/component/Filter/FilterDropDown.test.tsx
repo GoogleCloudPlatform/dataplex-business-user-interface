@@ -1451,13 +1451,13 @@ describe('FilterDropdown', () => {
       }
     });
 
-    it('displays Dataplex icon for Dataplex product', () => {
+    it('displays Knowledge Catalog icon for Knowledge Catalog product', () => {
       renderFilterDropdown();
 
       const productsAccordion = screen.getByText('Products').closest('[role="button"]');
       if (productsAccordion) {
         fireEvent.click(productsAccordion);
-        // Dataplex and Knowledge Catalog both use DataplexIcon
+        // Knowledge Catalog and Knowledge Catalog both use DataplexIcon
         expect(screen.getByAltText('Knowledge Catalog')).toBeInTheDocument();
       }
     });

@@ -16,7 +16,7 @@ import { fetchDataScan, selectScanData, selectScanStatus, selectIsScanLoading } 
  * This component serves as the main container for the Data Quality section.
  *
  * 1.  **Data Fetching**: On mount, it inspects the `entry.entrySource.labels`
- * to find a Dataplex Data Quality Scan ID (`dataplex-dq-published-scan`).
+ * to find a Knowledge Catalog Data Quality Scan ID (`dataplex-dq-published-scan`).
  * 2.  **Redux Integration**: It uses this scan ID (formatted as a full scan name)
  * to check the Redux store (via `dataScanSlice` selectors) to see if the
  * scan's data has already been fetched.

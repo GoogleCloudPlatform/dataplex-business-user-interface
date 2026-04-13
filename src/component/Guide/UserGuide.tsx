@@ -158,7 +158,7 @@ const UserGuide: React.FC = () => {
     content: (
       <>
         <Typography paragraph>
-          Dataplex Business Interface is an open source, web-based application designed to give your
+          Knowledge Catalog Business Interface is an open source, web-based application designed to give your
           business teams the ability to easily discover, understand, and request access to your
           organization's data assets.
         </Typography>
@@ -184,7 +184,7 @@ const UserGuide: React.FC = () => {
           </li>
           <li>
             <Typography>
-              <strong>Centralized Discovery:</strong> Search across all your data assets in Dataplex, including data
+              <strong>Centralized Discovery:</strong> Search across all your data assets in Knowledge Catalog, including data
               from BigQuery, Cloud Spanner, Cloud SQL and more.
             </Typography>
           </li>
@@ -201,11 +201,11 @@ const UserGuide: React.FC = () => {
   },
   {
     id: 'architecture',
-    title: 'Dataplex Business Interface: Architecture',
+    title: 'Knowledge Catalog Business Interface: Architecture',
     content: (
       <>
         <Typography paragraph>
-          The Dataplex Business Interface is designed to be a secure and fast web-application for your
+          The Knowledge Catalog Business Interface is designed to be a secure and fast web-application for your
           catalog search experience outside of Google Cloud.
           This diagram illustrates how the components work together to ensure a secure, user-friendly
           experience.
@@ -213,7 +213,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig1-architecture.png"
-          alt="Dataplex Business Interface high-level architecture"
+          alt="Knowledge Catalog Business Interface high-level architecture"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -233,14 +233,14 @@ const UserGuide: React.FC = () => {
         <ul>
           <li>
             <Typography>
-              <strong>Dataplex Catalog Search API:</strong> These are the primary engine, allowing the application
+              <strong>Knowledge Catalog Catalog Search API:</strong> These are the primary engine, allowing the application
               to quickly query metadata across assets using keywords, tags, descriptions, and
               filtering criteria.
             </Typography>
           </li>
           <li>
             <Typography>
-              <strong>Dataplex Entity/Entry API:</strong> Used to retrieve detailed information, such as schemas,
+              <strong>Knowledge Catalog Entity/Entry API:</strong> Used to retrieve detailed information, such as schemas,
               data owners, lineage, and creation times, when you click on a specific data asset.
             </Typography>
           </li>
@@ -259,7 +259,7 @@ const UserGuide: React.FC = () => {
     content: (
       <>
         <Typography paragraph>
-          The Dataplex Business Interface functions by interacting with Google Cloud APIs. For the
+          The Knowledge Catalog Business Interface functions by interacting with Google Cloud APIs. For the
           application to work, below prerequisites must be met by both the deployment administrator
           and the end-user.
         </Typography>
@@ -286,7 +286,7 @@ const UserGuide: React.FC = () => {
           Authentication Prerequisites
         </Typography>
         <Typography paragraph>
-          To ensure successful integration and utilization of Dataplex and BigQuery APIs (specifically for
+          To ensure successful integration and utilization of Knowledge Catalog and BigQuery APIs (specifically for
           retrieving metadata), the associated <strong>GCP Identity</strong> (User Principal) must be granted the
           necessary Identity and Access Management (IAM) permissions. The application enforces
           and validates these permissions during the connection process via <strong>Cloud OAuth 2.0 authorization</strong>.
@@ -299,7 +299,7 @@ const UserGuide: React.FC = () => {
         </Typography>
         <ul>
           <li><Typography><strong>GCP Viewer role:</strong> Grants necessary read/get access to generic resources to <Typography component="code" sx={{ color: '#006400', fontWeight: 'bold', fontFamily: 'monospace', padding: '2px 4px', borderRadius: '4px' }}>roles/viewer</Typography>.</Typography></li>
-          <li><Typography><strong>Dataplex Viewer role:</strong> Grants necessary read/get access to Dataplex resources <Typography component="code" sx={{ color: '#006400', fontWeight: 'bold', fontFamily: 'monospace', padding: '2px 4px', borderRadius: '4px' }}>roles/dataplex.viewer</Typography>.</Typography></li>
+          <li><Typography><strong>Knowledge Catalog Viewer role:</strong> Grants necessary read/get access to Knowledge Catalog resources <Typography component="code" sx={{ color: '#006400', fontWeight: 'bold', fontFamily: 'monospace', padding: '2px 4px', borderRadius: '4px' }}>roles/dataplex.viewer</Typography>.</Typography></li>
           <li><Typography>The specific permission: <Typography component="code" sx={{ color: '#006400', fontWeight: 'bold', fontFamily: 'monospace', padding: '2px 4px', borderRadius: '4px' }}>bigquery.tables.get</Typography> (required for retrieving BigQuery table metadata).</Typography></li>
         </ul>
       </>
@@ -307,7 +307,7 @@ const UserGuide: React.FC = () => {
   },
   {
     id: 'deploy',
-    title: 'Deploy Dataplex Business Interface Application',
+    title: 'Deploy Knowledge Catalog Business Interface Application',
     content: (
       <>
         <Typography paragraph>
@@ -320,7 +320,7 @@ const UserGuide: React.FC = () => {
           The core administrative requirements during deployment include:
         </Typography>
         <ul>
-          <li><Typography>Enabling the necessary GCP APIs (<strong>Dataplex API, BigQuery API</strong>, etc).</Typography></li>
+          <li><Typography>Enabling the necessary GCP APIs (<strong>Knowledge Catalog API, BigQuery API</strong>, etc).</Typography></li>
           <li><Typography>Generating and configuring the required API keys and service accounts.</Typography></li>
           <li><Typography>Setting up the application container and Cloud Run deployment environment.</Typography></li>
         </ul>
@@ -446,7 +446,7 @@ const UserGuide: React.FC = () => {
     content: (
       <>
         <Typography paragraph>
-          Accessing the Dataplex Business Interface is a straightforward, two-step process to ensure
+          Accessing the Knowledge Catalog Business Interface is a straightforward, two-step process to ensure
           security and permission compliance.
         </Typography>
         <ol>
@@ -465,7 +465,7 @@ const UserGuide: React.FC = () => {
           </li>
           <li>
             <Typography>
-              <strong>Permission Check:</strong> Once logged in, the application verifies your assigned Dataplex
+              <strong>Permission Check:</strong> Once logged in, the application verifies your assigned Knowledge Catalog
               permissions. If you have the required roles, you are redirected to the Home Page. If
               permissions are missing, you will receive a message to contact your administrator.
             </Typography>
@@ -474,7 +474,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig2-signin.png"
-          alt="Dataplex Business Interface Sign-in Page"
+          alt="Knowledge Catalog Business Interface Sign-in Page"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -494,7 +494,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig3-homepage.png"
-          alt="Dataplex Business Interface Home Page"
+          alt="Knowledge Catalog Business Interface Home Page"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -511,7 +511,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig4-searchbar.png"
-          alt="Dataplex search bar with asset type dropdown"
+          alt="Knowledge Catalog search bar with asset type dropdown"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -530,7 +530,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig5-search-results.png"
-          alt="Dataplex search results page for 'sale'"
+          alt="Knowledge Catalog search results page for 'sale'"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -560,7 +560,7 @@ const UserGuide: React.FC = () => {
             <Box
               component="img"
               src="/assets/images/fig6-filter-aspect.png"
-              alt="Dataplex search results with Aspect filter highlighted"
+              alt="Knowledge Catalog search results with Aspect filter highlighted"
               sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
             />
             <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -576,7 +576,7 @@ const UserGuide: React.FC = () => {
             <Box
               component="img"
               src="/assets/images/fig7-filter-assets.png"
-              alt="Dataplex search results with Assets filter highlighted"
+              alt="Knowledge Catalog search results with Assets filter highlighted"
               sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
             />
             <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -593,7 +593,7 @@ const UserGuide: React.FC = () => {
             <Box
               component="img"
               src="/assets/images/fig8-filter-products.png"
-              alt="Dataplex search results with Products filter highlighted"
+              alt="Knowledge Catalog search results with Products filter highlighted"
               sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
             />
             <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -605,7 +605,7 @@ const UserGuide: React.FC = () => {
             <Box
               component="img"
               src="/assets/images/fig9-filter-projects.png"
-              alt="Dataplex search results with Projects filter highlighted"
+              alt="Knowledge Catalog search results with Projects filter highlighted"
               sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
             />
             <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -637,7 +637,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig10-metadata-preview.png"
-          alt="Dataplex search result card and metadata preview pane"
+          alt="Knowledge Catalog search result card and metadata preview pane"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -685,7 +685,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig11-detailed-overview.png"
-          alt="Dataplex asset metadata overview tab"
+          alt="Knowledge Catalog asset metadata overview tab"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -704,7 +704,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig12-detailed-aspects.png"
-          alt="Dataplex asset metadata aspects tab"
+          alt="Knowledge Catalog asset metadata aspects tab"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -720,7 +720,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig13-detailed-lineage.png"
-          alt="Dataplex asset metadata lineage tab"
+          alt="Knowledge Catalog asset metadata lineage tab"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -757,7 +757,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig14-explore.png"
-          alt="Explore options in Dataplex: Open in BigQuery and Explore with Looker Studio"
+          alt="Explore options in Knowledge Catalog: Open in BigQuery and Explore with Looker Studio"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -778,7 +778,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig15-browse-button.png"
-          alt="Dataplex home page with Browse button highlighted"
+          alt="Knowledge Catalog home page with Browse button highlighted"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -805,7 +805,7 @@ const UserGuide: React.FC = () => {
         <Box
           component="img"
           src="/assets/images/fig16-browse-aspects.png"
-          alt="Dataplex browse by aspect page"
+          alt="Knowledge Catalog browse by aspect page"
           sx={{ width: '100%', border: '1px solid #ddd', borderRadius: '4px', my: 2 }}
         />
         <Typography variant="caption" display="block" gutterBottom sx={{ textAlign: 'center' }}>
@@ -844,7 +844,7 @@ const UserGuide: React.FC = () => {
       {/* Main Content Area (Accordions) */}
       <Box sx={{ flex: 3, minWidth: 0 }}>
         <Typography variant="h4" gutterBottom>
-          Dataplex Business Interface User Guide
+          Knowledge Catalog Business Interface User Guide
         </Typography>
         <Divider sx={{ mb: 2 }} />
         {guideSections.map((section) => (

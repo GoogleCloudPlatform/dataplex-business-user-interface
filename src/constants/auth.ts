@@ -63,5 +63,20 @@ export const REQUIRED_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ] as const;
 
-/** Minimum IAM role required to use the application */
-export const REQUIRED_IAM_ROLE = 'roles/dataplex.viewer';
+/** IAM permissions required to use the application (user must have ALL) */
+export const REQUIRED_PERMISSIONS = [
+  'dataplex.lakes.get',
+  'dataplex.lakes.list',
+  'dataplex.zones.get',
+  'dataplex.zones.list',
+  'dataplex.assets.get',
+  'dataplex.assets.list',
+  'dataplex.entryGroups.get',
+  'dataplex.entryGroups.list',
+  'dataplex.entries.get',
+  'dataplex.entries.list',
+  'dataplex.aspectTypes.get',
+  'dataplex.aspectTypes.list',
+  'dataplex.entryTypes.get',
+  'dataplex.entryTypes.list',
+] as const;

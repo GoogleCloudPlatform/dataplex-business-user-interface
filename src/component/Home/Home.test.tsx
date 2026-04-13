@@ -82,12 +82,27 @@ vi.mock('../../constants/urls', () => ({
   URLS: {
     API_URL: 'http://localhost:3000/api',
     APP_CONFIG: '/app-config',
-    CHECK_IAM_ROLE: '/check-iam-role',
+    CHECK_PERMISSIONS: '/check-permissions',
   }
 }));
 
 vi.mock('../../constants/auth', () => ({
-  REQUIRED_IAM_ROLE: 'roles/dataplex.viewer',
+  REQUIRED_PERMISSIONS: [
+    'dataplex.lakes.get',
+    'dataplex.lakes.list',
+    'dataplex.zones.get',
+    'dataplex.zones.list',
+    'dataplex.assets.get',
+    'dataplex.assets.list',
+    'dataplex.entryGroups.get',
+    'dataplex.entryGroups.list',
+    'dataplex.entries.get',
+    'dataplex.entries.list',
+    'dataplex.aspectTypes.get',
+    'dataplex.aspectTypes.list',
+    'dataplex.entryTypes.get',
+    'dataplex.entryTypes.list',
+  ],
 }));
 
 // Mock SearchBar component
@@ -194,8 +209,8 @@ describe('Home', () => {
     // Setup axios mock
     vi.mocked(axios.get).mockClear();
     vi.mocked(axios.post).mockClear();
-    // Mock IAM role check to succeed by default
-    vi.mocked(axios.post).mockResolvedValue({ data: { hasRole: true } });
+    // Mock permission check to succeed by default
+    vi.mocked(axios.post).mockResolvedValue({ data: { hasPermission: true } });
     if (!axios.defaults) {
       (axios as any).defaults = { headers: { common: {} } };
     }

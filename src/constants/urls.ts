@@ -5,7 +5,7 @@ export const URLS = {
     API_URL: API_BASE_URL+ '/' + API_VERSION,
     APP_CONFIG: '/app-configs',
     ADMIN_CONFIGURE: '/admin/configure',
-    CHECK_IAM_ROLE: '/check-iam-role',
+    CHECK_PERMISSIONS: '/check-permissions',
     SEARCH : '/search',
     GET_ENTRY: '/get-entry',
     CHECK_ENTRY_ACCESS: '/check-entry-access',

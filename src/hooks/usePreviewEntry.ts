@@ -28,7 +28,7 @@ interface PreviewEntryState {
 }
 
 interface UsePreviewEntryOptions {
-  /** The entry name to fetch (Dataplex entry name format) */
+  /** The entry name to fetch (Knowledge Catalog entry name format) */
   entryName: string | null;
   /** Authentication token for API requests */
   id_token: string;

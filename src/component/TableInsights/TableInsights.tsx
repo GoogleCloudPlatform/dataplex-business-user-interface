@@ -102,7 +102,7 @@ const TableInsights: React.FC<TableInsightsProps> = ({ entry, scanName }) => {
           </svg>
           <p className="insights-empty-state__title">No AI-generated insights available</p>
           <p className="insights-empty-state__subtitle">
-            Run a Data Documentation scan in Dataplex to generate insights for this table.
+            Run a Data Documentation scan in Knowledge Catalog to generate insights for this table.
           </p>
         </Box>
       </Box>

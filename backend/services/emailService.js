@@ -213,7 +213,7 @@ const createAccessRequestEmail = (assetName, message, requesterEmail, projectId,
             Manage Access in Console
           </a>
           <a href="https://console.cloud.google.com/dataplex?project=${projectId}" class="btn btn-secondary" style="color:#fff !important"  target="_blank">
-            View in Dataplex
+            View in Knowledge Catalog
           </a>
         </div>
         

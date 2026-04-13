@@ -586,7 +586,7 @@ describe("UserGuide", () => {
       const overviewButton = screen.getByRole("button", { name: /Overview/i });
       fireEvent.click(overviewButton);
 
-      // Check the Dataplex link
+      // Check the Knowledge Catalog link
       const dataplexLink = screen.getByText("Knowledge Catalog");
       expect(dataplexLink.tagName).toBe("A");
       expect(dataplexLink).toHaveAttribute("rel", "noopener");

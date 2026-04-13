@@ -1,14 +1,14 @@
-# Knowledge Catalog Business Interface - 1.3.2
+# Knowledge Catalog Business Interface - 1.3.3
 
-An open-source, web-based application called **`Dataplex Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Dataplex** Universal Catalog (formerly Data Catalog).
+An open-source, web-based application called **`Knowledge Catalog Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Knowledge Catalog** (formerly Dataplex Universal Catalog).
 ## Key objectives of the application include:
 - Empowering business users to find relevant data independently.
-- Streamlining the data access request process using **Dataplex's** API.
+- Streamlining the data access request process using **Knowledge Catalog's** API.
 **Improving** data governance and compliance with an audit trail for access requests.
 Increasing data literacy by making data more discoverable.
 Providing a customizable platform for future data governance enhancements.
 ## The target user personas are:
-Business users and others who need to access and understand data in **Dataplex**.
+Business users and others who need to access and understand data in **Knowledge Catalog**.
 Data Stewards.
 
 ## Key Features
@@ -21,13 +21,13 @@ Built with Vite for a fast development experience, TypeScript for type safety, a
 ### Mock Backend Simulation: 
 Includes a simulated API to demonstrate the frontend's interaction with a backend for exchanging the authorization code, allowing the frontend to be run standalone for development.
 ### **GCP APIs** Permission Check: 
-After successful authentication, the application will use **GCP APIs** to check if the logged-in user has **Dataplex** permissions. This check will ensure that only authorized users can access **Dataplex** data.
+After successful authentication, the application will use **GCP APIs** to check if the logged-in user has **Knowledge Catalog** permissions. This check will ensure that only authorized users can access **Knowledge Catalog** data.
 ### Search with Filters: 
-The UI will allow users to search for **Dataplex** datasets using various filters. The search functionality will leverage **Dataplex** APIs to query the data.
+The UI will allow users to search for **Knowledge Catalog** datasets using various filters. The search functionality will leverage **Knowledge Catalog** APIs to query the data.
 ### Catalogs Retrieval: 
-The application will retrieve and display **Dataplex** catalogs. Users will be able to browse through the catalogs to find datasets.
+The application will retrieve and display **Knowledge Catalog** catalogs. Users will be able to browse through the catalogs to find datasets.
 ### Dataset Details: 
-When a user selects a dataset, the application will fetch and display details such as Asset name, description, Project ID, and metadata using the **Dataplex** API.
+When a user selects a dataset, the application will fetch and display details such as Asset name, description, Project ID, and metadata using the **Knowledge Catalog** API.
 
 ## Libraries & Tools
 **React**: The core UI library.
@@ -317,22 +317,13 @@ gcloud run deploy [SERVICE_NAME] \
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
 
 
-## Release Note : 1.3.2
-This is a minor release with features, identified bug/fixes and some user interface changes.
+## Release Note : 1.3.3
+This is a sub minor release with features, identified bug/fixes and some user interface changes.
 Feature Enhancements:
 
-  - Rebranding of Dataplex Universal Catalog to Knowledge Catalog.
-  - UI/UX changes in search result, View Detail and browse by aspects page.
-  - Multiple Other smaller UI/UX changes.
-  - Data product request flow form modified.
-  - Increased and modified unit test coverages for the new and modified modules.
-  - Server caching for static files are modified for new deployments.
-  - data products inside search bar now working with natural language search.
-  - scope changes for auth and api usage
+  - Auth logic for checking access changed from roles to permissions
 
 Bug Fixes:
 
-  - Bug fixes in search filters.
-  - Dead code removal from backend.
-  - Bug fix in data products.
-
+  - UI Bug fixes in some screens.
+  - readme updates for rebranding to Knowledge Catalog.

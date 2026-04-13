@@ -8,6 +8,6 @@ export interface User {
   hasRole: boolean | undefined;
   roles: string[] | undefined;
   permissions: string[] | undefined;
-  iamDisplayRole?: string | undefined; // "Owner" | "Admin" | "Editor" | "Viewer" | "No Dataplex Role"
+  iamDisplayRole?: string | undefined; // "Owner" | "Admin" | "Editor" | "Viewer" | "No Knowledge Catalog Role"
   appConfig: any;
 };

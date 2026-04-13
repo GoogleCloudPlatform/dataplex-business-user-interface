@@ -37,7 +37,7 @@ const searchEntries = async (dataplexClientv1, query, parent) => {
   try {
       let query  = `fully_qualified_name=${fqn}`;
 
-      // Construct the request for the Dataplex API
+      // Construct the request for the Knowledge Catalog API
       const request = {
         // The name of the project and location to search within
         name: parent,
@@ -45,9 +45,9 @@ const searchEntries = async (dataplexClientv1, query, parent) => {
         pageSize:1, // Limit the number of results returned
       };
 
-      console.log('Performing Dataplex search with query:', query);
+      console.log('Performing Knowledge Catalog search with query:', query);
 
-      // Call the searchEntries method of the Dataplex client
+      // Call the searchEntries method of the Knowledge Catalog client
       const [response] = await dataplexClientv1.searchEntries(request);
       console.log('Search response:', response);
 
@@ -166,128 +166,92 @@ function checkErrorAndSendResponse(res, error, customMessage) {
 
 
 /**
- * POST /check-iam-role
- * Checks if a given email has a specific role on a Google Cloud Project.
+ * POST /check-permissions
+ * Checks if the authenticated user has all the specified IAM permissions on the project
+ * using the Cloud Resource Manager testIamPermissions API.
  *
  * Request Body:
  * {
-    * "projectId": "your-gcp-project-id", // e.g., "my-project-12345"
-    * "email": "user-to-check@example.com", // The email of the user/service account
-    * "role": "roles/viewer" // The specific IAM role to check, e.g., "roles/editor", "roles/compute.instanceAdmin"
+    * "permissions": ["dataplex.entries.get", "dataplex.entries.list", ...] // Array of IAM permissions to check (user must have ALL)
  * }
  *
  * Response:
  * {
- * "hasRole": true, // or false
+ * "hasPermission": true, // or false
+ * "grantedPermissions": [...],
+ * "missingPermissions": [...],
  * "message": "..."
  * }
  */
 
-app.post('/api/v1/check-iam-role', async (req, res) => {
-    
-    const {email, role } = req.body;
-    const accessToken = req.headers.authorization?.split(' ')[1]; // Expect
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID; // Use environment variable if not provided
+app.post('/api/v1/check-permissions', async (req, res) => {
+
+    const { permissions } = req.body;
+    const accessToken = req.headers.authorization?.split(' ')[1];
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
     // --- Input Validation ---
     if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
         return res.status(400).json({ error: 'projectId is required and must be a non-empty string.' });
     }
-    if (!email || typeof email !== 'string' || email.trim() === '') {
-        return res.status(400).json({ error: 'email is required and must be a non-empty string.' });
+    if (!Array.isArray(permissions) || permissions.length === 0 || !permissions.every(p => typeof p === 'string' && p.trim() !== '')) {
+        return res.status(400).json({ error: 'permissions is required and must be a non-empty array of strings.' });
     }
-    if (!role || typeof role !== 'string' || role.trim() === '') {
-        return res.status(400).json({ error: 'role is required and must be a non-empty string.' });
-    }
-
-    // Ensure the email is in the correct format for IAM members (e.g., "user:email@example.com", "serviceAccount:id@project.iam.gserviceaccount.com")
-    const member = email.includes(':') ? email : `user:${email}`;
 
     try {
         const oauth2Client = new CustomGoogleAuth(accessToken);
-        
+
         // Get the Cloud Resource Manager API client
         const cloudResourceManager = google.cloudresourcemanager({
-             version: 'v1',
+            version: 'v1',
             auth: oauth2Client,
         });
 
-        // Fetch the IAM policy for the specified project
-        console.log(`Fetching IAM policy for project: ${projectId}`);
-        const response = await cloudResourceManager.projects.getIamPolicy({
-            resource: projectId
+        // Use testIamPermissions to check the user's effective permissions
+        console.log(`Testing ${permissions.length} permissions for project: ${projectId}`);
+        const response = await cloudResourceManager.projects.testIamPermissions({
+            resource: projectId,
+            requestBody: { permissions },
         });
 
-        const policy = response.data;
-        console.log(`IAM Policy fetched for project ${projectId}.`);
+        const grantedPermissions = response.data.permissions || [];
+        const missingPermissions = permissions.filter(p => !grantedPermissions.includes(p));
+        const hasPermission = missingPermissions.length === 0;
 
-        let hasRole = false;
-
-        const userRoles = [];
-
-        // Iterate through the policy bindings to find the role and member
-        if (policy && policy.bindings) {
-            for (const binding of policy.bindings || []) {
-                if ((binding.members || []).includes(member)) {
-                    userRoles.push(binding.role);
-                }
-            }
-            console.log(`Roles found for user ${email} in project ${projectId}:`, userRoles);
-            // Check if the requested role is in the user's roles
-            if (userRoles.includes(role) || userRoles.includes(`roles/owner`)) {
-                hasRole = true;
-            }
+        console.log(`Granted ${grantedPermissions.length}/${permissions.length} permissions for project ${projectId}.`);
+        if (missingPermissions.length > 0) {
+            console.log(`Missing permissions:`, missingPermissions);
         }
 
-        let permissions = [];
-
-        // Expand each role into permissions (to simulate sub-roles)
-        for (const role of userRoles) {
-            console.log(`\n🔹 Role: ${role}`);
-            try {
-                const roleName = role.startsWith('roles/') ? `projects/${projectId}/roles/${role.split('/')[1]}` : role;
-
-                const res = await iam.roles.get({
-                    name: role.startsWith('roles/') ? role : roleName,
-                });
-
-                permissions = res.data.includedPermissions || [];
-                //console.log(`   Includes ${permissions.length} permissions`);
-                //console.log(`   Sample permissions: ${permissions.slice(0, 5).join(', ')}${permissions.length > 5 ? '...' : ''}`);
-            } catch (err) {
-                console.warn(`   Could not retrieve details for role ${role}:`, err.message);
-            }
-        }
-
-        if (hasRole) {
-            console.log(`User ${email} HAS role ${role} on project ${projectId}.`);
-            return res.json({ hasRole: true, roles:userRoles, permissions:permissions, message: `User ${email} has role ${role} on project ${projectId}.` });
-        } else {
-            console.log(`User ${email} DOES NOT HAVE role ${role} on project ${projectId}.`);
-            return res.json({ hasRole: false, roles:userRoles, permissions:permissions, message: `User ${email} does not have role ${role} on project ${projectId}.` });
-        }
+        return res.json({
+            hasPermission,
+            grantedPermissions,
+            missingPermissions,
+            message: hasPermission
+                ? `User has all required permissions on project ${projectId}.`
+                : `User is missing ${missingPermissions.length} permission(s) on project ${projectId}.`,
+        });
 
     } catch (error) {
-        console.error('Error checking IAM role:', error.message);
-        // Provide a more specific error message if it's a permission denied error
+        console.error('Error checking permissions:', error.message);
         if (error.code === 403 || (error.errors && error.errors[0] && error.errors[0].reason === 'FORBIDDEN')) {
             return res.status(403).json({
-                error: 'Permission Denied: The service account does not have the necessary permissions to get IAM policy for this project.',
+                error: 'Permission Denied: Unable to test permissions for this project.',
                 details: error.message
             });
         }
-        return checkErrorAndSendResponse(res, error, 'An error occurred while checking IAM role:');
+        return checkErrorAndSendResponse(res, error, 'An error occurred while checking permissions:');
     }
 });
 
 /**
  * POST /api/v1/search
- * A protected endpoint to search for entries in Google Cloud Dataplex.
+ * A protected endpoint to search for entries in Google Cloud Knowledge Catalog.
  * The user must be authenticated.
  *
  * Request Body:
  * {
- * "query": "The search query string for Dataplex. Supports structured search like 'type=TABLE name:customer'."
+ * "query": "The search query string for Knowledge Catalog. Supports structured search like 'type=TABLE name:customer'."
  * }
  */
 app.post('/api/v1/search', async (req, res) => {
@@ -314,7 +278,7 @@ app.post('/api/v1/search', async (req, res) => {
         return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
-    // Construct the request for the Dataplex API
+    // Construct the request for the Knowledge Catalog API
     const request = {
       // The name of the project and location to search within
       name: `projects/${projectId}/locations/${location}`,
@@ -324,29 +288,29 @@ app.post('/api/v1/search', async (req, res) => {
       orderBy: orderBy ?? '',
     };
 
-    console.log('Performing Dataplex search with query:', query);
+    console.log('Performing Knowledge Catalog search with query:', query);
 
-    // Call the searchEntries method of the Dataplex client
+    // Call the searchEntries method of the Knowledge Catalog client
     const [data, requestData, response] = await dataplexClientv1.searchEntries(request, { autoPaginate: false });
 
     // Send the search results back to the client
     res.json({data : data, requestData : requestData, results : response});
 
   } catch (error) {
-    console.error('Error during Dataplex search:', error);
+    console.error('Error during Knowledge Catalog search:', error);
     // Return a generic error message to the client
-    return checkErrorAndSendResponse( res, error, 'An error occurred while searching Dataplex.');
+    return checkErrorAndSendResponse( res, error, 'An error occurred while searching Knowledge Catalog.');
   }
 });
 
 /**
  * POST /api/aspects
- * A protected endpoint to fetch all aspects (detailed metadata like schema) for a specific Dataplex entry.
+ * A protected endpoint to fetch all aspects (detailed metadata like schema) for a specific Knowledge Catalog entry.
  * The user must be authenticated.
  *
  * Request Body:
  * {
- * "entryName": "The full resource name of the Dataplex entry. e.g., projects/{p}/locations/{l}/entryGroups/{eg}/entries/{e}"
+ * "entryName": "The full resource name of the Knowledge Catalog entry. e.g., projects/{p}/locations/{l}/entryGroups/{eg}/entries/{e}"
  * }
  */
 app.post('/api/v1/aspects', async (req, res) => {
@@ -374,7 +338,7 @@ app.post('/api/v1/aspects', async (req, res) => {
 
     console.log(`Fetching aspects for entry: ${entryName}`);
 
-    // Call the getEntry method of the Dataplex client
+    // Call the getEntry method of the Knowledge Catalog client
     const [entry] = await dataplexClientv1.getEntry(request);
 
     // The aspects are contained within the 'aspects' property of the entry object.
@@ -384,7 +348,7 @@ app.post('/api/v1/aspects', async (req, res) => {
   } catch (error) {
     console.error(`Error fetching aspects for entry ${entryName}:`, error);
     // Return a generic error message to the client
-    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching aspects from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching aspects from Knowledge Catalog.');
   }
 });
 
@@ -464,7 +428,7 @@ app.get('/api/v1/aspect-types', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Knowledge Catalog.');
   }
 });
 
@@ -499,7 +463,7 @@ app.get('/api/v1/entry-list', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Knowledge Catalog.');
   }
 });
 
@@ -534,7 +498,7 @@ app.get('/api/v1/entry-types', async (req, res) => {
 
   } catch (error) {
     console.error('Error listing aspect types:', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while listing aspect types from Knowledge Catalog.');
   }
 });
 
@@ -567,13 +531,13 @@ app.get('/api/v1/get-entry', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Knowledge Catalog.');
   }
 });
 
 /**
  * GET /api/v1/check-entry-access
- * A lightweight endpoint that checks if the user has access to a Dataplex entry.
+ * A lightweight endpoint that checks if the user has access to a Knowledge Catalog entry.
  * Uses EntryView.BASIC to minimize payload — returns only access status, not full entry data.
  */
 app.get('/api/v1/check-entry-access', async (req, res) => {
@@ -628,7 +592,7 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
         return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID and GCP_LOCATION must be set in the .env file.' });
     }
 
-    // Construct the request for the Dataplex API
+    // Construct the request for the Knowledge Catalog API
     const request = {
       // The name of the project and location to search within
       name: `projects/${projectId}/locations/${location}`,
@@ -636,9 +600,9 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
       pageSize:10, // Limit the number of results returned
     };
 
-    console.log('Performing Dataplex search with query:', query);
+    console.log('Performing Knowledge Catalog search with query:', query);
 
-    // Call the searchEntries method of the Dataplex client
+    // Call the searchEntries method of the Knowledge Catalog client
     const [response] = await dataplexClientv1.searchEntries(request);
 
 
@@ -655,7 +619,7 @@ app.get('/api/v1/get-entry-by-fqn', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Knowledge Catalog.');
   }
 });
 
@@ -682,7 +646,7 @@ app.get('/api/v1/lookup-entry', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching entry', error);
-    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Dataplex.');
+    return checkErrorAndSendResponse(res, error, 'An error occurred while fetching entry from Knowledge Catalog.');
   }
 });
 
@@ -1144,7 +1108,7 @@ app.post('/api/v1/lineage-column-level', async (req, res) => {
           fqnArray.map(async (item) =>{
               let query  = `fully_qualified_name=${item}`;
 
-              // Construct the request for the Dataplex API
+              // Construct the request for the Knowledge Catalog API
               const request = {
                 // The name of the project and location to search within
                 name: parent,
@@ -1152,7 +1116,7 @@ app.post('/api/v1/lineage-column-level', async (req, res) => {
                 pageSize:1, // Limit the number of results returned
               };
 
-              // Call the searchEntries method of the Dataplex client
+              // Call the searchEntries method of the Knowledge Catalog client
               const [searchResponse] = await dataplexClinetv1.searchEntries(request);
               if(searchResponse.length > 0){
                 const entryName = searchResponse.length > 0 ? searchResponse[0].dataplexEntry.name : null ;
@@ -1339,7 +1303,7 @@ app.get('/api/v1/app-configs', async (req, res) => {
     const parent = `projects/${projectId}/locations/${location}`;
     const aspectQuery = `type=projects/dataplex-types/locations/global/entryTypes/aspecttype`
 
-    // Construct the request for the Dataplex API
+    // Construct the request for the Knowledge Catalog API
     const request = {
       // The name of the project and location to search within
       name: parent,
@@ -1647,7 +1611,7 @@ app.get('/api/v1/get-data-scan-jobs', async (req, res) => {
 
 /**
  * POST /api/entry-data-quality
- * A protected endpoint to fetch data quality scan results for a specific Dataplex entry.
+ * A protected endpoint to fetch data quality scan results for a specific Knowledge Catalog entry.
  */
 app.post('/api/v1/entry-data-quality', async (req, res) => {
     const { name, resourceName, parent } = req.body;
@@ -1707,7 +1671,7 @@ app.post('/api/v1/entry-data-quality', async (req, res) => {
 
 /**
  * POST /api/get-data-scan
- * A protected endpoint to fetch data quality scan results for a specific Dataplex entry.
+ * A protected endpoint to fetch data quality scan results for a specific Knowledge Catalog entry.
  */
 app.get('/api/v1/get-data-scan', async (req, res) => {
     const { name } = req.query;
@@ -1749,7 +1713,7 @@ app.get('/api/v1/get-data-scan', async (req, res) => {
 
 /**
  * POST /api/get-data-scan
- * A protected endpoint to fetch data quality scan results for a specific Dataplex entry.
+ * A protected endpoint to fetch data quality scan results for a specific Knowledge Catalog entry.
  */
 app.post('/api/v1/get-jobs-scan', async (req, res) => {
     const { jobs } = req.body;
@@ -2012,7 +1976,7 @@ app.get('/*\w', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
     console.log('API Endpoints:');
-    console.log(`  POST /api/v1/check-iam-role`);
+    console.log(`  POST /api/v1/check-permissions`);
     console.log(`  POST /api/v1/search`);
     console.log(`  GET /api/health`);
     console.log(`process.env.GOOGLE_CLOUD_PROJECT_ID: ${process.env.GOOGLE_CLOUD_PROJECT_ID || 'Not set'}`);
