@@ -11,7 +11,7 @@ import { sanitizeRedirectURL } from '../../../services/urlPreservationService';
  *
  * @description
  * This component displays the main login screen for the application. The UI
- * consists of a background image, the application logo ("Dataplex
+ * consists of a background image, the application logo ("Knowledge Catalog
  * Universal Catalog"), and a "Sign in with Google Cloud" button.
  *
  * It uses the `useGoogleLogin` hook from `@react-oauth/google` to initiate
@@ -76,7 +76,7 @@ const Login: React.FC = () => {
             </div>
           </div>
           {/* <div className='signin-text'>
-            <span>Sign into Dataplex Business Interface</span>
+            <span>Sign into Knowledge Catalog Business Interface</span>
           </div> */}
           <button className="login-button" onClick={() => {googleLogin()}}>
             <img src='/assets/images/google-logo-figma-53c44d.png' alt='Google Icon' className='google-icon' />

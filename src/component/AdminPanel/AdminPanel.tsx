@@ -175,7 +175,7 @@ const AdminPanel = () => {
     });
 
     // Build nested structures keyed by selected items with their selected sub-items
-    const PRODUCT_API_NAMES: Record<string, string> = { "Knowledge Catalog": "Dataplex Universal Catalog" };
+    const PRODUCT_API_NAMES: Record<string, string> = { "Knowledge Catalog": "Knowledge Catalog Universal Catalog" };
     const assetsObj: Record<string, string[]> = {};
     products.forEach((product) => {
       const sp = selectedAssetsByProduct[product] || [];

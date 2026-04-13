@@ -45,7 +45,7 @@ import { useAccessRequest } from '../../contexts/AccessRequestContext';
  * entry.
  *
  * 1.  **Data Fetching**: On mount, it inspects the `entry.entrySource.labels` to
- * find a Dataplex Data Scan ID (`dataplex-dp-published-scan`).
+ * find a Knowledge Catalog Data Scan ID (`dataplex-dp-published-scan`).
  * 2.  **Redux Integration**: It uses this scan ID (formatted as a full scan name)
  * to check the Redux store (via `dataScanSlice` selectors) to see if the
  * profile data has already been fetched.

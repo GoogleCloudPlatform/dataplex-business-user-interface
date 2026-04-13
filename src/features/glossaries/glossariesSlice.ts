@@ -405,7 +405,7 @@ export const fetchGlossaries = createAsyncThunk(
 
       // Query specifically for Glossaries
       const response = await axios.post(url, {
-        query: "type=GLOSSARY EXP:SEMANTIC", // Standard Dataplex syntax for finding glossaries
+        query: "type=GLOSSARY EXP:SEMANTIC", // Standard Knowledge Catalog syntax for finding glossaries
         pageSize: 100,
         ...requestData.options,
       });
@@ -757,7 +757,7 @@ const buildFilteredTree = (
 };
 
 /**
- * Build a single filter part for the Dataplex query
+ * Build a single filter part for the Knowledge Catalog query
  */
 const buildSingleFilterPart = (filter: FilterChip): string => {
   const value = filter.value.trim();
@@ -787,7 +787,7 @@ const buildSingleFilterPart = (filter: FilterChip): string => {
 };
 
 /**
- * Build the complete Dataplex search query from filter chips
+ * Build the complete Knowledge Catalog search query from filter chips
  */
 const buildFilterQuery = (filters: FilterChip[]): string => {
   const baseTypes = "(type=glossary OR type=glossary_category OR type=glossary_term)";

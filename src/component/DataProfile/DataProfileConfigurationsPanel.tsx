@@ -21,7 +21,7 @@ import {
  * screen. It is controlled by the `isOpen` prop.
  *
  * It displays a read-only view of the configuration settings for a specific
- * Dataplex Data Scan, which is passed in via the `dataProfileScan` prop.
+ * Knowledge Catalog Data Scan, which is passed in via the `dataProfileScan` prop.
  *
  * The panel shows key-value pairs for various scan settings, such as:
  * - Scope

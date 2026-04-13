@@ -21,7 +21,7 @@ import {
  * screen, controlled by the `isOpen` prop.
  *
  * It displays a read-only view of the configuration settings for a specific
- * Dataplex Data Quality Scan, which is passed in via the `dataQualtyScan` prop.
+ * Knowledge Catalog Data Quality Scan, which is passed in via the `dataQualtyScan` prop.
  *
  * The panel shows key-value pairs for various scan settings, such as:
  * - Scope

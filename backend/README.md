@@ -1,5 +1,5 @@
 # Knowledge Catalog Buisness Interface - backend
-built on node js and express to communicate with GCP Dataplex
+built on node js and express to communicate with GCP Knowledge Catalog
 
 Just open this directory to terminal
 set the GOOGLE_CLOUD_PROJECT_ID to your project ID in .env.test file

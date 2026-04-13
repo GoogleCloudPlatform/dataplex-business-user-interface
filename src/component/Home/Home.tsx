@@ -12,7 +12,7 @@ import { useNotification } from '../../contexts/NotificationContext'
 import { getProjects } from '../../features/projects/projectsSlice'
 import { sanitizeFirstName } from '../../utils/sanitizeName'
 import { useNoAccess } from '../../contexts/NoAccessContext'
-import { REQUIRED_IAM_ROLE } from '../../constants/auth'
+import { REQUIRED_PERMISSIONS } from '../../constants/auth'
 
 /**
  * @file Home.tsx
@@ -66,19 +66,17 @@ const Home = () => {
       return;
     }
 
-    // 2. Check IAM role via backend endpoint
-    axios.post(URLS.API_URL + URLS.CHECK_IAM_ROLE, {
-      email: user.email,
-      role: REQUIRED_IAM_ROLE,
+    // 2. Check IAM permissions via backend endpoint
+    axios.post(URLS.API_URL + URLS.CHECK_PERMISSIONS, {
+      permissions: [...REQUIRED_PERMISSIONS],
     }).then((res) => {
-      if (!res.data.hasRole) {
+      if (!res.data.hasPermission) {
         triggerNoAccess({
-          message: `Your account (${user.email}) does not have the required '${REQUIRED_IAM_ROLE}' role on this project. Please contact your administrator to get the appropriate permissions.`,
+          message: `Your account (${user.email}) does not have the required Dataplex permissions on this project. Please contact your administrator to get the appropriate permissions.`,
         });
       }
     }).catch((err) => {
-      console.error('[Home] IAM role check failed:', err);
-      // If the check itself fails with 403, the user likely lacks cloud-platform scope
+      console.error('[Home] Permission check failed:', err);
       if (err.response?.status === 403) {
         triggerNoAccess({
           message: 'Unable to verify your permissions. You may not have sufficient access to this project. Please contact your administrator.',
