@@ -38,7 +38,7 @@ export const RedirectGuard: React.FC<RedirectGuardProps> = ({ children, isAuthen
       if (sanitizedURL) {
         console.log('[RedirectGuard] Redirecting to query param URL:', sanitizedURL);
         clearRedirectURL(); // Clear sessionStorage as well
-        navigate(sanitizedURL, { replace: true });
+        navigate(sanitizedURL, { replace: true, state: { fromAuth: true } });
         return;
       }
     }

@@ -452,7 +452,9 @@ describe('ResourcePreview', () => {
       const viewDetailsButton = screen.getByText('View Details');
       fireEvent.click(viewDetailsButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/view-details');
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `/view-details?entry=${encodeURIComponent(btoa(mockPreviewData.name))}`
+      );
     });
 
     it('does not navigate when viewDetailAccessable is false', () => {

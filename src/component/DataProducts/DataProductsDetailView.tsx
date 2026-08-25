@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Box, IconButton, Skeleton, Tab, Tabs } from '@mui/material'
-import { KeyboardArrowUp, KeyboardArrowDown, DashboardOutlined, Inventory2Outlined, GroupsOutlined, ArticleOutlined } from '@mui/icons-material'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Box, IconButton, Skeleton, Tab, Tabs, Tooltip } from '@mui/material'
+import { KeyboardArrowUp, KeyboardArrowDown, DashboardOutlined, Inventory2Outlined, GroupsOutlined, ArticleOutlined, LinkOutlined } from '@mui/icons-material'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import CustomTabPanel from '../TabPanel/CustomTabPanel'
 import PreviewAnnotation from '../Annotation/PreviewAnnotation'
@@ -85,8 +85,11 @@ const DataProductsDetailView: React.FC<DataProductsDetailViewProps> = ({ onReque
         selectedDataProductError
     } = useSelector((state: any) => state.dataProducts);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const dataProductIdFromUrl = searchParams.get('dataProductId');
+  const rawDataProductId = searchParams.get('dataProductId');
+  const dataProductIdFromUrl = rawDataProductId ? atob(rawDataProductId) : null;
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { showError } = useNotification();
 
@@ -192,7 +195,7 @@ const DataProductsDetailView: React.FC<DataProductsDetailViewProps> = ({ onReque
       }
   
       dispatch(fetchEntry({ entryName: entryName, id_token: id_token }));
-      navigate('/view-details');
+      navigate(`/view-details?entry=${encodeURIComponent(btoa(entryName))}`);
     };
     
     
@@ -396,6 +399,23 @@ const tabProps = (index: number)  => {
     }
   };
 
+  const handleCopyLink = () => {
+    if (!selectedDataProductDetails?.name) return;
+    // selectedDataProductDetails.name is the Dataplex entry path (from API response), not the
+    // plain DP path that getDataProductDetails expects. Derive the plain path from it:
+    //   entry path: projects/P/locations/L/entryGroups/@dataplex/entries/projects/NUM/locations/L/dataProducts/ID
+    //   plain path: projects/P/locations/L/dataProducts/ID
+    const entryPath = selectedDataProductDetails.name;
+    const projectLocation = entryPath.split('/entryGroups/')[0]; // "projects/P/locations/L"
+    const dpId = entryPath.split('/dataProducts/')[1];            // "ID"
+    const plainDpName = `${projectLocation}/dataProducts/${dpId}`;
+    const url = `${window.location.origin}/data-products-details?dataProductId=${encodeURIComponent(btoa(plainDpName))}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyLinkSuccess(true);
+      setTimeout(() => setCopyLinkSuccess(false), 2000);
+    });
+  };
+
  
 
 
@@ -495,19 +515,26 @@ const tabProps = (index: number)  => {
                 </label>
               </div>
 
-              {changeRequestStatus === 'loading' ? (
-                  <Skeleton variant="rounded" width={140} height={36} sx={{ borderRadius: '100px' }} />
-                ) : (
-                  <RequestAccessButton
-                    entry={selectedDataProductDetails}
-                    onRequestAccess={handleRequestAccess}
-                    changeRequests={changeRequests}
-                    changeRequestStatus={changeRequestStatus}
-                    userEmail={user?.email}
-                    variant="compact"
-                    totalAccessGroups={Object.keys(accessGroups).length}
-                  />
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                {changeRequestStatus === 'loading' ? (
+                    <Skeleton variant="rounded" width={140} height={36} sx={{ borderRadius: '100px' }} />
+                  ) : (
+                    <RequestAccessButton
+                      entry={selectedDataProductDetails}
+                      onRequestAccess={handleRequestAccess}
+                      changeRequests={changeRequests}
+                      changeRequestStatus={changeRequestStatus}
+                      userEmail={user?.email}
+                      variant="compact"
+                      totalAccessGroups={Object.keys(accessGroups).length}
+                    />
+                  )}
+                <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+                  <IconButton onClick={handleCopyLink} size="small" sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}>
+                    <LinkOutlined sx={{ fontSize: '20px' }} />
+                  </IconButton>
+                </Tooltip>
+              </div>
             </div>
 
             {/* Scrolled State: Tabs Container */}
@@ -545,13 +572,19 @@ const tabProps = (index: number)  => {
         ) : (
           /* Unscrolled State: Just the Custom Back Button */
           <>
-          <div 
-            onClick={() => { navigate(-1); }} 
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "4px", 
-              cursor: "pointer" 
+          <div
+            onClick={() => {
+              if (location.key === 'default' || (location.state as any)?.fromAuth) {
+                navigate('/data-products');
+              } else {
+                navigate(-1);
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer"
             }}
           >
           <IconButton
@@ -665,11 +698,14 @@ const tabProps = (index: number)  => {
                       </div>
                   </div>
 
-                  {/* Middle Row: Action Button */}
+                  {/* Middle Row: Action Buttons */}
                   <div style={{
                       position: "absolute",
                       top: "24px",
                       right: "24px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
                   }}>
                     {changeRequestStatus === 'loading' ? (
                       <Skeleton variant="rounded" width={160} height={40} sx={{ borderRadius: '100px' }} />
@@ -684,6 +720,11 @@ const tabProps = (index: number)  => {
                         totalAccessGroups={Object.keys(accessGroups).length}
                       />
                     )}
+                    <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+                      <IconButton onClick={handleCopyLink} size="small" sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px', color: '#022FCD', backgroundColor: '#FFFFFF', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}>
+                        <LinkOutlined sx={{ fontSize: '20px' }} />
+                      </IconButton>
+                    </Tooltip>
                   </div>
                   {/* Bottom Row: Description text block */}
                   <div style={{ width: "100%" }}>
@@ -1041,18 +1082,11 @@ const tabProps = (index: number)  => {
               <Skeleton variant="text" width={350} height={40} />
             </Box>
 
-            {/* Middle Row: Request Access Button */}
-            <Skeleton 
-              variant="rounded" 
-              width={160} 
-              height={40} 
-              sx={{ 
-                borderRadius: '100px',
-                position: 'absolute', 
-                top: '24px', 
-                right: '24px' 
-              }} 
-            />
+            {/* Middle Row: Request Access Button + Copy Link icon */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'absolute', top: '24px', right: '24px' }}>
+              <Skeleton variant="rounded" width={160} height={40} sx={{ borderRadius: '100px' }} />
+              <Skeleton variant="circular" width={36} height={36} />
+            </Box>
 
             {/* Bottom Row: Description text block */}
             <Box sx={{ width: '100%' }}>

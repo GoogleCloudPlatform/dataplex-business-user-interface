@@ -1,9 +1,31 @@
 import React from 'react';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import EditNoteIcon from '../../assets/svg/ListIcon.svg';
 import DatabaseSchemaIcon from '../../assets/svg/database_schema_icon.svg';
 import { getAspectL2Icon } from '../../constants/aspectIcons';
+
+const isUrl = (val: string): boolean =>
+  val.startsWith('http://') || val.startsWith('https://');
+
+const renderStringValue = (val: string, style?: React.CSSProperties): React.ReactNode => {
+  if (isUrl(val)) {
+    return (
+      <a
+        href={val}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#0B57D0', wordBreak: 'break-word', ...style }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {val}
+        <OpenInNewIcon sx={{ fontSize: '14px', flexShrink: 0 }} />
+      </a>
+    );
+  }
+  return <span style={style}>{val}</span>;
+};
 
 interface FieldItemProps {
   fieldName: string;
@@ -87,15 +109,13 @@ const renderLeafKeyValuePairs = (fields: Record<string, any>): React.ReactNode =
             }}>
               {formatFieldName(key)}
             </span>
-            <span style={{
+            {renderStringValue(displayVal!, {
               fontFamily: 'Google Sans Text, sans-serif',
               fontSize: '12px',
               fontWeight: 400,
               color: '#1F1F1F',
               wordBreak: 'break-word',
-            }}>
-              {displayVal}
-            </span>
+            })}
           </div>
         );
       })}
@@ -140,11 +160,11 @@ const FieldItem: React.FC<FieldItemProps> = ({
 
     if (fieldValue === null || typeof fieldValue !== 'object') {
       const val = getSimpleDisplayValue(fieldValue);
-      return val !== null ? <div style={simpleValueStyle}>{val}</div> : null;
+      return val !== null ? <div style={simpleValueStyle}>{renderStringValue(val)}</div> : null;
     }
-    
+
     if (fieldValue.kind === 'stringValue') {
-      return <div style={simpleValueStyle}>{fieldValue.stringValue}</div>;
+      return <div style={simpleValueStyle}>{renderStringValue(fieldValue.stringValue)}</div>;
     }
 
     if (fieldValue.kind === 'numberValue') {
@@ -261,7 +281,7 @@ const FieldItem: React.FC<FieldItemProps> = ({
                     paddingLeft: '53px',
                     wordBreak: 'break-word',
                   }}>
-                    {simpleVal}
+                    {renderStringValue(simpleVal)}
                   </div>
                 );
               }
@@ -286,7 +306,7 @@ const FieldItem: React.FC<FieldItemProps> = ({
                   color: '#1F1F1F',
                   wordBreak: 'break-word',
                 }}>
-                  {simpleVal}
+                  {renderStringValue(simpleVal)}
                 </div>
               );
             }
@@ -340,7 +360,7 @@ const FieldItem: React.FC<FieldItemProps> = ({
                   fontSize: '12px', fontWeight: 400, color: '#1F1F1F',
                   paddingLeft: '53px', wordBreak: 'break-word',
                 }}>
-                  {simpleVal}
+                  {renderStringValue(simpleVal)}
                 </div>
               );
             }

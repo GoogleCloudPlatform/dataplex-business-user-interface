@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import { Box, IconButton, Tab, Tabs, Skeleton } from '@mui/material'
-import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, DashboardOutlined, Inventory2Outlined, BadgeOutlined, TimelineOutlined, WorkspacePremiumOutlined, CategoryOutlined, ArticleOutlined } from '@mui/icons-material'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Box, IconButton, Tab, Tabs, Skeleton, Tooltip } from '@mui/material'
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, DashboardOutlined, Inventory2Outlined, BadgeOutlined, TimelineOutlined, WorkspacePremiumOutlined, CategoryOutlined, ArticleOutlined, LinkOutlined } from '@mui/icons-material'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import ConditionalTooltip from '../Common/ConditionalTooltip'
 import CustomTabPanel from '../TabPanel/CustomTabPanel'
@@ -119,7 +119,10 @@ const ViewDetails = () => {
   const allScansStatus = useSelector(selectAllScansStatus);
   const initialTabName = (location.state as any)?.tabName as string | undefined;
   const tabNameApplied = React.useRef(false);
+  const urlEntryFetchedRef = React.useRef(false);
   const fetchedLinksEntryId = React.useRef<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
   const [tabValue, setTabValue] = React.useState(0);
   const [sampleTableData, setSampleTableData] = React.useState<any>();
   const [filteredEntry, setFilteredEntry] = useState<any>(null);
@@ -168,14 +171,42 @@ const ViewDetails = () => {
       setExpandedAnnotations(new Set(annotationKeys));
     }
   };
+  // Inverse of resolveTabName: numeric tab index → tab name string for URL params
+  const resolveTabIndex = (index: number): string => {
+    const type = getEntryType(entry?.name || '', '/');
+    const isBQTable = type === 'Tables' && entry?.entrySource?.system?.toLowerCase() === 'bigquery';
+    const gType = getGlossaryType(entry);
+    if (isBQTable) return (['overview','aspects','terms','lineage','dataProfile','dataQuality','insights'] as const)[index] ?? 'overview';
+    if (type === 'Datasets') return (['overview','entryList','aspects','terms','insights'] as const)[index] ?? 'overview';
+    if (gType === 'glossary' || gType === 'category') return (['overview','categories','terms','aspects'] as const)[index] ?? 'overview';
+    if (gType === 'term') return (['overview','linkedAssets','synonyms','aspects'] as const)[index] ?? 'overview';
+    if (type === 'Entries') return (['overview','aspects'] as const)[index] ?? 'overview';
+    return (['overview','aspects','terms'] as const)[index] ?? 'overview';
+  };
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+
+    if (entry?.name) {
+      navigate(`/view-details?entry=${encodeURIComponent(btoa(entry.name))}&tab=${resolveTabIndex(newValue)}`, { replace: true });
+    }
 
     // Auto-close asset preview on tab switch
     if (isAssetPreviewOpen) {
       setIsAssetPreviewOpen(false);
       setAssetPreviewData(null);
     }
+  };
+
+  const handleCopyLink = () => {
+    if (!entry?.name) return;
+    const encoded = encodeURIComponent(btoa(entry.name));
+    const tabName = resolveTabIndex(tabValue);
+    const url = `${window.location.origin}/view-details?entry=${encoded}&tab=${tabName}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyLinkSuccess(true);
+      setTimeout(() => setCopyLinkSuccess(false), 2000);
+    });
   };
   
 
@@ -187,12 +218,12 @@ const ViewDetails = () => {
   }
 
   const goBack = () => {
-    // Check if we have entry history to go back to
     if (entryHistory && entryHistory.length > 0) {
-      // Pop the last entry from history and set it as current
       dispatch(popFromHistory());
+    } else if (location.key === 'default' || (location.state as any)?.fromAuth) {
+      // Direct link arrival OR post-login redirect — go to landing page
+      navigate('/home');
     } else {
-      // If no history, fall back to browser navigation
       navigate(-1);
     }
   };
@@ -389,6 +420,31 @@ let overviewTab = <DetailPageOverview entry={displayEntry} css={{width:"100%"}} 
       dispatch(fetchAllDataScans({ id_token: id_token, projectId: entry?.entrySource?.resource.split('/')[1] || '' }));
     }
   }, []);//[dispatch, id_token, allScansStatus]);
+
+  // Bootstrap from URL ?entry= param (token available on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const entryParam = searchParams.get('entry');
+    if (!entryParam) return;
+    const decoded = atob(entryParam);
+    if (entry?.name === decoded) { urlEntryFetchedRef.current = true; return; }
+    if (id_token) {
+      urlEntryFetchedRef.current = true;
+      dispatch(fetchEntry({ entryName: decoded, id_token }));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Bootstrap from URL ?entry= param (token resolves async on page reload)
+  useEffect(() => {
+    if (urlEntryFetchedRef.current) return;
+    const entryParam = searchParams.get('entry');
+    if (!entryParam || !id_token) return;
+    const decoded = atob(entryParam);
+    if (entry?.name !== decoded) {
+      dispatch(fetchEntry({ entryName: decoded, id_token }));
+    }
+    urlEntryFetchedRef.current = true;
+  }, [id_token]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
     // Don't update scans if preview is open
@@ -604,10 +660,13 @@ useEffect(() => {
     return map[tabName] ?? 0;
   };
 
-  // Apply tabName from route state when the new entry finishes loading
+  // Apply tabName from route state or URL ?tab param when the new entry finishes loading
   useEffect(() => {
-    if (!tabNameApplied.current && initialTabName && entryStatus === 'succeeded' && entry) {
-      setTabValue(resolveTabName(initialTabName));
+    if (!tabNameApplied.current && entryStatus === 'succeeded' && entry) {
+      const tabToApply = initialTabName ?? searchParams.get('tab') ?? undefined;
+      if (tabToApply) {
+        setTabValue(resolveTabName(tabToApply));
+      }
       tabNameApplied.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -909,11 +968,14 @@ const ctaButtons = (
                                 </ConditionalTooltip>
                                 </div>
 
-                                {showCta && (
-                                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                                    {ctaButtons}
-                                  </div>
-                                )}
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                                  {showCta && ctaButtons}
+                                  <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+                                    <IconButton onClick={handleCopyLink} size="small" sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}>
+                                      <LinkOutlined sx={{ fontSize: '20px' }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </div>
                               </div>
 
                               {/* Scrolled State: Tabs Container */}
@@ -1082,12 +1144,15 @@ const ctaButtons = (
                         </div>
                     </div>
 
-                    {/* Top-right CTA Buttons */}
-                    {showCta && (
-                      <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        {ctaButtons}
-                      </div>
-                    )}
+                    {/* Top-right CTA Buttons + Copy Link */}
+                    <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      {showCta && ctaButtons}
+                      <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+                        <IconButton onClick={handleCopyLink} size="small" sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px 12px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}>
+                          <LinkOutlined sx={{ fontSize: '20px' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </div>
 
                     {/* Description with Show more/less */}
                     <div style={{ width: "100%" }}>

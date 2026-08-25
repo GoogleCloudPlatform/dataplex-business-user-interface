@@ -1332,11 +1332,11 @@ describe('SubTypeHeaderSkeleton', () => {
       expect(titleRow).toHaveStyle({ display: 'flex' });
     });
 
-    it('should have title row with padding instead of absolute positioning', () => {
+    it('should have the outer card with padding matching MainComponent header', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
-      const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      expect(titleRow).toHaveStyle({ padding: '20px 20px 0px' });
+      const outerBox = container.firstChild as HTMLElement;
+      expect(outerBox).toHaveStyle({ padding: '24px' });
     });
 
     it('should have title row with center-aligned items', () => {
@@ -1348,11 +1348,11 @@ describe('SubTypeHeaderSkeleton', () => {
   });
 
   describe('skeleton dimensions', () => {
-    it('should render back arrow skeleton with 24x24 dimensions', () => {
+    it('should render back arrow skeleton with 40x40 dimensions matching the real IconButton', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
       const circularSkeleton = container.querySelector('.MuiSkeleton-circular');
-      expect(circularSkeleton).toHaveStyle({ width: '24px', height: '24px' });
+      expect(circularSkeleton).toHaveStyle({ width: '40px', height: '40px' });
     });
 
     it('should render icon skeleton with 48x48 dimensions', () => {
@@ -1496,8 +1496,8 @@ describe('SubTypeHeaderSkeleton', () => {
     it('should have the same padding as MainComponent header elements', () => {
       const { container } = render(<SubTypeHeaderSkeleton />);
 
-      const titleRow = container.querySelector('.MuiBox-root > .MuiBox-root');
-      expect(titleRow).toHaveStyle({ padding: '20px 20px 0px' });
+      const outerBox = container.firstChild as HTMLElement;
+      expect(outerBox).toHaveStyle({ padding: '24px' });
     });
   });
 });

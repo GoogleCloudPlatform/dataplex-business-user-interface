@@ -620,7 +620,9 @@ describe('ResourceViewer', () => {
 
     if (selectedCard) {
       fireEvent.doubleClick(selectedCard);
-      expect(mockNavigate).toHaveBeenCalledWith('/view-details');
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `/view-details?entry=${encodeURIComponent(btoa(previewData.name))}`
+      );
     }
   });
 

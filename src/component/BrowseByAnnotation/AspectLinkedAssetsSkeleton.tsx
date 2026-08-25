@@ -20,7 +20,7 @@ const AspectLinkedAssetsSkeleton: React.FC = () => {
           width: "100%",
           borderRadius: "16px",
           overflow: "visible",
-          bgcolor: "#fff",
+          bgcolor: "transparent",
           display: "flex",
           flexDirection: "column",
         }}
@@ -52,7 +52,9 @@ const AspectLinkedAssetsSkeleton: React.FC = () => {
           />
         </Box>
 
-        {/* Resource Cards Skeleton */}
+        {/* Resource Cards Skeleton — mirrors SearchEntriesCard.tsx's layout
+            (icon+title+action-icon row, single description line, tag/location/date row)
+            so the skeleton doesn't jump in shape once real cards render. */}
         <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Box
@@ -60,9 +62,14 @@ const AspectLinkedAssetsSkeleton: React.FC = () => {
               sx={{
                 marginBottom: "10px",
                 backgroundColor: "#ffffff",
-                borderRadius: "8px",
-                padding: "16px",
-                border: "1px solid #E0E0E0",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                border: "1px solid #DADCE0",
+                height: "120px",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
                 position: "relative",
                 overflow: "hidden",
               }}
@@ -85,57 +92,28 @@ const AspectLinkedAssetsSkeleton: React.FC = () => {
                 }}
               />
 
-              {/* Card Content Structure */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginBottom: "8px",
-                }}
-              >
-                {/* Icon placeholder */}
-                <Skeleton
-                  variant="rounded"
-                  width={40}
-                  height={40}
-                  sx={{ borderRadius: "8px", flexShrink: 0 }}
-                />
-
-                {/* Title and subtitle placeholder */}
-                <Box sx={{ flex: 1 }}>
-                  <Skeleton
-                    variant="text"
-                    width="60%"
-                    height={16}
-                    sx={{ marginBottom: "4px" }}
-                  />
-                  <Skeleton variant="text" width="40%" height={12} />
+              {/* Row 1: icon + title (left), action icon (right) */}
+              {/* Note: flexShrink/flexGrow used instead of the `flex: 'none'` shorthand —
+                  that shorthand triggers a jsdom/cssstyle getComputedStyle bug in tests
+                  (crashes on any property access once the rule exists), unrelated to
+                  real browsers, but avoided here to keep the test suite stable. */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, flexGrow: 0 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flex: "1 1 auto", minWidth: 0 }}>
+                  <Skeleton variant="rounded" width={24} height={24} sx={{ borderRadius: "4px", flexShrink: 0 }} />
+                  <Skeleton variant="text" width="45%" height={24} />
                 </Box>
+                <Skeleton variant="circular" width={20} height={20} sx={{ flexShrink: 0 }} />
               </Box>
 
-              {/* Description placeholder */}
-              <Skeleton
-                variant="text"
-                width="80%"
-                height={12}
-                sx={{ marginBottom: "8px" }}
-              />
+              {/* Row 2: description (single line, matches the real card's nowrap+ellipsis text) */}
+              <Skeleton variant="text" width="80%" height={20} sx={{ flexShrink: 0, flexGrow: 0 }} />
 
-              {/* Tags placeholder */}
-              <Box sx={{ display: "flex", gap: "8px" }}>
-                <Skeleton
-                  variant="rounded"
-                  width={60}
-                  height={20}
-                  sx={{ borderRadius: "12px" }}
-                />
-                <Skeleton
-                  variant="rounded"
-                  width={80}
-                  height={20}
-                  sx={{ borderRadius: "12px" }}
-                />
+              {/* Row 3: system/type tags + location pill + date */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexGrow: 0 }}>
+                <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: "12px" }} />
+                <Skeleton variant="rounded" width={70} height={24} sx={{ borderRadius: "12px" }} />
+                <Skeleton variant="rounded" width={90} height={24} sx={{ borderRadius: "12px" }} />
+                <Skeleton variant="text" width={70} height={20} />
               </Box>
             </Box>
           ))}

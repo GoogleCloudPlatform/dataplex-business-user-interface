@@ -3,8 +3,10 @@ import { Popover, Box, Typography, Avatar, Divider, IconButton } from '@mui/mate
 import { Close, Logout } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { sanitizeFirstName } from '../../utils/sanitizeName';
+import { clearRedirectURL, markExplicitSignOut } from '../../services/urlPreservationService';
 import './UserAccountDropdown.css';
 
 interface UserAccountDropdownProps {
@@ -42,6 +44,7 @@ const UserAccountDropdown: React.FC<UserAccountDropdownProps> = ({
   onClose,
 }) => {
   const { user, login, logout } = useAuth();
+  const navigate = useNavigate();
   const mode = useSelector((state: any) => state.user.mode);
   const isDark = mode === 'dark';
   const managedDomain = getManagedDomain(user?.email);
@@ -72,7 +75,25 @@ const UserAccountDropdown: React.FC<UserAccountDropdownProps> = ({
 
   const handleSignOut = () => {
     sessionStorage.removeItem('welcomeShown');
+    // Set BEFORE logout() so ProtectedRoute skips the ?continue= param no matter
+    // how the subsequent Redux/router renders get batched — see ProtectedRoute.tsx.
+    markExplicitSignOut();
     logout();
+    // Explicit, deliberate sign-out — go straight to plain /login instead of
+    // falling through to ProtectedRoute's redirect, which would embed the
+    // current resource link in ?continue= and send the user right back to it
+    // (that behavior is intentional for session-expiry/no-access logouts,
+    // mirrored in SessionExpired.tsx and SessionExpirationWrapper.tsx, but not
+    // wanted for a deliberate sign-out).
+    navigate('/login', { replace: true });
+    // Also purge any resource URL saved in sessionStorage by an earlier 401
+    // (apiInterceptor.ts's saveCurrentLocationForRedirect) — otherwise
+    // RedirectGuard would still fall back to it and send the user right back
+    // to the old resource on the next login, even though we just avoided the
+    // ?continue= param above. Scoped to this explicit sign-out call site only —
+    // NOT moved into AuthProvider's shared logout(), since the session-expiry
+    // flows deliberately rely on this sessionStorage value surviving.
+    clearRedirectURL();
     onClose();
   };
 

@@ -155,3 +155,25 @@ export const buildLoginURLWithRedirect = (redirectURL?: string): string => {
   const encodedURL = encodeURIComponent(url);
   return `/login?continue=${encodedURL}`;
 };
+
+/**
+ * Marks that an explicit, deliberate sign-out is in progress. ProtectedRoute checks
+ * this via `isExplicitSignOutRecent()` before building a `?continue=` redirect, so a
+ * user who intentionally signs out isn't sent right back to the resource they were on.
+ *
+ * A time-window check (rather than a set/consume-once flag) is used deliberately — it
+ * doesn't matter how many times (zero, one, or several) ProtectedRoute re-renders during
+ * the sign-out transition, every one of those renders sees the same answer, and it can
+ * never leak into suppressing an unrelated *future* session-expiry redirect, since it
+ * expires on its own regardless of whether anything ever reads it.
+ */
+let explicitSignOutTimestamp = 0;
+const EXPLICIT_SIGN_OUT_WINDOW_MS = 2000; // generous cushion for any render/batching delay
+
+export const markExplicitSignOut = (): void => {
+  explicitSignOutTimestamp = Date.now();
+};
+
+export const isExplicitSignOutRecent = (): boolean => {
+  return Date.now() - explicitSignOutTimestamp < EXPLICIT_SIGN_OUT_WINDOW_MS;
+};

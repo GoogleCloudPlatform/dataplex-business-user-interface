@@ -255,8 +255,7 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
 
   const number = entry?.entryType?.split('/')[1] || '';
   const entryTypeStr = entry?.entryType?.toLowerCase() ?? '';
-  const isGlossaryOrAnnotation =
-    entryTypeStr.startsWith('glossary/') || entryTypeStr.startsWith('annotation/');
+  const isAnnotation = entryTypeStr.startsWith('annotation/');
 
   let schema = <Schema entry={filteredSchemaEntry || entry} sx={{width:"100%", borderTopRightRadius:"0px", borderTopLeftRadius:"0px"}} />;
   const schemaData = entry?.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
@@ -564,8 +563,8 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
             spacing={0}
             style={{marginBottom:"5px"}}
         >
-            {/* left side  */}
-            <Grid size={8.5} sx={{ padding: noTopSpacing ? "0px 10px 10px 0px" : "10px 10px 10px 0px" , minWidth: 0, overflow: 'hidden' }}>
+            {/* left side — hidden for annotation/glossary entries (no left-panel content) */}
+            {!isAnnotation && <Grid size={8.5} sx={{ padding: noTopSpacing ? "0px 10px 10px 0px" : "10px 10px 10px 0px" , minWidth: 0, overflow: 'hidden' }}>
                 {/* Table Info */}
                 {getEntryType(entry.name, '/') == 'Tables' ? (
                     <Box sx={{
@@ -708,7 +707,8 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                         </Box>
                     </Box>
                 ) : null}
-                {/* Documentation */}
+                {/* Documentation — hidden for annotation entries */}
+                {!isAnnotation && (
                 <Box sx={{
                     display: "flex",
                     flexDirection: "column",
@@ -755,16 +755,19 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                         )}
                     </Box>
                 </Box>
-            </Grid>
+                )}
+            </Grid>}
 
-            {/* Right Sidebar */}
-            <Grid size={3.5} sx={{ display: "flex", flexDirection: "column", gap: "10px", padding: noTopSpacing ? "0px 0px 10px 10px" : "10px 0px 10px 10px" }}>
+            {/* Right Sidebar — full width for annotation/glossary entries */}
+            <Grid size={isAnnotation ? 12 : 3.5} sx={{ display: "flex", flexDirection: "column", gap: "10px", padding: isAnnotation ? (noTopSpacing ? "0px 0px 10px 0px" : "10px 0px 10px 0px") : (noTopSpacing ? "0px 0px 10px 10px" : "10px 0px 10px 10px") }}>
+                <Box sx={{ display: "flex", flexDirection: isAnnotation ? "row" : "column", gap: "10px", alignItems: "flex-start", width: "100%" }}>
                 
                 {/* Consolidated Info Card */}
                 <Box sx={{
                     display: "flex", flexDirection: "column", alignItems: "flex-start",
                     padding: "24px", gap: "16px", width: "100%", boxSizing: "border-box",
-                    background: "#FFFFFF", border: "1px solid #ECEEF4", borderRadius: "12px"
+                    background: "#FFFFFF", border: "1px solid #ECEEF4", borderRadius: "12px",
+                    ...(isAnnotation && { flex: 2 })
                 }}>
                     {/* Header */}
                     <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -816,23 +819,30 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                     )}
 
                     {/* Metadata List */}
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                    <Box sx={{
+                        display: isAnnotation ? "grid" : "flex",
+                        gridTemplateColumns: isAnnotation ? "max-content 1fr" : undefined,
+                        flexDirection: isAnnotation ? undefined : "column",
+                        alignItems: isAnnotation ? "center" : undefined,
+                        gap: isAnnotation ? "12px 24px" : "16px",
+                        width: "100%",
+                    }}>
                         {/* Last Modified */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Last Modified</Typography>
-                            <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F" }}>
-                                {isGlossaryOrAnnotation ? <>{updateDateShort}{updateTimeShort ? ` \u00b7 ${updateTimeShort}` : ''}</> : <>{updateDate}{updateTime ? ` \u00b7 ${updateTime}` : ''}</>}
+                            <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", justifySelf: isAnnotation ? "end" : undefined }}>
+                                {isAnnotation ? <>{updateDateShort}{updateTimeShort ? ` \u00b7 ${updateTimeShort}` : ''}</> : <>{updateDate}{updateTime ? ` \u00b7 ${updateTime}` : ''}</>}
                             </Typography>
                         </Box>
                         {/* System */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>System</Typography>
-                            <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F" }}>{normalizeSystemName(entry.entrySource?.system)}</Typography>
+                            <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", justifySelf: isAnnotation ? "end" : undefined }}>{normalizeSystemName(entry.entrySource?.system)}</Typography>
                         </Box>
                         {/* Location */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Location</Typography>
-                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F5FEF8', border: '1px solid #C4E9D8', borderRadius: '12px', padding: '0px 8px', height: '24px' }}>
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F5FEF8', border: '1px solid #C4E9D8', borderRadius: '12px', padding: '0px 8px', height: '24px', justifySelf: isAnnotation ? "end" : undefined }}>
                                 <LocationOnOutlined sx={{ fontSize: '14px', color: '#027E4C', flexShrink: 0 }} />
                                 <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontSize: '13px', fontWeight: 600, color: '#027E4C', lineHeight: 1 }}>
                                     {(entry.entrySource?.location || '-')}
@@ -840,27 +850,27 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                             </Box>
                         </Box>
                         {/* Parent */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D", flexShrink: 0 }}>Parent</Typography>
                             <Tooltip title={getName(entry.parentEntry, '/') || '-'} arrow>
-                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "220px", textAlign: "right" }}>
+                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "220px", textAlign: "right", justifySelf: isAnnotation ? "end" : undefined }}>
                                     {getName(entry.parentEntry, '/') || '-'}
                                 </Typography>
                             </Tooltip>
                         </Box>
                         {/* Project */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D", flexShrink: 0 }}>Project</Typography>
                             <Tooltip title={projectDisplayName} arrow>
-                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "220px", textAlign: "right" }}>
+                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F", textAlign: "right", justifySelf: isAnnotation ? "end" : undefined, ...(isAnnotation ? {} : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "220px" }) }}>
                                     {projectDisplayName}
                                 </Typography>
                             </Tooltip>
                         </Box>
                         {/* Identifiers */}
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                        <Box sx={{ display: isAnnotation ? "contents" : "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Identifiers</Typography>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end", justifySelf: isAnnotation ? "end" : undefined }}>
                                 <Tooltip title={entry.entrySource?.resource || ''} arrow>
                                     <Box sx={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }} onClick={() => { navigator.clipboard.writeText(entry.entrySource?.resource || ''); showNotification('Copied to clipboard.', 'success', 3000, undefined); }}>
                                         <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#1F1F1F" }}>Resource</Typography>
@@ -873,7 +883,7 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                 </Box>
 
                 {/* Usage Metrics (Hidden for Glossaries/Annotations) */}
-                {!isGlossaryOrAnnotation && (
+                {!entryTypeStr.startsWith('glossary/') && !isAnnotation && (
                     <Box sx={{
                         display: "flex", flexDirection: "column", alignItems: "flex-start",
                         padding: "24px", gap: "16px", width: "100%", boxSizing: "border-box",
@@ -938,7 +948,8 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                 <Box sx={{
                     display: "flex", flexDirection: "column", alignItems: "flex-start",
                     padding: "24px", gap: "16px", width: "100%", boxSizing: "border-box",
-                    background: "#FFFFFF", border: "1px solid #ECEEF4", borderRadius: "12px"
+                    background: "#FFFFFF", border: "1px solid #ECEEF4", borderRadius: "12px",
+                    ...(isAnnotation && { flex: 1 })
                 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <Box sx={{ width: "32px", height: "32px", background: "#EAEEFA", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -975,6 +986,7 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                             </Typography>
                         )}
                     </Box>
+                </Box>
                 </Box>
             </Grid>
         </Grid>

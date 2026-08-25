@@ -4,7 +4,11 @@ import MainComponent from './MainComponent';
 import { Box, CircularProgress, Typography, useMediaQuery } from '@mui/material';
 import { useAuth } from '../../auth/AuthProvider';
 import { useDispatch, useSelector } from 'react-redux';
-import { browseResourcesByAspects, setAspectBrowseCache, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache } from '../../features/resources/resourcesSlice';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
+import { URLS } from '../../constants/urls';
+import { extractProjectNumberFromEntryName } from '../../utils/resourceUtils';
+import { browseResourcesByAspects, setAspectBrowseCache, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache, setAccessDeniedItemId, clearAccessDeniedItemId } from '../../features/resources/resourcesSlice';
 import { getAspectDetail } from '../../features/aspectDetail/aspectDetailSlice';
 import { fetchEntry } from '../../features/entry/entrySlice';
 import type { AppDispatch, RootState } from '../../app/store';
@@ -51,9 +55,18 @@ import { setSideNavOpen } from '../../features/search/searchSlice';
 
 const BrowseByAnnotation = () => {
 
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const id_token = user?.token || '';
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Guards so the deep-link bootstrap effects fire exactly once each, even across
+  // re-renders/StrictMode double-invocation (mirrors Glossaries.tsx's urlEntryHandled).
+  const aspectParamHandled = useRef(false);
+  const subTypeParamHandled = useRef(false);
+  // Guards the inline APP_CONFIG fetch (see below) so it fires at most once per mount.
+  const appConfigFetchAttempted = useRef(false);
 
   // Redux-backed state for navigation preservation
   const reduxSelectedItemName = useSelector((state: RootState) => state.resources.browseSelectedItemName);
@@ -61,6 +74,7 @@ const BrowseByAnnotation = () => {
   const reduxTabValue = useSelector((state: RootState) => state.resources.browseTabValue);
   const reduxDynamicAnnotationsData = useSelector((state: RootState) => state.resources.browseDynamicAnnotationsData) as any[];
   const reduxSubTypesWithCache = useSelector((state: RootState) => state.resources.browseSubTypesWithCache) as Record<string, boolean>;
+  const accessDeniedItemId = useSelector((state: RootState) => state.resources.accessDeniedItemId);
 
   const [loader, setLoader] = useState<boolean>(reduxDynamicAnnotationsData.length === 0);
   const [selectedItemName, _setSelectedItemName] = useState<string | null>(reduxSelectedItemName);
@@ -116,6 +130,7 @@ const BrowseByAnnotation = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [loadingAspectName, setLoadingAspectName] = useState<string | null>(null);
   const isSidebarOpen = useSelector((state: any) => state.search.isSideNavOpen);
+  const projectsList = useSelector((state: any) => state.projects?.items ?? []);
   const isSmallScreen = useMediaQuery('(max-width: 1280px)');
   // NEW: AbortController for Phase 2
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -247,6 +262,9 @@ const BrowseByAnnotation = () => {
             })
           ).unwrap(),
         ]);
+
+        // Both calls succeeded — clear any stale access-denied flag for this aspect
+        dispatch(clearAccessDeniedItemId());
 
         // Extract recordFields from the aspect detail response
         const recordFields = aspectDetailResponse?.metadataTemplate?.recordFields || [];
@@ -432,17 +450,24 @@ const BrowseByAnnotation = () => {
           );
         }
 
-      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
         console.error("Failed to fetch aspect details:", error);
         setLoadingAspectName(null);
+        // Surface a 403 on either the aspect-type or entry fetch as an inline
+        // "Permission Required" state instead of leaving the tab spinning forever
+        // (mirrors Glossaries' accessDeniedItemId — no global no-access modal).
+        if (error?.type === 'PERMISSION_DENIED') {
+          dispatch(setAccessDeniedItemId(item.name));
+        }
         setDynamicAnnotationsData((prevData: any) =>
           prevData.map((annotation: any) =>
             annotation.name === item.name
-              ? { 
-                  ...annotation, 
-                  subItems: [], 
-                  subTypesLoaded: true, 
-                  countsFetched: true 
+              ? {
+                  ...annotation,
+                  subItems: [],
+                  subTypesLoaded: true,
+                  countsFetched: true
                 }
               : annotation
           )
@@ -472,8 +497,44 @@ const BrowseByAnnotation = () => {
       setLoader(false);
       return;
     }
+    // A deep-link login (?continue=/browse-by-annotation...) navigates straight back
+    // here, bypassing Home.tsx — the only place that normally fetches APP_CONFIG into
+    // user.appConfig. Without this, `aspects` stays undefined forever and the loader
+    // above never resolves (mirrors the fix in dataProductsSlice.ts's getDataProductDetails).
+    // Object.keys(...).length === 0 (not just `!aspects`) distinguishes "config never
+    // loaded" from "config loaded but this org has zero aspects configured" — the latter
+    // is a legitimate empty state, not something to refetch.
+    if (!aspects && Object.keys(user?.appConfig || {}).length === 0 && user?.token && !appConfigFetchAttempted.current) {
+      appConfigFetchAttempted.current = true;
+      axios.get(URLS.API_URL + URLS.APP_CONFIG)
+        .then((res) => {
+          // Updates user.appConfig — aspects/browseByAspectTypes will change on the
+          // next render, re-firing this effect via its dependency array below.
+          updateUser(user.token, { ...user, appConfig: res.data });
+        })
+        .catch((err) => {
+          console.error('Failed to fetch APP_CONFIG for deep-linked Browse by Annotation:', err);
+          // Fall through to the existing "No Aspects" empty state rather than spinning
+          // forever. Deliberately not logging the user out here — unlike Home.tsx, this
+          // is a supplementary fetch on a page that isn't the primary auth gate.
+          setDynamicAnnotationsData([]);
+          setLoader(false);
+        });
+      return;
+    }
     if(aspects){
-      const fullAspectList = aspects || [];
+      // Filter aspects by configured project scope when restriction is active
+      const appConfig = user?.appConfig;
+      const configuredProjectIds: string[] = appConfig?.configuredProjectIds || [];
+      const scopedAspects = (appConfig?.projectsRestricted && configuredProjectIds.length > 0)
+        ? aspects.filter((a: any) => {
+            const projectNumber = extractProjectNumberFromEntryName(a.dataplexEntry?.name);
+            const project = (projectsList as any[]).find(p => p.name === `projects/${projectNumber}`);
+            return project && configuredProjectIds.includes(project.projectId);
+          })
+        : aspects;
+
+      const fullAspectList = scopedAspects || [];
       const aspectList: Record<string, string[]> = browseByAspectTypes || {};
       const generatedData: any[] = [];
 
@@ -483,6 +544,10 @@ const BrowseByAnnotation = () => {
       }else{
         fullAspectList.forEach((aspectInfo: any) => {
           const aspectName = aspectInfo?.dataplexEntry?.name;
+          // Resolve project display name from the projects list
+          const projectNumber = extractProjectNumberFromEntryName(aspectName);
+          const project = (projectsList as any[]).find(p => p.name === `projects/${projectNumber}`);
+          const projectLabel = project?.displayName || project?.projectId || '';
           // Get subItems from config if available, otherwise empty array
           const configuredSubItems = aspectList?.[aspectName] || [];
           const subItems = configuredSubItems.map((f: string) => {
@@ -498,6 +563,7 @@ const BrowseByAnnotation = () => {
             location: aspectInfo?.dataplexEntry?.entrySource?.location || '',
             resource: aspectInfo?.dataplexEntry?.entrySource?.resource || '',
             createTime: aspectInfo?.dataplexEntry?.createTime || null,
+            projectLabel,
           });
         });
         setDynamicAnnotationsData(generatedData);
@@ -527,26 +593,114 @@ const BrowseByAnnotation = () => {
       // });
 
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aspects, browseByAspectTypes]);
 
-  // Auto-select first aspect on load (skip Browse page)
+  // Patch projectLabel onto existing annotation items whenever projectsList loads/changes.
+  // Handles the race where aspects build before /get-projects resolves.
   useEffect(() => {
-    if (dynamicAnnotationsData.length > 0 && !selectedItemName) {
-      setSelectedItemName(dynamicAnnotationsData[0]?.name || null);
+    if (!projectsList?.length || !dynamicAnnotationsData.length) return;
+    setDynamicAnnotationsData((prev: any[]) =>
+      prev.map((item: any) => {
+        const projectNumber = extractProjectNumberFromEntryName(item.name);
+        const project = (projectsList as any[]).find(p => p.name === `projects/${projectNumber}`);
+        const projectLabel = project?.displayName || project?.projectId || item.projectLabel || '';
+        return { ...item, projectLabel };
+      })
+    );
+  }, [projectsList]);
+
+  // Auto-select first aspect on load (skip Browse page) — but not when a deep
+  // link (?aspect=) is present; the bootstrap effect below will own selection then.
+  useEffect(() => {
+    if (dynamicAnnotationsData.length > 0 && !selectedItemName && !searchParams.get('aspect')) {
+      const firstAspectName = dynamicAnnotationsData[0]?.name || null;
+      setSelectedItemName(firstAspectName);
+      // Keep the URL in sync with the auto-selected aspect too (mirrors handleItemClick) —
+      // otherwise the address bar stays bare while the page shows the first aspect.
+      updateUrlForSelection(firstAspectName, null, 0);
     }
-  }, [dynamicAnnotationsData, selectedItemName]);
+  }, [dynamicAnnotationsData, selectedItemName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resolveTabName = (index: number): string => (index === 1 ? 'sub-types' : 'overview');
+  const resolveTabIndex = (name: string | null): number => (name === 'sub-types' ? 1 : 0);
+
+  // Keep the URL in sync with the current selection so it's always copy/reload-able
+  // (mirrors Glossaries.tsx navigating on every selection/tab change).
+  const updateUrlForSelection = useCallback((aspectName: string | null, subTypeTitle: string | null, tab: number) => {
+    if (!aspectName) return;
+    let url = `/browse-by-annotation?aspect=${encodeURIComponent(btoa(aspectName))}`;
+    if (subTypeTitle) {
+      url += `&subType=${encodeURIComponent(btoa(subTypeTitle))}`;
+    } else {
+      url += `&tab=${resolveTabName(tab)}`;
+    }
+    navigate(url, { replace: true });
+  }, [navigate]);
 
   const handleItemClick = (item:any) => {
     setSelectedItemName(item?.name || null);  // Store only the name
     setSelectedSubItem(null);  // Clear sub-item when selecting a new aspect
     setTabValue(0);  // Reset to Overview tab
+    updateUrlForSelection(item?.name || null, null, 0);
   };
   const handleSubItemClick = (subItem:any) => {
     setSelectedSubItem(subItem);
+    updateUrlForSelection(selectedItemName, subItem?.title || null, tabValue);
   };
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    updateUrlForSelection(selectedItemName, null, newValue);
   };
+
+  // Bootstrap from URL ?aspect= param (deep-link / page reload).
+  // Waits for auth + the admin-configured aspect list before resolving, and is
+  // guarded by a ref so it fires exactly once even if deps re-fire.
+  useEffect(() => {
+    const aspectParam = searchParams.get('aspect');
+    if (!aspectParam || aspectParamHandled.current || !id_token || dynamicAnnotationsData.length === 0) return;
+    aspectParamHandled.current = true;
+    try {
+      const decodedAspect = atob(aspectParam);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const target = dynamicAnnotationsData.find((a: any) => a.name === decodedAspect);
+      if (!target) return; // unknown/stale id — fall through to default first-item select
+
+      // Select the aspect directly (not via handleItemClick) so we don't clear a
+      // pending ?subType= param or rewrite the URL before the sub-type bootstrap
+      // effect below gets a chance to read it once this aspect's sub-items load.
+      setSelectedItemName(target.name);
+
+      const subTypeParam = searchParams.get('subType');
+      if (!subTypeParam) {
+        setSelectedSubItem(null);
+        const tabParam = searchParams.get('tab');
+        setTabValue(resolveTabIndex(tabParam));
+      }
+      // else: leave selectedSubItem/tab/URL untouched — the sub-type bootstrap
+      // effect resolves it once this aspect's subItems have loaded.
+    } catch {
+      // malformed base64 — ignore, fall through to default first-item selection
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id_token, dynamicAnnotationsData]);
+
+  // Resolve a pending ?subType= param once the target aspect's sub-items have
+  // loaded (they aren't available until fetchSubItemCounts' Phase 1 completes).
+  useEffect(() => {
+    const subTypeParam = searchParams.get('subType');
+    if (!subTypeParam || subTypeParamHandled.current || !selectedItem?.subTypesLoaded) return;
+    subTypeParamHandled.current = true;
+    try {
+      const decodedSubType = atob(subTypeParam);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const target = selectedItem.subItems?.find((s: any) => s.title === decodedSubType);
+      if (target) handleSubItemClick(target);
+    } catch {
+      // malformed base64 — ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem?.subTypesLoaded]);
   const handleSortOrderToggle = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
@@ -597,6 +751,7 @@ const BrowseByAnnotation = () => {
           isSidebarOpen={isSidebarOpen}
           onSidebarToggle={(open: boolean) => dispatch(setSideNavOpen(open))}
           isSmallScreen={isSmallScreen}
+          accessDeniedItemId={accessDeniedItemId}
         />
         </Box>
       </Box>

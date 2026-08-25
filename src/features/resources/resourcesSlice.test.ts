@@ -39,6 +39,7 @@ type ResourcesState = {
   browseTabValue: number;
   browseDynamicAnnotationsData: any[];
   browseSubTypesWithCache: Record<string, boolean>;
+  accessDeniedItemId: string | null;
 };
 
 // Define store type
@@ -254,6 +255,7 @@ describe('resourcesSlice', () => {
           browseTabValue: 0,
           browseDynamicAnnotationsData: [],
           browseSubTypesWithCache: {},
+          accessDeniedItemId: null,
         };
 
         const newItems = [{ new: 'data' }];
@@ -500,7 +502,8 @@ describe('resourcesSlice', () => {
 
         expect(mockedAxiosPost).toHaveBeenCalledWith(
           expect.any(String),
-          expect.objectContaining(customRequestData.requestResourceData)
+          expect.objectContaining(customRequestData.requestResourceData),
+          expect.objectContaining({ validateStatus: expect.any(Function) })
         );
       });
 
@@ -621,7 +624,8 @@ describe('resourcesSlice', () => {
             semanticSearch: true,
             pageSize: 100,
             orderBy: 'relevance',
-          })
+          }),
+          expect.objectContaining({ validateStatus: expect.any(Function) })
         );
       });
 
@@ -747,7 +751,8 @@ describe('resourcesSlice', () => {
           expect.any(String),
           expect.objectContaining({
             pageToken: 'page-token-123',
-          })
+          }),
+          expect.objectContaining({ validateStatus: expect.any(Function) })
         );
       });
 

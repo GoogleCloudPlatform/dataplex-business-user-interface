@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -107,6 +107,36 @@ const SideNav: React.FC<SideNavProps> = ({
   const [expandedItem, setExpandedItem] = React.useState<number | false>(0); // Auto-expand first item
   const [filterText, setFilterText] = useState('');
   const [dateError, setDateError] = useState('');
+
+  // Keep the expanded row in sync with the actual selection (deep-link bootstrap,
+  // redux-restored navigation, etc. select an aspect without going through
+  // handleAspectClick, which is otherwise the only place that sets expandedItem).
+  // Guarded by name-change so manually collapsing the still-selected row afterward
+  // isn't immediately re-expanded.
+  const lastSyncedSelectedName = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedItem?.name || lastSyncedSelectedName.current === selectedItem.name) return;
+    lastSyncedSelectedName.current = selectedItem.name;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const idx = annotationsData.findIndex((a: any) => a.name === selectedItem.name);
+    if (idx !== -1) setExpandedItem(idx);
+  }, [selectedItem?.name, annotationsData]);
+
+  // Scroll the currently-selected row into view (deep-link bootstrap lands on an
+  // aspect/sub-type that may be scrolled out of view; a manual click is already
+  // visible so this is a no-op then). Attached below to whichever row is currently
+  // selected/expanded via `selectedRowRef`.
+  const selectedRowRef = React.useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!selectedRowRef.current) return;
+    // Deferred to the next frame so the Collapse expand transition/layout (for a
+    // sub-item row) has settled before measuring scroll position.
+    const id = requestAnimationFrame(() => {
+      // jsdom (unit tests) doesn't implement scrollIntoView — guard defensively.
+      selectedRowRef.current?.scrollIntoView?.({ block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [selectedItem?.name, selectedSubItem?.title, expandedItem]);
 
   const handleAspectClick = (annotation: any, index: number) => {
     // Toggle expansion
@@ -255,6 +285,7 @@ const SideNav: React.FC<SideNavProps> = ({
               <Box sx={{ position: "relative", zIndex: 1, pb: showGroupCard ? "6px" : 0 }}>
                 {/* Parent Item - Aspect */}
                 <ListItemButton
+                  ref={(isSelected && !selectedSubItem) ? selectedRowRef : undefined}
                   selected={isSelected && !selectedSubItem}
                   onClick={() => handleAspectClick(annotation, index)}
                   sx={{
@@ -338,6 +369,7 @@ const SideNav: React.FC<SideNavProps> = ({
                         return (
                           <ListItemButton
                             key={subIndex}
+                            ref={isSubItemSelected ? selectedRowRef : undefined}
                             selected={isSubItemSelected}
                             onClick={() => handleSubItemClick(subItem, annotation)}
                             sx={{

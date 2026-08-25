@@ -12,7 +12,7 @@ const getAspectName = (name: string, appConfig: any) => {
   return (projectId.length > 1 && resource.length == 6) ? `${projectId}.${resource[3]}.${resource[5]}` : resource.toString();
 }
 // Thunk for searching resources based on a search term
-export const searchResourcesByTerm = createAsyncThunk('resources/searchResourcesByTerm', async (requestData: any , { rejectWithValue, getState }) => {
+export const searchResourcesByTerm = createAsyncThunk('resources/searchResourcesByTerm', async (requestData: any , { rejectWithValue, getState, signal }) => {
   // If the search term is empty, we are returning an empty list.
   // if (!requestData.term) {
   //   return [];
@@ -20,7 +20,7 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
 
   // If the term is not empty, we will perform a search.
   try {
-    const appConfig = (getState() as any).user.userData?.appConfig;
+    const appConfig = (getState() as any).user?.userData?.appConfig;
     let requestResourceData = {};
     axios.defaults.headers.common['Authorization'] = requestData.id_token ? `Bearer ${requestData.id_token}` : '';
     if(requestData.requestResourceData) {
@@ -114,6 +114,16 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
         // searchString += typeAliases != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(type=(${typeAliases}))`) : '';
         // searchString += project != '' ? (((searchString != '' && !requestData.semanticSearch) ? ',' : ' ') + `(project=(${project}))`) : '';
       }
+
+      // Always apply project scope when restriction is active, regardless of whether
+      // any filters are selected. Runs outside the filters block so it is never skipped.
+      if (appConfig?.projectsRestricted === true && appConfig?.configuredProjectIds?.length > 0) {
+        const hasUserProjectFilter = requestData.filters?.some((f: any) => f.type === 'project');
+        if (!hasUserProjectFilter) {
+          searchString += (searchString !== '' ? ' ' : '') + `(projectid=(${appConfig.configuredProjectIds.join('|')}))`;
+        }
+      }
+
       requestResourceData = {
         query: searchString,
         pageSize: 100,
@@ -135,20 +145,30 @@ export const searchResourcesByTerm = createAsyncThunk('resources/searchResources
     // const data = await response.data;
     // return data;
 
+    // validateStatus: () => true prevents axios from throwing on non-2xx responses,
+    // which stops the global axios interceptor from treating search errors as auth
+    // failures and force-logging the user out. The thunk inspects status itself.
     const response = await axios.post(
       URLS.API_URL + URLS.SEARCH_ENTRIES,
-      { project: import.meta.env.VITE_GOOGLE_PROJECT_ID, location: 'global', ...requestResourceData }
+      { project: import.meta.env.VITE_GOOGLE_PROJECT_ID, location: 'global', ...requestResourceData },
+      { validateStatus: () => true, signal }
     );
 
-    //console.log(response);
-    return response.status === 200 || response.status !== 401 ? {
-      data : response.data.results,
-      requestData: {...requestResourceData,pageToken: response.data.nextPageToken || ''},
-      results : response.data,
-    } : rejectWithValue('Token expired');
+    if (response.status === 200) {
+      return {
+        data: response.data.results,
+        requestData: { ...requestResourceData, pageToken: response.data.nextPageToken || '' },
+        results: response.data,
+      };
+    }
+    // Non-200 response — return empty results so the user stays on the page
+    return { data: [], requestData: {}, results: {} };
     //return mockSearchData; // For testing, we return mock data
 
   } catch (error) {
+    if (axios.isCancel(error) || (error instanceof Error && (error.name === 'AbortError' || error.name === 'CanceledError'))) {
+      return rejectWithValue({ aborted: true, message: 'Request aborted' });
+    }
     if (error instanceof AxiosError) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -162,7 +182,7 @@ export const browseResourcesByAspects = createAsyncThunk('resources/browseResour
   try {
     // search from your API endpoint
     axios.defaults.headers.common['Authorization'] = requestData.id_token ? `Bearer ${requestData.id_token}` : '';
-    const appConfig = (getState() as any).user.userData?.appConfig;
+    const appConfig = (getState() as any).user?.userData?.appConfig;
     let searchString = '';
     if(requestData.annotationName && requestData.annotationName != '') {
       let aspectType = getAspectName(requestData.annotationName, appConfig);
@@ -175,13 +195,31 @@ export const browseResourcesByAspects = createAsyncThunk('resources/browseResour
         `(aspect=(${aspectType}${(requestData.subAnnotationName && requestData.subAnnotationName != '') ? '.' : ''}${requestData.subAnnotationName}))`) : '';
     }
     if(searchString != '') {
+      // Scope asset counts to configured projects when restriction is active
+      if (appConfig?.projectsRestricted && appConfig?.configuredProjectIds?.length > 0) {
+        searchString += ` (projectid=(${appConfig.configuredProjectIds.join('|')}))`;
+      }
+      // validateStatus: () => true prevents axios from throwing on non-2xx responses,
+      // so a 403 on a specific aspect/sub-type can be surfaced as PERMISSION_DENIED
+      // (with the offending itemId) instead of falling through to the generic catch.
       const response = await axios.post(URLS.API_URL + URLS.SEARCH, {
         query: searchString,
       }, {
-        signal: requestData.signal || signal // Support both custom signal and thunk signal
+        signal: requestData.signal || signal, // Support both custom signal and thunk signal
+        validateStatus: () => true,
       });
-      const data = await response.data;
-      return data;
+
+      if (response.status === 403) {
+        return rejectWithValue({
+          type: 'PERMISSION_DENIED',
+          message: "You don't have access to this resource",
+          itemId: requestData.subAnnotationName
+            ? `${requestData.annotationName}__${requestData.subAnnotationName}`
+            : requestData.annotationName,
+        });
+      }
+
+      return response.data;
     } else {
       return rejectWithValue('Invalid annotation name');
     }
@@ -254,6 +292,9 @@ type ResourcesState = {
   browseTabValue: number;
   browseDynamicAnnotationsData: any[];
   browseSubTypesWithCache: Record<string, boolean>;
+  // Tracks which aspect (or `aspectName__subTypeName`) most recently returned 403,
+  // so the UI can render an inline "Permission Required" panel instead of a global modal.
+  accessDeniedItemId: string | null;
 };
 
 const initialState: ResourcesState = {
@@ -275,6 +316,7 @@ const initialState: ResourcesState = {
   browseTabValue: 0,
   browseDynamicAnnotationsData: [],
   browseSubTypesWithCache: {},
+  accessDeniedItemId: null,
 };
 
 // createSlice generates actions and reducers for a slice of the Redux state.
@@ -336,6 +378,13 @@ export const resourcesSlice = createSlice({
       state.browseTabValue = 0;
       state.browseDynamicAnnotationsData = [];
       state.browseSubTypesWithCache = {};
+      state.accessDeniedItemId = null;
+    },
+    clearAccessDeniedItemId: (state) => {
+      state.accessDeniedItemId = null;
+    },
+    setAccessDeniedItemId: (state, action) => {
+      state.accessDeniedItemId = action.payload;
     },
   }, // No synchronous reducers needed for this slice
   // The `extraReducers` field lets the slice handle actions defined elsewhere,
@@ -357,6 +406,9 @@ export const resourcesSlice = createSlice({
         state.status = 'succeeded';
       })
       .addCase(searchResourcesByTerm.rejected, (state, action) => {
+        if ((action.payload as { aborted?: boolean })?.aborted || action.meta?.aborted) {
+          return; // Stale request cancelled — new one is in flight, keep its loading state
+        }
         state.status = 'failed';
         state.error = action.payload; // Use payload from rejectWithValue
       })
@@ -368,14 +420,19 @@ export const resourcesSlice = createSlice({
         state.totalItems = action.payload?.results?.totalSize ?? 0;
         state.itemsRequestData = action.payload?.requestData ?? {};
         state.itemsStore = [...state.itemsStore, ...(action.payload?.data ?? [])]; // Append new results to the store
-        state.items = state.itemsNextPageSize != null 
+        state.items = state.itemsNextPageSize != null
         ? state.itemsStore.slice(state.itemsStore.length - state.itemsNextPageSize)
         : action.payload?.data ?? []; // Replace the list with search results
         state.status = 'succeeded';
+        state.accessDeniedItemId = null;
       })
       .addCase(browseResourcesByAspects.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload; // Use payload from rejectWithValue
+        const payload = action.payload as { type?: string; itemId?: string } | string | undefined;
+        if (payload && typeof payload === 'object' && payload.type === 'PERMISSION_DENIED') {
+          state.accessDeniedItemId = payload.itemId || null;
+        }
       })
       .addCase(fetchEntriesByParent.pending, (state) => {
         state.entryListStatus = 'loading';
@@ -394,6 +451,6 @@ export const resourcesSlice = createSlice({
   },
 });
 
-export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData, setAspectBrowseCache, clearAspectBrowseCache, removeAspectBrowseCacheEntry, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache, resetBrowseUIState } = resourcesSlice.actions;
+export const { setItems, setItemsStatus, setItemsPageRequest, setItemsNextPageSize, setItemsRequestData, setItemsStoreData, setAspectBrowseCache, clearAspectBrowseCache, removeAspectBrowseCacheEntry, setBrowseSelectedItemName, setBrowseSelectedSubItem, setBrowseTabValue, setBrowseDynamicAnnotationsData, setBrowseSubTypesWithCache, resetBrowseUIState, clearAccessDeniedItemId, setAccessDeniedItemId } = resourcesSlice.actions;
 
 export default resourcesSlice.reducer;

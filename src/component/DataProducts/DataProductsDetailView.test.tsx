@@ -580,7 +580,7 @@ describe('DataProductsDetailView', () => {
       const backButton = document.querySelector('button[class*="MuiButton"]');
       if (backButton) {
         fireEvent.click(backButton);
-        expect(mockNavigate).toHaveBeenCalledWith(-1);
+        expect(mockNavigate).toHaveBeenCalledWith('/data-products');
       }
     });
   });

@@ -162,7 +162,7 @@ describe('Routing', () => {
       expect(screen.getByTestId('login-component')).toBeInTheDocument();
     });
 
-    it('should redirect away from login when user is authenticated with email', () => {
+    it('should still render Login route via RedirectGuard when user is authenticated at /login', () => {
       mockUser = { email: 'test@example.com' };
       mockUserState = { userData: { hasRole: true } };
       mockLocation = { pathname: '/login' };
@@ -173,8 +173,10 @@ describe('Routing', () => {
         </MemoryRouter>
       );
 
-      // Should redirect when user has email
-      expect(screen.queryByTestId('login-component')).not.toBeInTheDocument();
+      // Routing itself only auto-redirects at "/"; redirecting authenticated
+      // users away from /login is now RedirectGuard's responsibility (mocked
+      // here to pass children through), so the Login route still renders.
+      expect(screen.getByTestId('login-component')).toBeInTheDocument();
     });
   });
 
@@ -410,7 +412,7 @@ describe('Routing', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/login');
     });
 
-    it('should navigate to /home when user has role and at /login path', () => {
+    it('should not navigate from the useEffect when at /login path (RedirectGuard owns that redirect)', () => {
       mockUser = { email: 'test@example.com' };
       mockUserState = { userData: { hasRole: true } };
       mockLocation = { pathname: '/login' };
@@ -421,7 +423,9 @@ describe('Routing', () => {
         </MemoryRouter>
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith('/home');
+      // shouldRedirect is only true for pathname === '/'; /login is handled
+      // by RedirectGuard, not this useEffect.
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it('should not navigate when user is on a different path', () => {

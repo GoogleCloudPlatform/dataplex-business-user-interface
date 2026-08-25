@@ -466,7 +466,7 @@ const DataProducts = () => {
     dispatch(getDataProductDetails({ dataProductId: dataProduct.name, id_token: user?.token }));
     dispatch(setDataProductsDetailTabValue(0)); // Reset to Overview tab on fresh navigation
     localStorage.setItem('selectedDataProduct', JSON.stringify(dataProduct));
-    navigate(`/data-products-details?dataProductId=${encodeURIComponent(dataProduct.name)}`);
+    navigate(`/data-products-details?dataProductId=${encodeURIComponent(btoa(dataProduct.name))}`);
   }, [dispatch, navigate, user?.token]);
 
   // Memoize the display state for better performance

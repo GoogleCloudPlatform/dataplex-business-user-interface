@@ -471,7 +471,7 @@ describe('ViewDetails', () => {
       });
 
       expect(mockDispatch).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith(-1);
+      expect(mockNavigate).toHaveBeenCalledWith('/home');
     });
 
     it('pops from entry history when history exists', async () => {
@@ -1410,7 +1410,7 @@ describe('ViewDetails', () => {
         fireEvent.click(backButton);
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith(-1);
+      expect(mockNavigate).toHaveBeenCalledWith('/home');
     });
   });
 

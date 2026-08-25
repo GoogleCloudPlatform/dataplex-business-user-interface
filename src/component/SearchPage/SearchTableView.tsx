@@ -660,7 +660,11 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                       }}
                     />
                     <OverflowTag
-                      text={getEntryType(entry.name, '/')}
+                      text={
+                        entry.entryType && entry.entryType.includes('-')
+                          ? entry.entryType.split('-').pop()
+                          : getEntryType(entry.name, '/')
+                      }
                       className="asset-tag"
                       css={{
                         fontFamily: '"Google Sans", sans-serif',

@@ -1,4 +1,4 @@
-# Knowledge Catalog Business Interface - 1.4.1
+# Knowledge Catalog Business Interface - 1.4.2
 
 An open-source, web-based application called **`Knowledge Catalog Business Interface`** which aims to help business users of BigQuery customers discover and access data assets in the **Knowledge Catalog** (formerly Dataplex Universal Catalog).
 ## Key objectives of the application include:
@@ -141,6 +141,11 @@ via changing the **configData.json** inside the backend folder
 
 ### This is manadotory if you want to use **Browse by aspects** functionality in the UI, if you don't want to use **Browse by aspects** functionality you can skip this and move on to Step 5 of deployment steps .
 
+**Newly added project list control**
+As mentioned below you can add projects Id to the projects array in configData.json to restrict users to see the limited projects which you want to see them and the assets search results from those projects only. the projects you will add here will be shown to user and restrict them to only these projects if they have access to the projects in the list else they will only see the projects from the list they have access to.
+
+Also if you leave the projects array empty then they will see the projects they have access to as per the default access.
+
 ```shell
 vi backend/configData.json // or use any code/text editor
 ```
@@ -148,7 +153,10 @@ Once you open this file you will see the json structure as mentioned below.
 
 ```json
 {
-  "aspectType": {}
+  "aspectType": {},
+  "projects": [
+    "example-project-id-here"  // only if you want restrict the users to limited project in this array list else leave the array empty
+  ]
 }
 ```
 
@@ -202,8 +210,9 @@ Folllow these steps to get the values for configuration:
 11. You can add as many aspects you want in the same manner.
 12. And save this in configData.json under backend folder.
 
-
 **Now you are done with the aspects configuration for browse by funationality**
+
+** We have addedd the 
 
 #### Step 5: Create the artifact repository to store the container artifact, this command require to run only once for the deployment if you are redeplying skip this step
 Replace `[REPO_NAME]` with the name you want to give like (dataplex-business-ui-artifact, etc.) and set up your preferred region by setting that in --location flag below command is using `us-central1` but you can replace it but make sure if you replace it then use the same region in below steps by replacing `us-central1` with the the used value.
@@ -281,7 +290,8 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
   --set-env-vars  GCP_REGION="global" \
-  --set-env-vars  IS_SERVICE_ACCOUNT="true"
+  --set-env-vars  IS_SERVICE_ACCOUNT="true" \
+  --set-env-vars  VITE_FEATURE_REQUEST_ACCESS="false"
 ```
 **--service-account**: Specifies which service account needs tp attach to Cloud Run environment to access ADC.
 
@@ -346,18 +356,22 @@ gcloud run deploy [SERVICE_NAME] \
   --set-env-vars  VITE_GOOGLE_REDIRECT_URI="/auth/google/callback" \
   --set-env-vars  GOOGLE_CLOUD_PROJECT_ID="[PROJECT_ID]" \
   --set-env-vars  GCP_LOCATION="global" \
-  --set-env-vars  GCP_REGION="global"
+  --set-env-vars  GCP_REGION="global" \
+  --set-env-vars  VITE_FEATURE_REQUEST_ACCESS="false"
 ```
 
 **Your application is now redeployed and accessible, with both front-end and backend in one single container and cloud run service!**
 
 
-## Release Note : 1.4.1
+## Release Note : 1.4.2
 This is a sub-minor release with features, identified bug/fixes.
 Feature Enhancements:
 
-  - Service Acoount option for API Calls authentication.
+  - Request Access Button under the feature flag accept data products VITE_FEATURE_REQUEST_ACCESS needs to set true to enable request access in details and preview else it will be not be visible.
+  - Project attribute in configData.json is added to control/restrict the search results and projects visible to user in filters.
+  - Shareable links for every routes in BUI. Now users can share the assets they are viewing to others who have access to it via links
+  - UI Modification browse by aspect page to remove Documentation section as in GCP we don't have option of documentation for aspects.
 
 Bug Fixes:
 
-  - Bugs related to random blinking of view detail page.
+  - Bugs related to Ui View Detail button enable in preview sectrion because of lazy loading.

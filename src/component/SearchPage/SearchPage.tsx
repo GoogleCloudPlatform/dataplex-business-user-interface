@@ -69,6 +69,7 @@ const SearchPage: React.FC = () => {
   const isInitialMount = useRef(true);
   const isInitialFiltersMount = useRef(true);
   const isInitialSearchTypeMount = useRef(true);
+  const currentSearchRef = useRef<{ abort: (reason?: string) => void } | null>(null);
 
 
   const handleFilterChange = useCallback((selectedFilters: any[]) => {
@@ -145,7 +146,10 @@ const SearchPage: React.FC = () => {
     setStartIndex(0);
     setPageNumber(1);
     if(filters.length > 0 || prevFilters.length > 0){
-      dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters, semanticSearch: semanticSearch}));
+      if (currentSearchRef.current) {
+        currentSearchRef.current.abort('stale');
+      }
+      currentSearchRef.current = dispatch(searchResourcesByTerm({term : searchTerm, id_token: id_token, filters: filters, semanticSearch: semanticSearch}));
     }
     setPrevFilters(filters);
   }, [filters]);
@@ -388,33 +392,47 @@ const SearchPage: React.FC = () => {
                       handlePagination={handlePagination}
                     />
                 </div>
-                <Paper
-                  elevation={0}
-                  sx={{
+                {/* Wrapper matches the flex row's actual height (calc(100vh - 3.9rem)) and
+                    carries the panel's background color, so the strip below the Paper
+                    (whose own height formula is shorter, see below) shows this matching
+                    color instead of the page's gray background. */}
+                <div
+                  style={{
                     width: previewData ? '25%' : '0px',
                     minWidth: previewData ? '25%' : '0px',
-                    height: 'calc(100vh - 5rem)',
-                    borderRadius: '0px',
+                    height: 'calc(100vh - 3.9rem)',
                     backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
-                    border: 'transparent',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
                     flexShrink: 0,
-                    transition: 'width 0.3s ease-in-out, min-width 0.3s ease-in-out, opacity 0.3s ease-in-out',
-                    paddingLeft: previewData ? '8px' : '0px',
-                    paddingRight: previewData ? '20px' : '0px',
-                    opacity: previewData ? 1 : 0,
+                    overflow: 'hidden',
+                    transition: 'width 0.3s ease-in-out, min-width 0.3s ease-in-out',
                   }}
                 >
-                  {previewData && (
-                    <ResourcePreview
-                      previewData={previewData}
-                      onPreviewDataChange={handlePreviewDataChange}
-                      id_token={id_token}
-                    />
-                  )}
-                </Paper>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      width: '100%',
+                      height: 'calc(100vh - 5rem)',
+                      borderRadius: '0px',
+                      backgroundColor: mode === 'dark' ? '#131314' : '#FFFFFF',
+                      border: 'transparent',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                      transition: 'opacity 0.3s ease-in-out',
+                      paddingLeft: previewData ? '8px' : '0px',
+                      paddingRight: previewData ? '20px' : '0px',
+                      opacity: previewData ? 1 : 0,
+                    }}
+                  >
+                    {previewData && (
+                      <ResourcePreview
+                        previewData={previewData}
+                        onPreviewDataChange={handlePreviewDataChange}
+                        id_token={id_token}
+                      />
+                    )}
+                  </Paper>
+                </div>
             </div>
         </div>
     </>

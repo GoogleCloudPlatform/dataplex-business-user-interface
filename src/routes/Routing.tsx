@@ -44,7 +44,7 @@ const Routing = () => {
 
   useEffect(() => {
     // Only redirect if we're on the root path or login page
-    const shouldRedirect = location.pathname === '/' || location.pathname === '/login';
+    const shouldRedirect = location.pathname === '/'; // RedirectGuard handles /login redirects
 
     if (userState && shouldRedirect) {
       if(userState.userData?.hasRole) {
@@ -73,10 +73,7 @@ const Routing = () => {
         path="/login"
         element={
           <RedirectGuard isAuthenticated={!!(user && user.email)}>
-            {user && user.email ?
-              <Navigate to="/home" replace />
-              : <LoginV2 />
-            }
+            <LoginV2 />
           </RedirectGuard>
         }
       />

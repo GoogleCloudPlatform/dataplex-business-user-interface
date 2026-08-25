@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import NothingImage from "../../assets/images/nothing-image.png";
 
-import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted, DashboardOutlined, CategoryOutlined, ArticleOutlined, Inventory2Outlined } from "@mui/icons-material";
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted, DashboardOutlined, CategoryOutlined, ArticleOutlined, Inventory2Outlined, LinkOutlined } from "@mui/icons-material";
 import { type GlossaryItem, type FilterChip, type FilterFieldType, FILTER_FIELD_LABELS } from "./GlossaryDataType";
 import PreviewAnnotation from "../Annotation/PreviewAnnotation";
 import AnnotationFilter from "../Annotation/AnnotationFilter";
@@ -56,6 +56,7 @@ import GlossariesLinkedAssets from "./GlossariesLinkedAssets";
 import FilterBar, { FilterBarChips } from "../Common/FilterBar";
 import type { ActiveFilter } from "../Common/FilterBar";
 import DetailPageOverview from "../DetailPageOverview/DetailPageOverview";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 /**
  * Transforms a GlossaryItem into the entry format expected by DetailPageOverview.
@@ -83,7 +84,7 @@ const transformGlossaryToEntry = (item: GlossaryItem) => {
   return {
     name: item.id,
     entryType: `glossary/${item.type}`,
-    fullyQualifiedName: item.id,
+    fullyQualifiedName: '',
     createTime: null,
     updateTime: item.lastModified ? { seconds: item.lastModified } : null,
     entrySource: {
@@ -210,6 +211,17 @@ const Glossaries = () => {
     dispatch(setGlossaryTabValue(val));
   }, [dispatch]);
   const [glossaryFilterText, setGlossaryFilterText] = useState('');
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
+  const urlEntryHandled = React.useRef(false);
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const resolveTabName = (index: number): string =>
+    (['overview', 'categories', 'terms', 'linked-assets', 'synonyms', 'aspects'] as const)[index] ?? 'overview';
+
+  const resolveTabIndex = (name: string): number =>
+    ({ overview: 0, categories: 1, terms: 2, 'linked-assets': 3, synonyms: 4, aspects: 5 } as Record<string, number>)[name] ?? 0;
 
   const handleFilterBarChange = useCallback((newFilters: ActiveFilter[]) => {
     const chips = newFilters.map(activeFilterToChip);
@@ -289,13 +301,13 @@ const Glossaries = () => {
   }, [dispatch, glossaryItems.length, status, user?.token]);
 
   useEffect(() => {
-    if (displayGlossaries.length > 0 && !selectedId) {
+    if (displayGlossaries.length > 0 && !selectedId && !searchParams.get('entry')) {
       setSelectedId(displayGlossaries[0].id);
     }
   }, [displayGlossaries, selectedId]);
 
   useEffect(() => {
-    if (glossaryItems.length > 0 && !selectedId) {
+    if (glossaryItems.length > 0 && !selectedId && !searchParams.get('entry')) {
       const firstId = glossaryItems[0].id;
       setSelectedId(firstId);
       // Also fetch details for the first item immediately
@@ -303,8 +315,16 @@ const Glossaries = () => {
       dispatch(fetchGlossaryEntryDetails({ entryName: firstId, id_token: user?.token }))
         .unwrap()
         .finally(() => setIsContentLoading(false));
+      navigate(`/glossaries?entry=${encodeURIComponent(btoa(firstId))}`, { replace: true });
+      // We're establishing the selection ourselves (no incoming deep link to honor),
+      // so mark the deep-link bootstrap as handled now. Otherwise the bootstrap effect
+      // below sees a stale (not-yet-updated) searchParams on this same tick, bails out
+      // without ever flipping this ref, and — since its deps don't include searchParams —
+      // never gets another chance to. That leaves `!urlEntryHandled.current` permanently
+      // true, which pins the page's loading skeleton on for every future navigation.
+      urlEntryHandled.current = true;
     }
-  }, [glossaryItems, selectedId, dispatch, user?.token]);
+  }, [glossaryItems, selectedId, dispatch, user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset sidebar when navigating away from Glossaries
   useEffect(() => {
@@ -312,6 +332,34 @@ const Glossaries = () => {
       dispatch(setSideNavOpen(true));
     };
   }, [dispatch]);
+
+  // Bootstrap from URL ?entry= param (deep-link / page reload)
+  useEffect(() => {
+    const entryParam = searchParams.get('entry');
+    // Wait until the root glossaries have finished loading (status === 'succeeded' or items exist)
+    if (!entryParam || urlEntryHandled.current || !user?.token || glossaryItems.length === 0) return;
+    
+    urlEntryHandled.current = true;
+    try {
+      const decoded = atob(entryParam);
+      const tabParam = searchParams.get('tab');
+      handleNavigate(decoded).then(() => {
+        const tabIndex = tabParam ? resolveTabIndex(tabParam) : 0;
+        if (tabIndex !== 0) setTabValue(tabIndex);
+      });
+    } catch {
+      // malformed base64 — ignore, fall through to default first-item selection
+    }
+  }, [user?.token, glossaryItems.length]); // Added glossaryItems.length to dependencies
+
+  const handleCopyLink = () => {
+    if (!selectedItem?.id) return;
+    const url = `${window.location.origin}/glossaries?entry=${encodeURIComponent(btoa(selectedItem.id))}&tab=${resolveTabName(tabValue)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyLinkSuccess(true);
+      setTimeout(() => setCopyLinkSuccess(false), 2000);
+    });
+  };
 
   // --- Sort Handlers ---
   const handleSortDirectionToggle = () => {
@@ -382,6 +430,12 @@ const Glossaries = () => {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setContentSearchTerm("");
+    if (selectedId) {
+      navigate(
+        `/glossaries?entry=${encodeURIComponent(btoa(selectedId))}&tab=${resolveTabName(newValue)}`,
+        { replace: true }
+      );
+    }
   };
 
   const handleToggle = (id: string) => {
@@ -426,6 +480,9 @@ const Glossaries = () => {
   };
 
   const handleNavigate = async (rawTargetId: string) => {
+    // START CONTENT LOADING IMMEDIATELY
+    setIsContentLoading(true); 
+
     // 0. Normalize ID to ensure it matches the Sidebar Tree format (Resource Name)
     const targetId = normalizeId(rawTargetId);
 
@@ -434,11 +491,17 @@ const Glossaries = () => {
 
     // 2. If not found, it might be in a collapsed glossary we haven't fetched yet
     if (!targetItem) {
-      const parentGlossaryId = extractGlossaryId(targetId);
+      // Use regex to safely guarantee we extract the Root Glossary ID
+      const match = targetId.match(/(projects\/[^/]+\/locations\/[^/]+\/glossaries\/[^/]+)/);
+      const parentGlossaryId = match ? match[1] : extractGlossaryId(targetId);
 
       if (parentGlossaryId) {
         setIsSidebarLoading(true);
         try {
+          // Claim the parent in fetchedParentIds BEFORE the await so the auto-fetch
+          // effect (which triggers after fetchGlossaries.fulfilled) sees it as already
+          // in-flight and skips the redundant second dispatch that causes the race.
+          fetchedParentIds.current.add(parentGlossaryId);
           // Fetch the children of the parent glossary
           await dispatch(
             fetchGlossaryChildren({
@@ -462,10 +525,16 @@ const Glossaries = () => {
     setSelectedId(targetId);
     setTabValue(0);
     setContentSearchTerm("");
+    navigate(`/glossaries?entry=${encodeURIComponent(btoa(targetId))}`, { replace: true });
 
     setIsContentLoading(true);
 
-    // Fetch entry details
+    // Fetch entry details, then relationships sequentially.
+    // .catch() comes BEFORE .then() intentionally: it swallows any rejection from
+    // fetchGlossaryEntryDetails so that .then() always runs — ensuring
+    // fetchTermRelationships is dispatched even when the detail fetch fails.
+    // This prevents relations:undefined from persisting for terms already in the
+    // tree (added by fetchGlossaryChildren) when fetchGlossaryEntryDetails rejects.
     dispatch(
       fetchGlossaryEntryDetails({
         entryName: targetId,
@@ -479,20 +548,23 @@ const Glossaries = () => {
           targetId,
           err
         );
+        // Swallowing here converts the rejected chain to resolved so .then() fires.
+      })
+      .then(() => {
+        // Always dispatched after fetchGlossaryEntryDetails settles (success or failure).
+        // Term is guaranteed to be in glossaryItems by this point (updated or pushed).
+        if (targetId.includes("/terms/")) {
+          dispatch(
+            fetchTermRelationships({
+              termId: targetId,
+              id_token: user?.token,
+            })
+          );
+        }
       })
       .finally(() => {
         setIsContentLoading(false);
       });
-
-    // If it's a TERM, fetch relationships
-    if (targetId.includes("/terms/")) {
-      dispatch(
-        fetchTermRelationships({
-          termId: targetId,
-          id_token: user?.token,
-        })
-      );
-    }
   };
 
 
@@ -766,7 +838,7 @@ const Glossaries = () => {
           transition: "margin-left 0.3s ease-in-out, width 0.3s ease-in-out",
         }}
       >
-        {(status === "loading" && !selectedItem) || isContentLoading ? (
+        {(status === "loading" && !selectedItem) || isContentLoading || (Boolean(searchParams.get('entry')) && !urlEntryHandled.current) ? (
           <GlossariesPageSkeleton />
         ) : (
         <>
@@ -835,6 +907,7 @@ const Glossaries = () => {
               flex: "none",
               order: 0,
               flexGrow: 0,
+              position: "relative",
             }}
           >
             {/* Breadcrumbs/Title Row */}
@@ -850,17 +923,23 @@ const Glossaries = () => {
               {(
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {breadcrumbs.length > 1 && (
-                      <IconButton
-                        sx={{ p: '4px', width: '40px', height: '40px', borderRadius: '50%', color: '#1F1F1F', transition: 'background-color 0.2s', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}
-                        onClick={() => {
-                          setSelectedId(breadcrumbs[breadcrumbs.length - 2].id);
+                    <IconButton
+                      sx={{ p: '4px', width: '40px', height: '40px', borderRadius: '50%', color: '#1F1F1F', transition: 'background-color 0.2s', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' } }}
+                      onClick={() => {
+                        if (breadcrumbs.length > 1) {
+                          // Child (category or term) — navigate to parent in hierarchy
+                          const newId = breadcrumbs[breadcrumbs.length - 2].id;
+                          setSelectedId(newId);
                           setTabValue(0);
-                        }}
-                      >
-                        <ArrowBack style={{ fontSize: "24px" }} />
-                      </IconButton>
-                    )}
+                          navigate(`/glossaries?entry=${encodeURIComponent(btoa(newId))}`, { replace: true });
+                        } else {
+                          // Top-level glossary — browser history back
+                          navigate(-1);
+                        }
+                      }}
+                    >
+                      <ArrowBack style={{ fontSize: "24px" }} />
+                    </IconButton>
                     <ThemedIconContainer iconColor={GLOSSARY_COLORS[selectedItem?.type || "term"]}>
                       {getIcon(selectedItem?.type || "term", "medium")}
                     </ThemedIconContainer>
@@ -883,6 +962,19 @@ const Glossaries = () => {
                 </>
               )}
             </Box>
+
+            {/* Copy Link button — absolutely positioned top-right of the header card */}
+            <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+                <IconButton
+                  onClick={handleCopyLink}
+                  size="small"
+                  sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px 12px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}
+                >
+                  <LinkOutlined sx={{ fontSize: '20px' }} />
+                </IconButton>
+              </Tooltip>
+            </div>
 
             {/* Description Section */}
             {selectedItem && (
