@@ -660,7 +660,11 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                       }}
                     />
                     <OverflowTag
-                      text={getEntryType(entry.name, '/')}
+                      text={
+                        entry.entryType && entry.entryType.includes('-')
+                          ? entry.entryType.split('-').pop()
+                          : getEntryType(entry.name, '/')
+                      }
                       className="asset-tag"
                       css={{
                         fontFamily: '"Google Sans", sans-serif',
@@ -707,7 +711,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                         textOverflow: 'ellipsis',
                         minWidth: 0
                       }}>
-                        {(entry.entrySource?.location || '-').charAt(0).toUpperCase() + (entry.entrySource?.location || '').slice(1)}
+                        {entry.entrySource?.location || '-'}
                       </Typography>
                     </Box>
                   </OverflowTooltip>

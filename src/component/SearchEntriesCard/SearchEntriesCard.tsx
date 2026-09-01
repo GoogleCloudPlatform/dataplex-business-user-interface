@@ -11,6 +11,7 @@ import { type SxProps, type Theme } from '@mui/material/styles';
 import { fetchEntry, checkEntryAccess, clearHistory } from '../../features/entry/entrySlice';
 import type { AppDispatch } from '../../app/store';
 import { generateBigQueryLink, generateLookerStudioLink, getEntryType } from '../../utils/resourceUtils';
+import { FEATURE_FLAGS } from '../../utils/featureFlags';
 import { debounce } from '../../utils/debounce';
 import DatabaseIcon from '../../assets/svg/database_icon.svg';
 import BucketIcon from '../../assets/svg/bucket_icon.svg';
@@ -519,12 +520,12 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                     fontSize: '13px',
                     fontWeight: 600,
                     color: '#027E4C',
-                    lineHeight: 1,
+                    lineHeight: 'normal',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}>
-                    {entryData.entrySource.location.charAt(0).toUpperCase() + entryData.entrySource.location.slice(1)}
+                    {entryData.entrySource.location}
                   </Typography>
                 </Tooltip>
               </Box>
@@ -694,7 +695,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 {/* Details Button */}
                 {isAccessConfirmed ? (
                   <Box
-                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); dispatch(clearHistory()); dispatch(fetchEntry({ entryName: entry.name, id_token })); navigate('/view-details'); }}
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); dispatch(clearHistory()); dispatch(fetchEntry({ entryName: entry.name, id_token })); navigate(`/view-details?entry=${encodeURIComponent(btoa(entry.name))}`); }}
                     sx={{
                       height: '32px',
                       padding: '6px 12px',
@@ -761,7 +762,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                 )}
 
                 {/* Request Access Button */}
-                <Box
+                {FEATURE_FLAGS.enableRequestAccess && <Box
                   onClick={(e: React.MouseEvent) => { e.stopPropagation(); onRequestAccess?.(entry); }}
                   sx={{
                     height: '32px',
@@ -791,7 +792,7 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                   }}>
                     Request Access
                   </span>
-                </Box>
+                </Box>}
               </div>
           </div>
         </Box>

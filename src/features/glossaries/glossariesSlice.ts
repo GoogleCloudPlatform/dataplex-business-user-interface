@@ -62,7 +62,27 @@ const updateChildrenInTree = (
 ): boolean => {
   for (const node of nodes) {
     if (node.id === parentId) {
-      node.children = [...newChildren];
+      // Merge children to preserve details fetched by concurrent thunks (like aspects)
+      if (node.children && node.children.length > 0) {
+        const existingMap = new Map(node.children.map(c => [c.id, c]));
+        node.children = newChildren.map(nc => {
+          const existing = existingMap.get(nc.id);
+          if (existing) {
+            return {
+              ...nc,
+              aspects: existing.aspects || nc.aspects,
+              relations: existing.relations || nc.relations,
+              linkedAssets: existing.linkedAssets || nc.linkedAssets,
+              longDescription: existing.longDescription || nc.longDescription,
+              contacts: (existing.contacts && existing.contacts.length > 0) ? existing.contacts : nc.contacts,
+              description: existing.description || nc.description,
+            };
+          }
+          return nc;
+        });
+      } else {
+        node.children = [...newChildren];
+      }
       return true;
     }
     if (node.children && node.children.length > 0) {
@@ -396,7 +416,7 @@ const mapEntryToGlossaryItem = (apiResult: any): GlossaryItem => {
 
 export const fetchGlossaries = createAsyncThunk(
   "glossaries/fetchGlossaries",
-  async (requestData: any, { rejectWithValue }) => {
+  async (requestData: any, { rejectWithValue, getState }) => {
     try {
       const url = URLS.API_URL + URLS.SEARCH_ENTRIES;
 
@@ -405,11 +425,17 @@ export const fetchGlossaries = createAsyncThunk(
         ? `Bearer ${requestData.id_token}`
         : "";
 
+      // Append project scope when restricted by config
+      const appConfig = (getState() as any).user?.userData?.appConfig;
+      const projectScope = (appConfig?.projectsRestricted && appConfig?.configuredProjectIds?.length > 0)
+        ? ` (projectid=(${appConfig.configuredProjectIds.join('|')}))`
+        : '';
+
       // Query specifically for Glossaries
       const response = await axios.post(url, {
         project: import.meta.env.VITE_GOOGLE_PROJECT_ID,
         location: "global",
-        query: "type=GLOSSARY EXP:SEMANTIC", // Standard Knowledge Catalog syntax for finding glossaries
+        query: `type=GLOSSARY EXP:SEMANTIC${projectScope}`, // Standard Knowledge Catalog syntax for finding glossaries
         pageSize: 100,
         ...requestData.options,
       });
@@ -917,7 +943,7 @@ export const filterGlossaries = createAsyncThunk(
       id_token: string;
       pageSize?: number;
     },
-    { rejectWithValue }
+    { rejectWithValue, getState }
   ) => {
     try {
       const projectId = import.meta.env.VITE_GOOGLE_PROJECT_ID;
@@ -925,7 +951,13 @@ export const filterGlossaries = createAsyncThunk(
 
       axios.defaults.headers.common["Authorization"] = `Bearer ${id_token}`;
 
-      const query = buildFilterQuery(filters);
+      // Append project scope when restricted by config
+      const appConfig = (getState() as any).user?.userData?.appConfig;
+      const projectScope = (appConfig?.projectsRestricted && appConfig?.configuredProjectIds?.length > 0)
+        ? ` (projectid=(${appConfig.configuredProjectIds.join('|')}))`
+        : '';
+
+      const query = buildFilterQuery(filters) + projectScope;
 
       const response = await axios.post(searchUrl, {
         project: projectId,

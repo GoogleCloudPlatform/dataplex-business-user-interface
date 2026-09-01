@@ -486,7 +486,7 @@ describe('DetailPageOverview', () => {
     renderDetailPageOverview({ entry: mockAnnotationEntry });
 
     expect(screen.queryByText('Usage Metrics')).not.toBeInTheDocument();
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.queryByText('Documentation')).not.toBeInTheDocument();
     expect(screen.getByText('Info')).toBeInTheDocument();
     expect(screen.getByText('Last Modified')).toBeInTheDocument();
     expect(screen.getByText('Labels')).toBeInTheDocument();

@@ -60,6 +60,7 @@ export const fetchEntry = createAsyncThunk('entry/fetchEntry', async (requestDat
         return rejectWithValue({
           type: 'PERMISSION_DENIED',
           message: "You don't have access to this resource",
+          itemId: requestData.entryName,
         });
       }
       return rejectWithValue(error.response?.data || error.message);

@@ -6,8 +6,9 @@ import {
   Tab,
   Paper,
   Skeleton,
+  Tooltip,
 } from '@mui/material';
-import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted, DashboardOutlined, Inventory2Outlined } from '@mui/icons-material';
+import { ArrowBack, KeyboardArrowUp, KeyboardArrowDown, Close, FormatListBulleted, DashboardOutlined, Inventory2Outlined, LinkOutlined, LockOutlined } from '@mui/icons-material';
 import IconButton from '@mui/material/IconButton';
 import { useNavigate } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../app/store';
@@ -56,6 +57,7 @@ interface MainComponentProps {
   isSidebarOpen?: boolean;
   onSidebarToggle?: (open: boolean) => void;
   isSmallScreen?: boolean;
+  accessDeniedItemId?: string | null;
 }
 
 const MainComponent: React.FC<MainComponentProps> = ({
@@ -75,12 +77,29 @@ const MainComponent: React.FC<MainComponentProps> = ({
   isSidebarOpen = true,
   onSidebarToggle,
   isSmallScreen = false,
+  accessDeniedItemId = null,
 }) => {
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const id_token = useSelector((state:any) => state.user.token);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
+
+  // Copy-link for the currently selected aspect (Overview/Sub Types tabs) or,
+  // when a sub-type is open, for that sub-type's Linked Assets view.
+  const handleCopyLink = () => {
+    if (!selectedCard?.name) return;
+    let url = `${window.location.origin}/browse-by-annotation?aspect=${encodeURIComponent(btoa(selectedCard.name))}`;
+    if (selectedSubItem?.title) {
+      url += `&subType=${encodeURIComponent(btoa(selectedSubItem.title))}`;
+    } else {
+      url += `&tab=${tabValue === 1 ? 'sub-types' : 'overview'}`;
+    }
+    navigator.clipboard.writeText(url);
+    setCopyLinkSuccess(true);
+    setTimeout(() => setCopyLinkSuccess(false), 2000);
+  };
 
   // ResourceViewer state
   const resources = useSelector((state: any) => state.resources.items);
@@ -98,12 +117,27 @@ const MainComponent: React.FC<MainComponentProps> = ({
     return `${aspectTitle}__${subTypeName}`;
   };
 
+  // Whether the currently open aspect (Overview tab) or sub-type (Linked Assets
+  // view) was denied access on its last fetch — drives the inline "Permission
+  // Required" panel instead of a global no-access modal.
+  const isAspectAccessDenied = Boolean(selectedCard?.name) && accessDeniedItemId === selectedCard?.name;
+  const isSubTypeAccessDenied =
+    Boolean(selectedCard?.title && selectedSubItem?.title) &&
+    accessDeniedItemId === generateCacheKey(selectedCard.title, selectedSubItem.title);
+
   // Fetch resources when sub-item is selected
   useEffect(() => {
     if (selectedCard && selectedSubItem) {
       // Check if data is already cached
       const cacheKey = generateCacheKey(selectedCard.title, selectedSubItem.title);
       const cachedData = aspectBrowseCache[cacheKey];
+
+      if (accessDeniedItemId === cacheKey) {
+        // Already known to be forbidden — skip re-fetching, just surface as failed
+        // so the Linked Assets view renders the access-denied panel instead of a spinner.
+        dispatch(setItemsStatus('failed'));
+        return;
+      }
 
       if (cachedData && subTypesWithCache[cacheKey]) {
         // Use cached data - set directly without API call
@@ -119,7 +153,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
         setIsPreviewOpen(false);
       }
     }
-  }, [selectedCard, selectedSubItem, dispatch, id_token, aspectBrowseCache, subTypesWithCache]);
+  }, [selectedCard, selectedSubItem, dispatch, id_token, aspectBrowseCache, subTypesWithCache, accessDeniedItemId]);
 
   // Reset description expanded state when selected card changes
   useEffect(() => {
@@ -151,7 +185,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
     return {
       name: item.name,
       entryType: `annotation/${item.title}`,
-      fullyQualifiedName: item.fullyQualifiedName || item.resource || item.name,
+      fullyQualifiedName: '',
       createTime: item.createTime,
       updateTime: item.updateTime,
       entrySource: {
@@ -200,8 +234,22 @@ const MainComponent: React.FC<MainComponentProps> = ({
             border: "1px solid #ECEEF4",
             flex: "none",
             order: 0,
+            position: "relative",
           }}
         >
+          {/* Copy Link button — absolutely positioned top-right of the header card */}
+          <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+              <IconButton
+                onClick={handleCopyLink}
+                size="small"
+                sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px 12px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}
+              >
+                <LinkOutlined sx={{ fontSize: '20px' }} />
+              </IconButton>
+            </Tooltip>
+          </div>
+
           {/* Back Arrow, Icon, and Title Row */}
           <Box
             sx={{
@@ -440,23 +488,35 @@ const MainComponent: React.FC<MainComponentProps> = ({
 
           {/* Linked Assets Content */}
           <Box sx={{ flex: 1, p: '20px', overflow: 'hidden' }}>
-            <AspectLinkedAssets
-              linkedAssets={resources}
-              searchTerm={linkedAssetsSearchTerm}
-              onSearchTermChange={setLinkedAssetsSearchTerm}
-              idToken={id_token}
-              isPreviewOpen={isPreviewOpen}
-              onAssetPreviewChange={(data) => {
-                setPreviewData(data);
-                setIsPreviewOpen(!!data);
-                if (isSmallScreen && data) {
-                  onSidebarToggle?.(false);
-                }
-              }}
-              resourcesStatus={resourcesStatus}
-              isSidebarOpen={isSidebarOpen}
-              onSidebarToggle={onSidebarToggle}
-            />
+            {isSubTypeAccessDenied ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', color: '#5F6368' }}>
+                <LockOutlined sx={{ fontSize: '40px', color: '#9AA0A6' }} />
+                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontSize: '16px', fontWeight: 500, color: '#1F1F1F' }}>
+                  Permission Required
+                </Typography>
+                <Typography sx={{ fontFamily: '"Google Sans Text", sans-serif', fontSize: '14px', color: '#5F6368' }}>
+                  You don't have access to view assets for this sub-type.
+                </Typography>
+              </Box>
+            ) : (
+              <AspectLinkedAssets
+                linkedAssets={resources}
+                searchTerm={linkedAssetsSearchTerm}
+                onSearchTermChange={setLinkedAssetsSearchTerm}
+                idToken={id_token}
+                isPreviewOpen={isPreviewOpen}
+                onAssetPreviewChange={(data) => {
+                  setPreviewData(data);
+                  setIsPreviewOpen(!!data);
+                  if (isSmallScreen && data) {
+                    onSidebarToggle?.(false);
+                  }
+                }}
+                resourcesStatus={resourcesStatus}
+                isSidebarOpen={isSidebarOpen}
+                onSidebarToggle={onSidebarToggle}
+              />
+            )}
           </Box>
         </Paper>
 
@@ -603,8 +663,22 @@ const MainComponent: React.FC<MainComponentProps> = ({
             border: "1px solid #ECEEF4",
             flex: "none",
             order: 0,
+            position: "relative",
           }}
         >
+          {/* Copy Link button — absolutely positioned top-right of the header card */}
+          <div style={{ position: "absolute", top: "24px", right: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
+            <Tooltip title={copyLinkSuccess ? 'Link copied!' : 'Copy link'} placement="bottom">
+              <IconButton
+                onClick={handleCopyLink}
+                size="small"
+                sx={{ border: '1px solid #DADCE0', borderRadius: '100px', padding: '8px 12px', color: '#022FCD', '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' } }}
+              >
+                <LinkOutlined sx={{ fontSize: '20px' }} />
+              </IconButton>
+            </Tooltip>
+          </div>
+
           {/* Title Row */}
           <Box
             sx={{
@@ -777,6 +851,7 @@ const MainComponent: React.FC<MainComponentProps> = ({
             <DetailPageOverview
               entry={transformAnnotationToEntry(selectedCard)}
               css={{ width: "100%" }}
+              accessDenied={isAspectAccessDenied}
             />
           </Box>
         )}

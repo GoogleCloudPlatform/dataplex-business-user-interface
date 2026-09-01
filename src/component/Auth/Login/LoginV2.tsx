@@ -54,7 +54,7 @@ const LoginV2: React.FC = () => {
           const sanitizedURL = sanitizeRedirectURL(continueParam);
           if (sanitizedURL) {
             console.log('[Login] Redirecting to:', sanitizedURL);
-            navigate(sanitizedURL, { replace: true });
+            navigate(sanitizedURL, { replace: true, state: { fromAuth: true } });
             return;
           }
         }

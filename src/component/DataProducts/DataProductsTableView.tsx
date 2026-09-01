@@ -590,7 +590,7 @@ const DataProductsTableView: React.FC<DataProductsTableViewProps> = ({
                     color: '#027E4C', 
                     whiteSpace: 'nowrap' 
                   }}>
-                    {(dp.name.split('/')[3] || '-').charAt(0).toUpperCase() + (dp.name.split('/')[3] || '').slice(1)}
+                    {dp.name.split('/')[3] || '-'}
                   </Typography>
                 </Box>
 </TableCell>

@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event';
 import BrowseByAnnotation from './BrowseByAnnotation';
 
 // Mock functions using vi.hoisted
-const { mockDispatch, mockUnwrap, mockUseAuth } = vi.hoisted(() => ({
+const { mockDispatch, mockUnwrap, mockUseAuth, mockNavigate } = vi.hoisted(() => ({
   mockDispatch: vi.fn(),
   mockUnwrap: vi.fn(),
   mockUseAuth: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 // Mock useAuth hook
@@ -28,6 +29,7 @@ vi.mock('react-redux', () => ({
         browseTabValue: 0,
         browseDynamicAnnotationsData: [],
         browseSubTypesWithCache: {},
+        accessDeniedItemId: null,
       },
       search: {
         isSideNavOpen: true,
@@ -35,6 +37,12 @@ vi.mock('react-redux', () => ({
     };
     return selector(mockState);
   },
+}));
+
+// Mock react-router-dom (deep-link URL sync uses useNavigate/useSearchParams)
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+  useSearchParams: () => [new URLSearchParams()],
 }));
 
 // Mock browseResourcesByAspects action
@@ -52,6 +60,8 @@ vi.mock('../../features/resources/resourcesSlice', () => ({
   setBrowseTabValue: vi.fn((val) => ({ type: 'resources/setBrowseTabValue', payload: val })),
   setBrowseDynamicAnnotationsData: vi.fn((val) => ({ type: 'resources/setBrowseDynamicAnnotationsData', payload: val })),
   setBrowseSubTypesWithCache: vi.fn((val) => ({ type: 'resources/setBrowseSubTypesWithCache', payload: val })),
+  setAccessDeniedItemId: vi.fn((val) => ({ type: 'resources/setAccessDeniedItemId', payload: val })),
+  clearAccessDeniedItemId: vi.fn(() => ({ type: 'resources/clearAccessDeniedItemId' })),
 }));
 
 // Mock getAspectDetail action

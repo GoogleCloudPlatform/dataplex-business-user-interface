@@ -367,8 +367,13 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
         return true;
       });
   }
+  const effectiveProjects = (list: any[]) =>
+    user?.appConfig?.projectsRestricted && user?.appConfig?.configuredProjectIds?.length > 0
+      ? list.filter((p: any) => user.appConfig.configuredProjectIds.includes(p.projectId))
+      : list;
+
   if(projects && user?.appConfig && user?.appConfig.projects && Array.isArray(user?.appConfig.projects)){
-    let plist:any = projectsLoaded ? projectsList : user?.appConfig.projects;
+    let plist:any = effectiveProjects(projectsLoaded ? projectsList : user?.appConfig.projects);
     let p:any = plist.map((project:any) => ({
       name: project.projectId,
       type: "project",
@@ -413,7 +418,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
 
   useEffect(() => {
     if(projectsLoaded){
-      let plist:any = projectsList;
+      let plist:any = effectiveProjects(projectsList);
       let p:any = plist.map((project:any) => ({
         name: project.projectId,
         type: "project",
@@ -493,7 +498,7 @@ const FilterDropdown: React.FC<FilterProps> = ({ filters , onFilterChange, isGlo
 
   useEffect(() => {
     // Re-construct projects list
-    let plist:any = projectsLoaded ? projectsList : (user?.appConfig?.projects || []);
+    let plist:any = effectiveProjects(projectsLoaded ? projectsList : (user?.appConfig?.projects || []));
     let pItems = plist.map((project:any) => ({
       name: project.projectId,
       type: "project",
@@ -758,7 +763,7 @@ const handleCheckboxChange = (filter: any) => {
         overflowY: "auto",
         scrollbarWidth: "none", // Firefox
         "&::-webkit-scrollbar": { display: "none" }, // Chrome/Safari
-        "-ms-overflow-style": "none", // IE and Edge
+        msOverflowStyle: "none", // IE and Edge
         maxHeight: "100%",
         backgroundColor: isGlossary ? "#F2F4FC" : "transparent",
       }}

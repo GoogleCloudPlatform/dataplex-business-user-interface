@@ -30,10 +30,18 @@ interface RuleData {
   failedRows: string;
   threshold: string;
   failingRowsQuery: string;
+  /** Only populated in 'columnScores' mode. */
+  score?: string;
 }
 
 interface CurrentRulesProps {
   dataQualtyScan: any;
+  /** 'rules' (default): render the real per-rule scan result table, unchanged.
+   * 'columnScores': render a simpler Column Name/Score/Status table from
+   * `dataQualtyScan.scan.dataQualityResult.columns`, used when this data was
+   * adapted from a data-quality-scorecard aspect (no rule spec/detail exists
+   * for that source) — same box/header/filter/sort chrome, different columns. */
+  mode?: 'rules' | 'columnScores';
 }
 
 const RULE_TYPE_DISPLAY_NAMES: Record<string, string> = {
@@ -70,7 +78,7 @@ const FILTER_PROPERTIES: PropertyConfig[] = [
   { name: 'Threshold more than', mode: 'text' },
 ];
 
-type SortableField = 'columnName' | 'ruleName' | 'ruleType' | 'statusLabel' | 'evaluation' | 'dimensions';
+type SortableField = 'columnName' | 'ruleName' | 'ruleType' | 'statusLabel' | 'evaluation' | 'dimensions' | 'score';
 
 interface ColumnDef {
   key: SortableField | 'parameters' | 'failedRows' | 'threshold' | 'failingRowsQuery';
@@ -103,6 +111,30 @@ const COLUMN_CONFIGS = [
   { key: 'threshold', initialWidth: 80, minWidth: 60 },
 ];
 
+// 'columnScores' mode: a much simpler table (Column Name/Score/Status) used
+// when there's no real rule spec/result to show — see `mode` prop above.
+const COLUMN_SCORES_FILTER_PROPERTY_TO_FIELD: Record<string, keyof RuleData> = {
+  'Column Name': 'columnName',
+  'Status': 'statusLabel',
+};
+
+const COLUMN_SCORES_FILTER_PROPERTIES: PropertyConfig[] = [
+  { name: 'Column Name', mode: 'text' },
+  { name: 'Status', mode: 'dropdown' },
+];
+
+const COLUMN_SCORES_COLUMNS: ColumnDef[] = [
+  { key: 'columnName', header: 'Column Name', sortable: true },
+  { key: 'score', header: 'Score', sortable: true },
+  { key: 'statusLabel', header: 'Status', sortable: true },
+];
+
+const COLUMN_SCORES_COLUMN_CONFIGS = [
+  { key: 'columnName', initialWidth: 260, minWidth: 120 },
+  { key: 'score', initialWidth: 160, minWidth: 90 },
+  { key: 'statusLabel', initialWidth: 160, minWidth: 90 },
+];
+
 const headerCellStyle: React.CSSProperties = {
   fontFamily: '"Google Sans", sans-serif',
   fontWeight: 500,
@@ -122,7 +154,13 @@ const bodyCellStyle: React.CSSProperties = {
   overflow: 'hidden',
 };
 
-const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
+const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan, mode = 'rules' }) => {
+  const isColumnScores = mode === 'columnScores';
+  const activeColumns = isColumnScores ? COLUMN_SCORES_COLUMNS : COLUMNS;
+  const activeColumnConfigs = isColumnScores ? COLUMN_SCORES_COLUMN_CONFIGS : COLUMN_CONFIGS;
+  const activeFilterProperties = isColumnScores ? COLUMN_SCORES_FILTER_PROPERTIES : FILTER_PROPERTIES;
+  const activeFilterPropertyToField = isColumnScores ? COLUMN_SCORES_FILTER_PROPERTY_TO_FIELD : FILTER_PROPERTY_TO_FIELD;
+
   const [filterText, setFilterText] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [sortColumn, setSortColumn] = useState<SortableField | null>(null);
@@ -139,12 +177,35 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
   };
 
   const { columnWidths, activeIndex, handleMouseDown } = useColumnResize({
-    columns: COLUMN_CONFIGS,
+    columns: activeColumnConfigs,
     mode: 'flex',
   });
 
-  // Build rules data by merging spec rules with result rules
+  // Build rules data by merging spec rules with result rules (or, in
+  // 'columnScores' mode, directly from the adapted scorecard's columns).
   const rulesData: RuleData[] = useMemo(() => {
+    if (isColumnScores) {
+      const columns = dataQualtyScan.scan?.dataQualityResult?.columns || [];
+      return columns.map((col: any, index: number) => {
+        const passed = col.status?.toUpperCase() === 'PASS';
+        return {
+          id: index + 1,
+          columnName: col.name,
+          ruleName: '',
+          ruleType: '',
+          status: passed,
+          statusLabel: passed ? 'Passed' : 'Failed',
+          evaluation: '',
+          dimensions: '',
+          parameters: '-',
+          failedRows: '',
+          threshold: '',
+          failingRowsQuery: '',
+          score: typeof col.score === 'number' ? `${Math.floor(col.score * 100) / 100}%` : '-',
+        };
+      });
+    }
+
     const specRules = dataQualtyScan.scan?.dataQualitySpec?.rules || [];
     const resultRules = dataQualtyScan.scan?.dataQualityResult?.rules || dataQualtyScan.jobs?.[0]?.dataQualityResult?.rules || [];
 
@@ -172,11 +233,11 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
         failingRowsQuery: resultRule?.failingRowsQuery || '',
       };
     });
-  }, [dataQualtyScan]);
+  }, [dataQualtyScan, isColumnScores]);
 
   // Get unique values for a filter property
   const getPropertyValues = useCallback((property: string): string[] => {
-    const field = FILTER_PROPERTY_TO_FIELD[property];
+    const field = activeFilterPropertyToField[property];
     if (!field) return [];
 
     const values = new Set<string>();
@@ -185,7 +246,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
       if (val.trim() && val !== '-') values.add(val);
     });
     return Array.from(values).sort();
-  }, [rulesData]);
+  }, [rulesData, activeFilterPropertyToField]);
 
   // Filter data based on text search and active filters
   const filteredData = useMemo(() => {
@@ -193,17 +254,19 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
 
     if (filterText) {
       const search = filterText.toLowerCase();
-      data = data.filter(rule =>
-        rule.columnName.toLowerCase().includes(search) ||
-        rule.ruleName.toLowerCase().includes(search) ||
-        rule.dimensions.toLowerCase().includes(search)
-      );
+      data = isColumnScores
+        ? data.filter(row => row.columnName.toLowerCase().includes(search))
+        : data.filter(rule =>
+          rule.columnName.toLowerCase().includes(search) ||
+          rule.ruleName.toLowerCase().includes(search) ||
+          rule.dimensions.toLowerCase().includes(search)
+        );
     }
 
     if (activeFilters.length > 0) {
       data = data.filter(row => {
         return activeFilters.every(filter => {
-          const field = FILTER_PROPERTY_TO_FIELD[filter.property];
+          const field = activeFilterPropertyToField[filter.property];
           if (!field) return true;
 
           if (filter.property === 'Failed Rows less than') {
@@ -228,7 +291,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
     }
 
     return data;
-  }, [rulesData, activeFilters, filterText]);
+  }, [rulesData, activeFilters, filterText, isColumnScores, activeFilterPropertyToField]);
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -483,9 +546,9 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
             fontSize: "18px",
             color: "#3D4151",
           }}>
-            Current Rules
+            {isColumnScores ? 'Column Scores' : 'Current Rules'}
           </Typography>
-          <Tooltip title="Current rules signifies the rules applied to define and run data quality checks on the asset" slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
+          <Tooltip title={isColumnScores ? 'Column Scores signifies the per-column data quality scores reported for this asset' : 'Current rules signifies the rules applied to define and run data quality checks on the asset'} slotProps={{ popper: { modifiers: [{ name: 'offset', options: { offset: [0, -14] } }] } }}>
             <InfoOutline sx={{ width: '18px', height: '18px', opacity: 0.9, color: "#7D7D7D" }} />
           </Tooltip>
         </Box>
@@ -498,7 +561,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
             <FilterBar
               filterText={filterText}
               onFilterTextChange={setFilterText}
-              propertyNames={FILTER_PROPERTIES}
+              propertyNames={activeFilterProperties}
               getPropertyValues={getPropertyValues}
               activeFilters={activeFilters}
               onActiveFiltersChange={setActiveFilters}
@@ -530,7 +593,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
                 }}>
                   {/* Empty header for expand icon column */}
                   <div style={{ ...headerCellStyle, width: '28px', flexShrink: 0 }} />
-                  {COLUMNS.map((col, colIdx) => {
+                  {activeColumns.map((col, colIdx) => {
                     const isLastCol = col.key === 'failingRowsQuery';
                     const colStyle: React.CSSProperties = isLastCol
                       ? { flex: 1, minWidth: 0, overflow: 'hidden' }
@@ -639,7 +702,7 @@ const CurrentRules: React.FC<CurrentRulesProps> = ({ dataQualtyScan }) => {
                                 />
                               )}
                             </div>
-                            {COLUMNS.map((col, colIdx) => {
+                            {activeColumns.map((col, colIdx) => {
                               const isLastCol = col.key === 'failingRowsQuery';
                               const colStyle: React.CSSProperties = isLastCol
                                 ? { flex: 1, minWidth: 0, overflow: 'hidden' }

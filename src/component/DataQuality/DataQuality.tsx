@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 import CurrentRules from './CurrentRules';
 import DataQualityStatus from './DataQualityStatus';
 import DataQualitySkeleton from './DataQualitySkeleton';
+import { adaptScorecardToScanShape, type DataQualityScorecardData } from './aspectScorecard';
 import { useAuth } from '../../auth/AuthProvider';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
@@ -26,8 +27,11 @@ import { fetchDataScan, selectScanData, selectScanStatus, selectIsScanLoading } 
  * fetch status:
  * -   **Loading**: Displays a `CircularProgress` spinner.
  * -   **No Data**: If no scan ID is found in the entry's labels or the
- * fetch fails, it displays a "No published Data Quality available"
- * message.
+ * fetch fails, it falls back to `aspectScorecard` (extracted from the
+ * entry's `data-quality-scorecard` aspect, if present) adapted into the
+ * same scan-result shape and fed to the same two components below; only
+ * if neither source has data does it show "No published Data Quality
+ * available".
  * -   **Success**: It renders the `CurrentRules` and `DataQualityStatus`
  * components side-by-side, passing the fetched `dataQualityScan`
  * object to both.
@@ -44,9 +48,10 @@ import { fetchDataScan, selectScanData, selectScanStatus, selectIsScanLoading } 
 interface DataQualityProps {
   scanName: string | null;
   allScansStatus: string;
+  aspectScorecard?: DataQualityScorecardData | null;
 }
 
-const DataQuality: React.FC<DataQualityProps> = ({ scanName, allScansStatus }) => {
+const DataQuality: React.FC<DataQualityProps> = ({ scanName, allScansStatus, aspectScorecard = null }) => {
   const isParentLoading = allScansStatus !== 'succeeded';
 
   const { user } = useAuth();
@@ -106,6 +111,11 @@ const DataQuality: React.FC<DataQualityProps> = ({ scanName, allScansStatus }) =
         <>
           <DataQualityStatus dataQualityScan={dataQualityScan}/>
           <CurrentRules dataQualtyScan={dataQualityScan}/>
+        </>)
+        : aspectScorecard ? (
+        <>
+          <DataQualityStatus dataQualityScan={adaptScorecardToScanShape(aspectScorecard)} showConfigurations={false}/>
+          <CurrentRules dataQualtyScan={adaptScorecardToScanShape(aspectScorecard)} mode="columnScores"/>
         </>)
         : (
           <Box sx={{

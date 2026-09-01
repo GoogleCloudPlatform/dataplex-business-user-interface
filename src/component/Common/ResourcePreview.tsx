@@ -21,6 +21,7 @@ import { getName, getEntryType, generateBigQueryLink, hasValidAnnotationData, ge
 import { useAuth } from '../../auth/AuthProvider';
 import { usePreviewEntry } from '../../hooks/usePreviewEntry';
 import { useAccessRequest } from '../../contexts/AccessRequestContext';
+import { FEATURE_FLAGS } from '../../utils/featureFlags';
 
 /**
  * @file ResourcePreview.tsx
@@ -202,7 +203,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
       onViewDetails(entry);
     } else {
       dispatch(clearHistory());
-      navigate('/view-details');
+      navigate(`/view-details?entry=${encodeURIComponent(btoa(entry.name))}`);
     }
   };
 
@@ -251,6 +252,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
       return generateBigQueryLink(entry);
     }, [entry]);
 
+  const isBigQuery = previewData?.entrySource?.system?.toLowerCase() === 'bigquery';
 
     const getDisplayName = (contact: any) => {
     try {
@@ -444,7 +446,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           alignItems: 'stretch',
           padding: 'var(--cta-pt) 0 0',
           gap: 'var(--cta-gap)',
-          marginBottom: 'var(--cta-mb)',
+          marginBottom: (FEATURE_FLAGS.enableRequestAccess || isBigQuery) ? 'var(--cta-mb)' : '4px',
           flex: '0 0 auto',
         }}>
           {/* View Details - full width */}
@@ -478,8 +480,9 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
           </Tooltip>
 
           {/* Request Access + Icon buttons row */}
-          <div className="preview-cta-row" style={{ display: 'flex', alignItems: 'center', gap: 'var(--btn-gap)' }}>
-            <Box
+          {(FEATURE_FLAGS.enableRequestAccess || isBigQuery) && (
+          <div className="preview-cta-row" style={{ display: 'flex', alignItems: 'center', gap: 'var(--btn-gap)', justifyContent: FEATURE_FLAGS.enableRequestAccess ? 'flex-start' : 'center' }}>
+            {FEATURE_FLAGS.enableRequestAccess && <Box
               component="button"
               sx={{
                 flex: '1 1 auto',
@@ -511,10 +514,10 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
             >
               <LockOutlined sx={{ fontSize: 'var(--lock-icon-size)', color: mode === 'dark' ? '#ffffff' : '#575757', flexShrink: 0, transition: 'color 0.2s ease' }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Request Access</span>
-            </Box>
+            </Box>}
 
             {/* BigQuery icon button */}
-            {previewData.entrySource?.system?.toLowerCase() === 'bigquery' && (
+            {isBigQuery && (
               <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : "Open in BigQuery"} arrow>
                 <Box
                   component="button"
@@ -553,7 +556,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
             )}
 
             {/* Looker icon button */}
-            {previewData.entrySource?.system?.toLowerCase() === 'bigquery' && (
+            {isBigQuery && (
               <Tooltip title={entryStatus !== 'succeeded' ? "Loading link..." : (demoMode ? "Disabled in Demo Mode" : "Explore with Looker Studio")} arrow>
                 <Box
                   component="button"
@@ -591,6 +594,7 @@ const ResourcePreview: React.FC<ResourcePreviewProps> = ({
               </Tooltip>
             )}
           </div>
+          )}
         </div>
 
         {/* Tabs Section */}

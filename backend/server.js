@@ -793,20 +793,33 @@ app.get('/api/v1/lookup-entry-links', async (req, res) => {
 app.get('/api/v1/data-products', async (req, res) => {
   try {
     const accessToken = req.headers.authorization?.split(' ')[1];
-    const projectId = req.query.projectId || process.env.GOOGLE_CLOUD_PROJECT_ID;
+    // Support a comma-separated list of projectIds for multi-project scoping.
+    // Falls back to the legacy single projectId param, then to the env var.
+    const projectIds = req.query.projectIds
+      ? req.query.projectIds.split(',').map(id => id.trim()).filter(Boolean)
+      : [req.query.projectId || process.env.GOOGLE_CLOUD_PROJECT_ID];
 
-    if (!projectId) {
+    if (!projectIds.length || !projectIds[0]) {
       return res.status(500).json({ message: 'Server Configuration Error: GOOGLE_CLOUD_PROJECT_ID must be set in the .env file.' });
     }
 
     const bearerToken = await getRequestAccessToken(accessToken);
-    const url = `https://dataplex.googleapis.com/v1/projects/${projectId}/locations/-/dataProducts`;
 
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json' },
-    });
+    // Fetch data products for each project in parallel and merge results.
+    const results = await Promise.all(
+      projectIds.map(pid =>
+        axios.get(`https://dataplex.googleapis.com/v1/projects/${pid}/locations/-/dataProducts`, {
+          headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json' },
+        })
+        .then(r => r.data.dataProducts || [])
+        .catch(err => {
+          console.warn(`Error fetching data products for project ${pid}:`, err?.response?.data || err.message);
+          return [];
+        })
+      )
+    );
 
-    res.json(response.data);
+    res.json({ dataProducts: results.flat() });
   } catch (error) {
     console.error('Error listing data products', error?.response?.data || error);
     const err = error?.response?.data?.error || error;
@@ -1670,9 +1683,9 @@ app.get('/api/v1/app-configs', async (req, res) => {
           fs.readFile(dataFilePath, 'utf8') || {}
       ]);
       aspects = aspectsList[0] || [];
+      configData = defaultConfigData ? JSON.parse(defaultConfigData) : {};
       let p = projectList[0] ? projectList[0].filter(pr => pr.projectId !== projectId) : [];
       projects = [ currentProject[0], ...p];
-      configData = defaultConfigData ? JSON.parse(defaultConfigData) : {};
     } catch(err){
       console.error('Error listing projects for app config:', err);
     }
@@ -1682,6 +1695,8 @@ app.get('/api/v1/app-configs', async (req, res) => {
     const configs = {
         aspects: aspects.map(({ dataplexEntry }) => ({ dataplexEntry:reduceAspect(dataplexEntry) })),
         projects: projects.map(({ projectId, name, displayName }) => ({ projectId, name, displayName })),
+        projectsRestricted: !!(configData.projects && configData.projects.length > 0),
+        configuredProjectIds: configData.projects || [],
         defaultSearchProduct: configData.products || 'All',
         defaultSearchAssets: configData.assets || '',
         browseByAspectTypes: configData.aspectType || []

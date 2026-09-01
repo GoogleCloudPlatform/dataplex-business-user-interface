@@ -139,7 +139,10 @@ describe('RedirectGuard', () => {
 
       expect(mockSanitizeRedirectURL).toHaveBeenCalledWith('/dashboard');
       expect(mockClearRedirectURL).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', {
+        replace: true,
+        state: { fromAuth: true },
+      });
       expect(consoleLog).toHaveBeenCalledWith(
         '[RedirectGuard] Redirecting to query param URL:',
         '/dashboard'
@@ -191,7 +194,10 @@ describe('RedirectGuard', () => {
       );
 
       expect(mockClearRedirectURL).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/profile', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/profile', {
+        replace: true,
+        state: { fromAuth: true },
+      });
 
       consoleLog.mockRestore();
     });
@@ -209,7 +215,10 @@ describe('RedirectGuard', () => {
         </RedirectGuard>
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith('/from-query', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/from-query', {
+        replace: true,
+        state: { fromAuth: true },
+      });
       expect(mockNavigate).toHaveBeenCalledTimes(1);
 
       consoleLog.mockRestore();
@@ -337,7 +346,10 @@ describe('RedirectGuard', () => {
           </RedirectGuard>
         );
 
-        expect(mockNavigate).toHaveBeenCalledWith(sanitized, { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith(sanitized, {
+          replace: true,
+          state: { fromAuth: true },
+        });
       });
 
       consoleLog.mockRestore();
@@ -355,9 +367,12 @@ describe('RedirectGuard', () => {
         </RedirectGuard>
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith('/target', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/target', {
+        replace: true,
+        state: { fromAuth: true },
+      });
       const callArgs = mockNavigate.mock.calls[0];
-      expect(callArgs[1]).toEqual({ replace: true });
+      expect(callArgs[1]).toEqual({ replace: true, state: { fromAuth: true } });
 
       consoleLog.mockRestore();
     });

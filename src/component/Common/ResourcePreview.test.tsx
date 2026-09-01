@@ -182,6 +182,12 @@ vi.mock('../../features/entry/entrySlice', () => ({
   clearHistory: vi.fn(() => ({ type: 'entry/clearHistory' })),
 }));
 
+// Mock feature flags so the "Request Access" tests don't depend on
+// VITE_FEATURE_REQUEST_ACCESS / .env.test being present in the environment.
+vi.mock('../../utils/featureFlags', () => ({
+  FEATURE_FLAGS: { enableRequestAccess: true },
+}));
+
 // Mock MUI icons
 vi.mock('@mui/icons-material', () => ({
   Close: () => <div data-testid="CloseIcon">Close</div>,
@@ -452,7 +458,9 @@ describe('ResourcePreview', () => {
       const viewDetailsButton = screen.getByText('View Details');
       fireEvent.click(viewDetailsButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/view-details');
+      expect(mockNavigate).toHaveBeenCalledWith(
+        `/view-details?entry=${encodeURIComponent(btoa(mockPreviewData.name))}`
+      );
     });
 
     it('does not navigate when viewDetailAccessable is false', () => {

@@ -48,6 +48,7 @@ const Home = () => {
   const [loader, setLoader] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
   const projectsLoaded = useSelector((state: any) => state.projects.isloaded);
+  const projectsList = useSelector((state: any) => state.projects.items);
   const accessCheckedRef = useRef(false);
 
   // Check OAuth scopes (set at login) and IAM role after login
@@ -84,6 +85,20 @@ const Home = () => {
       }
     });
   }, [user?.token, user?.email, triggerNoAccess]);
+
+  // Check project-level access once both appConfig (configuredProjectIds) and
+  // the user's accessible projects (/get-projects) have loaded.
+  useEffect(() => {
+    if (!user?.appConfig?.projectsRestricted) return;
+    if (!projectsLoaded) return;
+    const configuredIds: string[] = user.appConfig.configuredProjectIds || [];
+    const intersection = (projectsList as any[]).filter((p: any) => configuredIds.includes(p.projectId));
+    if (intersection.length === 0) {
+      triggerNoAccess({
+        message: 'You do not have access to any of the configured projects. Please contact your administrator.',
+      });
+    }
+  }, [projectsLoaded, user?.appConfig?.projectsRestricted]);
 
   useEffect(() => {
     setLoader(true);

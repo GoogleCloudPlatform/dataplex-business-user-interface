@@ -9,6 +9,7 @@ import { setGlobalAuthFunctions, setAuthNotificationShown } from '../services/au
 import { performSilentAuth } from '../services/silentAuthService';
 import { AUTH_CONFIG } from '../constants/auth';
 import { setIsLoaded } from '../features/projects/projectsSlice';
+import { resetSelectedDataProduct } from '../features/dataProducts/dataProductsSlice';
 import { useAppDispatch, useAppSelector } from '../app/store';
 
 
@@ -85,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isLoggedOut.current = true;
     dispatch(setCredentials({token: null, user: null}));
     dispatch(setIsLoaded({ isloaded: false }));
+    dispatch(resetSelectedDataProduct()); // Reset DP detail status so self-hydration fires on next deep-link login
     clearUserState(); // Clear user state from IndexedDB
     clearPersistedState(); // Clear persisted Redux state (search, resources, entry)
     showInfo('You have been signed out.', 3000);

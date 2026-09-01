@@ -10,6 +10,7 @@ import type { GlossaryItem } from './GlossaryDataType';
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: '/glossaries' }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 // Mock auth provider

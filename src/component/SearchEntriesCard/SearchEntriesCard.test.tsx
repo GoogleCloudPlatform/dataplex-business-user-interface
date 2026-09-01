@@ -122,7 +122,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Us-central1')).toBeInTheDocument();
+        expect(screen.getByText('us-central1')).toBeInTheDocument();
       });
     });
 
@@ -485,7 +485,7 @@ describe('SearchEntriesCard', () => {
       render(<SearchEntriesCard entry={entry} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Europe-west1')).toBeInTheDocument();
+        expect(screen.getByText('europe-west1')).toBeInTheDocument();
       });
     });
   });

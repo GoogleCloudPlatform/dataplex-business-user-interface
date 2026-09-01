@@ -342,7 +342,7 @@ const DataProductAssets: React.FC<DataProductAssetsProps> = ({
               onViewDetails={(entry) => {
                 dispatch(clearHistory());
                 dispatch(fetchEntry({ entryName: entry.name, id_token: idToken }));
-                navigate('/view-details');
+                navigate(`/view-details?entry=${encodeURIComponent(btoa(entry.name))}`);
               }}
               
               customFilterChips={

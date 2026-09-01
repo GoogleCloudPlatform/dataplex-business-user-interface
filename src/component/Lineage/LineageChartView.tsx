@@ -61,7 +61,7 @@ const renderRectSvgNode = ({ nodeDatum, foreignObjectProps, handleSidePanelToggl
     y: -25,
   };
   const number = nodeDatum.isRoot ? nodeDatum.entryData.entryType.split('/')[1] : null;
-  const schema = nodeDatum.isRoot ? nodeDatum.entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values : [];
+  const schema = nodeDatum.isRoot ? (nodeDatum.entryData.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || []) : [];
   let foreignProps = foreignObjectProps;
   if(nodeDatum.isRoot) {
     foreignProps.height = schema.length > 0 ? 185 : 36;

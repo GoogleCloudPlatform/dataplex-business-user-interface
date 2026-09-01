@@ -11,18 +11,17 @@ import {
 } from '@mui/icons-material';
 import ConfigurationsPanel from './ConfigurationsPanel';
 import { useAccessRequest } from '../../contexts/AccessRequestContext';
+import { getScoreColor } from './scoreColor';
 
 interface DataQualityStatusProps {
   dataQualityScan: any;
+  /** Hide the "Configurations" link/drawer when there's no real scan spec to show
+   * (e.g. when this data was adapted from a data-quality-scorecard aspect, which
+   * has no rule spec and no `jobs` array — `ConfigurationsPanel` needs both). */
+  showConfigurations?: boolean;
 }
 
-const getScoreColor = (score: number) => {
-  if (score >= 80) return { color: '#128937', dotShadow: '0px 0px 0px 2px #E6F4EA' };
-  if (score >= 40) return { color: '#E37400', dotShadow: '0px 0px 0px 2px #FEF7E0' };
-  return { color: '#C5221F', dotShadow: '0px 0px 0px 2px #FCE8E6' };
-};
-
-const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan }) => {
+const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan, showConfigurations = true }) => {
   const [isConfigurationsOpen, setIsConfigurationsOpen] = useState(false);
   const { setAccessPanelOpen } = useAccessRequest();
 
@@ -33,7 +32,11 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan }
   const dataQualityResult = dataQualityScan.scan?.dataQualityResult || dataQualityScan.jobs?.[0]?.dataQualityResult;
   const overallScore = dataQualityResult?.score ?? 0;
   const scoreStyle = getScoreColor(overallScore);
-  const passedRulesCount = dataQualityResult?.rules?.filter((r: any) => r.passed)?.length ?? 0;
+  const hasColumns = !!dataQualityResult?.columns;
+  const passedCount = hasColumns
+    ? dataQualityResult.columns.filter((c: any) => c.status?.toUpperCase() === 'PASS').length
+    : dataQualityResult?.rules?.filter((r: any) => r.passed)?.length ?? 0;
+  const passedLabel = hasColumns ? 'Passed Columns' : 'Passed Rules';
   const dimensions = dataQualityResult?.dimensions || [];
 
   const getDimensionScore = (name: string) => {
@@ -84,29 +87,31 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan }
         }}>
           Data Quality Status
         </Typography>
-        <Button
-          onClick={() => setIsConfigurationsOpen(true)}
-          endIcon={
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6.91 5.59L11.5 10.17L6.91 14.75L8.33 16.17L14.33 10.17L8.33 4.17L6.91 5.59Z" fill="#0B57D0"/>
-            </svg>
-          }
-          sx={{
-            textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: '#0B57D0',
-            padding: '6px 0px',
-            minWidth: 'auto',
-            '& .MuiButton-endIcon': { marginLeft: '2px' },
-            '&:hover': {
-              backgroundColor: 'transparent',
-              textDecoration: 'underline'
+        {showConfigurations && (
+          <Button
+            onClick={() => setIsConfigurationsOpen(true)}
+            endIcon={
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6.91 5.59L11.5 10.17L6.91 14.75L8.33 16.17L14.33 10.17L8.33 4.17L6.91 5.59Z" fill="#0B57D0"/>
+              </svg>
             }
-          }}
-        >
-          Configurations
-        </Button>
+            sx={{
+              textTransform: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#0B57D0',
+              padding: '6px 0px',
+              minWidth: 'auto',
+              '& .MuiButton-endIcon': { marginLeft: '2px' },
+              '&:hover': {
+                backgroundColor: 'transparent',
+                textDecoration: 'underline'
+              }
+            }}
+          >
+            Configurations
+          </Button>
+        )}
       </Box>
 
       {/* Metrics Row */}
@@ -177,7 +182,7 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan }
               color: '#575757',
               lineHeight: '18px',
             }}>
-              Passed Rules
+              {passedLabel}
             </Typography>
             <Typography sx={{
               fontSize: '14px',
@@ -185,7 +190,7 @@ const DataQualityStatus: React.FC<DataQualityStatusProps> = ({ dataQualityScan }
               color: '#1F1F1F',
               lineHeight: '24px',
             }}>
-              {passedRulesCount}
+              {passedCount}
             </Typography>
           </Box>
 

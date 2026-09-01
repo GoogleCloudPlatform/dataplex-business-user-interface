@@ -257,7 +257,10 @@ describe('LoginV2', () => {
 
       expect(mockSanitizeRedirectURL).toHaveBeenCalledWith('/dashboard');
       expect(consoleLog).toHaveBeenCalledWith('[Login] Redirecting to:', '/dashboard');
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', {
+        replace: true,
+        state: { fromAuth: true },
+      });
 
       consoleLog.mockRestore();
     });
@@ -328,7 +331,10 @@ describe('LoginV2', () => {
           await capturedGoogleLoginConfig.onSuccess?.(tokenResponse);
         });
 
-        expect(mockNavigate).toHaveBeenCalledWith(sanitized, { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith(sanitized, {
+          replace: true,
+          state: { fromAuth: true },
+        });
 
         consoleLog.mockRestore();
       }

@@ -373,6 +373,18 @@ describe('ViewDetails', () => {
     aspects: {}
   };
 
+  const mockLookerEntry = {
+    name: 'projects/test/locations/us/entryGroups/@looker/entries/looker-model',
+    fullyQualifiedName: 'looker:instance.model',
+    entryType: 'projects/test/locations/global/entryTypes/looker-model',
+    entrySource: {
+      system: 'looker',
+      displayName: 'Test Looker Model',
+      resource: 'projects/test/locations/us/lookerInstances/test/models/model1'
+    },
+    aspects: {}
+  };
+
   const mockOtherEntry = {
     name: 'project/other/resource',
     fullyQualifiedName: 'project:other.resource',
@@ -471,7 +483,7 @@ describe('ViewDetails', () => {
       });
 
       expect(mockDispatch).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith(-1);
+      expect(mockNavigate).toHaveBeenCalledWith('/home');
     });
 
     it('pops from entry history when history exists', async () => {
@@ -683,6 +695,61 @@ describe('ViewDetails', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('entry-list')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Looker Entry Type', () => {
+    it('renders Entry List and Lineage tabs for Looker entries, without Glossary Terms', async () => {
+      renderViewDetails(mockLookerEntry);
+
+      await waitFor(() => {
+        expect(screen.getByText('Overview')).toBeInTheDocument();
+        expect(screen.getByText('Entry List')).toBeInTheDocument();
+        expect(screen.getByText('Aspects')).toBeInTheDocument();
+        expect(screen.getByText('Lineage')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('tab', { name: 'Glossary Terms' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Profile' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Data Quality' })).not.toBeInTheDocument();
+    });
+
+    it('renders entry list content for Looker entries', async () => {
+      renderViewDetails(mockLookerEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Entry List'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('entry-list')).toBeInTheDocument();
+      });
+    });
+
+    it('renders lineage content for Looker entries', async () => {
+      renderViewDetails(mockLookerEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Lineage'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-3')).toBeInTheDocument();
+        expect(screen.getByTestId('lineage')).toBeInTheDocument();
+      });
+    });
+
+    it('renders aspects content for Looker entries', async () => {
+      renderViewDetails(mockLookerEntry);
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Aspects'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tabpanel-2')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation-filter')).toBeInTheDocument();
       });
     });
   });
@@ -1410,7 +1477,7 @@ describe('ViewDetails', () => {
         fireEvent.click(backButton);
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith(-1);
+      expect(mockNavigate).toHaveBeenCalledWith('/home');
     });
   });
 

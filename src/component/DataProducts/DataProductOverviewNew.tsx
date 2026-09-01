@@ -435,7 +435,7 @@ const { date: updateDate, time: updateTime } = (entryType && entryType=='data-pr
                                     textAlign: 'center',
                                     maxWidth: '460px',
                                 }}>
-                                    The owner of this asset hasn&apos;t added documentation.
+                                    The owner of this data product hasn&apos;t added documentation.
                                 </Typography>
                             </Box>
                         ) : (
@@ -708,7 +708,7 @@ const { date: updateDate, time: updateTime } = (entryType && entryType=='data-pr
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#027E4C',
-                                    lineHeight: 1,
+                                    lineHeight: 'normal',
                                 }}>
                                     {(entry.entrySource?.location || '-')}
                                 </Typography>

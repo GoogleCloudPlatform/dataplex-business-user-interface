@@ -11,16 +11,19 @@ vi.mock('./AuthProvider', () => ({
 
 // Mock Navigate component
 const mockNavigate = vi.fn();
+const mockUseLocation = vi.fn();
 vi.mock('react-router-dom', () => ({
   Navigate: ({ to }: { to: string }) => {
     mockNavigate(to);
     return <div data-testid="navigate-mock">Redirecting to {to}</div>;
   },
+  useLocation: () => mockUseLocation(),
 }));
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseLocation.mockReturnValue({ pathname: '/', search: '' });
   });
 
   describe('when user is authenticated', () => {
@@ -86,7 +89,7 @@ describe('ProtectedRoute', () => {
       mockUseAuth.mockReturnValue({ user: null });
     });
 
-    it('should redirect to root when user is null', () => {
+    it('should redirect to login with continue param when user is null', () => {
       render(
         <ProtectedRoute>
           <div data-testid="protected-content">Protected Content</div>
@@ -94,7 +97,7 @@ describe('ProtectedRoute', () => {
       );
 
       expect(screen.getByTestId('navigate-mock')).toBeInTheDocument();
-      expect(mockNavigate).toHaveBeenCalledWith('/');
+      expect(mockNavigate).toHaveBeenCalledWith('/login?continue=%2F');
     });
 
     it('should not render children when user is null', () => {
@@ -107,7 +110,7 @@ describe('ProtectedRoute', () => {
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it('should redirect to root when user is undefined', () => {
+    it('should redirect to login with continue param when user is undefined', () => {
       mockUseAuth.mockReturnValue({ user: undefined });
 
       render(
@@ -117,7 +120,7 @@ describe('ProtectedRoute', () => {
       );
 
       expect(screen.getByTestId('navigate-mock')).toBeInTheDocument();
-      expect(mockNavigate).toHaveBeenCalledWith('/');
+      expect(mockNavigate).toHaveBeenCalledWith('/login?continue=%2F');
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
   });

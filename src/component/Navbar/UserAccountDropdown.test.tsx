@@ -16,6 +16,12 @@ vi.mock('@react-oauth/google', () => ({
   },
 }));
 
+// Mock react-router-dom's useNavigate (handleSignOut navigates to /login on sign-out)
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 // Allow toggling light/dark mode in tests
 let mockMode = 'light';
 vi.mock('react-redux', async () => {
@@ -245,6 +251,10 @@ describe('UserAccountDropdown', () => {
 
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('welcomeShown');
       expect(mockLogout).toHaveBeenCalledTimes(1);
+      // Explicit sign-out navigates straight to plain /login instead of relying on
+      // ProtectedRoute's redirect (which would embed the current resource link
+      // in ?continue=).
+      expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
 
