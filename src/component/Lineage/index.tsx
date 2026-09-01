@@ -61,6 +61,45 @@ interface LineageProps {
   entry: any; // entry data
 }
 
+/**
+ * Builds a "self only" graph/list fallback: a single node/row representing
+ * just the entry itself, with no source or target links. Used both when the
+ * lineage search returns no links, and when the lineage fetch fails outright
+ * for Looker resources (e.g. Data Lineage API disabled/permission denied) so
+ * the tab still shows something useful instead of spinning forever.
+ */
+function buildSelfOnlyGraphAndList(entry: any) {
+  const fqn = entry.fullyQualifiedName;
+  const graph = [{
+    id: `node-asset-${fqn.split('.').pop()}`,
+    name: fqn.split('.').pop(),
+    fqn: fqn,
+    linkData: null,
+    entryData: entry,
+    type: "assetNode",
+    isSource: false,
+    isRoot: true,
+    level: 2,
+    count: 1,
+    showUpStreamIcon: true,
+    showDownStreamIcon: true,
+    isDownStreamFetched: true,
+    isUpStreamFetched: true,
+  }];
+  const list = [{
+    id: 0,
+    sourceSystem: fqn.split(':')[0],
+    sourceProject: fqn.split(':')[1].split('.')[0],
+    source: fqn.split('.').pop(),
+    sourceFQN: fqn,
+    target: "",
+    targetProject: "",
+    targetSystem: "",
+    targetFQN: "",
+  }];
+  return { graph, list };
+}
+
 const Lineage: React.FC<LineageProps> = ({entry}) => {
 
   const { user } = useAuth();
@@ -94,6 +133,10 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
   const lineageEntryError = useSelector((state: any) => state.entry.lineageEntryError);
   //const error = useSelector((state: any) => state.lineage.error);
   const { triggerNoAccess } = useNoAccess();
+  // Looker lineage often has no source/target links, or the Data Lineage API
+  // isn't enabled for it - in that case, fall back to showing just the
+  // resource itself instead of leaving the graph/list stuck on a spinner.
+  const isLooker = entry?.entrySource?.system?.toLowerCase() === 'looker';
 
   useEffect(() => {
     dispatch(fetchLineageSearchLinks({parent : entry.name.split('/').slice(0,4).join("/"), fqn:entry.fullyQualifiedName, id_token: id_token}));
@@ -244,22 +287,20 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
 
       setGraphData(graph);
       setListData(
-        list.length > 0 ? 
-        list : 
-        [{
-          id: count++,
-          sourceSystem: entry.fullyQualifiedName.split(':')[0],
-          sourceProject: entry.fullyQualifiedName.split(':')[1].split('.')[0],
-          source: entry.fullyQualifiedName.split('.').pop(),
-          sourceFQN: entry.fullyQualifiedName,
-          target: "",
-          targetProject: "",
-          targetSystem: "",
-          targetFQN: "",
-        }]
+        list.length > 0 ?
+        list :
+        buildSelfOnlyGraphAndList(entry).list
       );
       //setGraphData(data)
-    }   
+    } else if (lineageSearchLinksStatus === 'failed' && isLooker) {
+      // Looker lineage links couldn't be fetched (e.g. Data Lineage API disabled/
+      // permission denied, or any other server error). Fall back to showing just
+      // the resource itself instead of leaving the graph/list stuck on an
+      // indefinite spinner. Non-Looker resources keep the existing behavior.
+      const { graph, list } = buildSelfOnlyGraphAndList(entry);
+      setGraphData(graph);
+      setListData(list);
+    }
   }, [lineageSearchLinksStatus]);
 
   const handleToggleSidePanel = (data:any, showSchema:boolean = false) => {
@@ -729,8 +770,8 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
         const entryData = link.sourceEntry;
         if(entryData){
           const number = entryData.entryType.split('/')[1];
-          const schema = entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
-          if(schema.find((f:any) => (f.structValue.fields.name.stringValue === columnName)) || columnName === undefined || columnName === ""){
+          const schema = entryData.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
+          if(schema.find((f:any) => (f?.structValue?.fields?.name?.stringValue === columnName)) || columnName === undefined || columnName === ""){
             const res:any[] = generateTargetLinks(link, count, levelCounter) || [];
             graph.push(...res);
           }
@@ -761,8 +802,8 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
         const entryData = link.targetEntry;
         if(entryData){
           const number = entryData.entryType.split('/')[1];
-          const schema = entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
-          if(schema.find((f:any) => (f.structValue.fields.name.stringValue === columnName)) || columnName === undefined || columnName === ""){
+          const schema = entryData.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
+          if(schema.find((f:any) => (f?.structValue?.fields?.name?.stringValue === columnName)) || columnName === undefined || columnName === ""){
             const res:any[] = generateSourceLinks(link, count, levelCounter, entry) || [];
             sourceGraph.push(...res);
           }
@@ -941,7 +982,7 @@ const Lineage: React.FC<LineageProps> = ({entry}) => {
                 overflow: 'hidden'
               }}>
                 {
-                  (lineageSearchLinksStatus === 'succeeded' && graphData) ? (
+                  ((lineageSearchLinksStatus === 'succeeded' || (lineageSearchLinksStatus === 'failed' && isLooker)) && graphData) ? (
                     <div id="lineageChartContainer" ref={elementRef} style={{
                         minHeight: "calc(100vh - 220px)",
                         // Fullscreen style: take up the entire viewport

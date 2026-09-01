@@ -18,7 +18,7 @@ const nodeContentStyles = {
 export default memo(({ data, isConnectable } : any) => {
     const nodeData = data.nodeData;
     const number = nodeData.isRoot || data.columnLineageApplied ? nodeData.entryData.entryType.split('/')[1] : null;
-    const schema = nodeData.isRoot || data.columnLineageApplied ? nodeData.entryData.aspects[`${number}.global.schema`].data.fields.fields.listValue.values : [];
+    const schema = nodeData.isRoot || data.columnLineageApplied ? (nodeData.entryData.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || []) : [];
     const [lineageLoader, setLineageLoader] = useState<boolean>(false); 
 
     return (

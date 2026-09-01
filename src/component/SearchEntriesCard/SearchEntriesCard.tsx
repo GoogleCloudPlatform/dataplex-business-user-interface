@@ -520,12 +520,12 @@ const SearchEntriesCard: React.FC<SearchEntriesCardProps> = ({ entry, sx, isSele
                     fontSize: '13px',
                     fontWeight: 600,
                     color: '#027E4C',
-                    lineHeight: 1,
+                    lineHeight: 'normal',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}>
-                    {entryData.entrySource.location.charAt(0).toUpperCase() + entryData.entrySource.location.slice(1)}
+                    {entryData.entrySource.location}
                   </Typography>
                 </Tooltip>
               </Box>

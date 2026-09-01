@@ -12,6 +12,7 @@ import DetailPageOverview from '../DetailPageOverview/DetailPageOverview'
 import DetailPageOverviewSkeleton from '../DetailPageOverview/DetailPageOverviewSkeleton'
 import Lineage from '../Lineage'
 import DataQuality from '../DataQuality/DataQuality'
+import { extractDataQualityScorecard } from '../DataQuality/aspectScorecard'
 import DataProfile from '../DataProfile/DataProfile'
 import EntryList from '../EntryList/EntryList'
 import type { AppDispatch } from '../../app/store'
@@ -129,6 +130,7 @@ const ViewDetails = () => {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [expandedAnnotations, setExpandedAnnotations] = useState<Set<string>>(new Set());
   const [dqScanName, setDqScanName] = useState<string | null>(null);
+  const aspectScorecard = useMemo(() => extractDataQualityScorecard(entry), [entry]);
   const [dpScanName, setDpScanName] = useState<string | null>(null);
   const [tableInsightsScanName, setTableInsightsScanName] = useState<string | null>(null);
 
@@ -633,6 +635,7 @@ useEffect(() => {
   const resolveTabName = (tabName: string): number => {
     const type = getEntryType(entry.name, '/');
     const isBigQueryTable = type === 'Tables' && entry.entrySource?.system?.toLowerCase() === 'bigquery';
+    const isLooker = entry.entrySource?.system?.toLowerCase() === 'looker';
     const gType = getGlossaryType(entry);
 
     if (isBigQueryTable) {
@@ -641,6 +644,10 @@ useEffect(() => {
     }
     if (type === 'Datasets') {
       const map: Record<string, number> = { overview: 0, entryList: 1, aspects: 2, terms: 3, insights: 4 };
+      return map[tabName] ?? 0;
+    }
+    if (isLooker) {
+      const map: Record<string, number> = { overview: 0, entryList: 1, aspects: 2, lineage: 3 };
       return map[tabName] ?? 0;
     }
     if (gType === 'glossary' || gType === 'category') {
@@ -825,6 +832,11 @@ const ctaButtons = (
     <Tab key="annotations" icon={<span className="material-symbols-outlined" style={{ fontSize: "20px", display: "inline-block", verticalAlign: "middle" }}>newsmode</span>} iconPosition="start" label="Aspects" {...tabProps(2)} />,
     <Tab key="terms" icon={<ArticleOutlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Glossary Terms" {...tabProps(3)} />,
     <Tab key="insights" icon={<span className="material-symbols-outlined" style={{ fontSize: "20px", display: "inline-block", verticalAlign: "middle" }}>query_stats</span>} iconPosition="start" label="Insights" {...tabProps(4)} />
+  ] : displayEntry.entrySource?.system?.toLowerCase() === 'looker' ? [
+    <Tab key="overview" icon={<DashboardOutlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Overview" {...tabProps(0)} />,
+    <Tab key="entryList" icon={<Inventory2Outlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Entry List" {...tabProps(1)} />,
+    <Tab key="annotations" icon={<span className="material-symbols-outlined" style={{ fontSize: "20px", display: "inline-block", verticalAlign: "middle" }}>newsmode</span>} iconPosition="start" label="Aspects" {...tabProps(2)} />,
+    <Tab key="lineage" icon={<TimelineOutlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Lineage" {...tabProps(3)} />,
   ] : glossaryType === 'glossary' || glossaryType === 'category' ? [
     <Tab key="overview" icon={<DashboardOutlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Overview" {...tabProps(0)} />,
     <Tab key="categories" icon={<CategoryOutlined sx={{ fontSize: "20px" }} />} iconPosition="start" label="Categories" {...tabProps(1)} />,
@@ -1292,7 +1304,7 @@ const ctaButtons = (
                             <DataProfile scanName={dpScanName} allScansStatus={allScansStatus} />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={5}>
-                            <DataQuality scanName={dqScanName} allScansStatus={allScansStatus} />
+                            <DataQuality scanName={dqScanName} allScansStatus={allScansStatus} aspectScorecard={aspectScorecard} />
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={6}>
                             <TableInsights entry={entry} scanName={tableInsightsScanName} />
@@ -1318,6 +1330,25 @@ const ctaButtons = (
                         </CustomTabPanel>
                         <CustomTabPanel value={tabValue} index={4}>
                             <DatasetInsights entry={entry} scanName={tableInsightsScanName} />
+                        </CustomTabPanel>
+                      </>
+                    ) : entry.entrySource?.system?.toLowerCase() === 'looker' ? (
+                      <>
+                        <CustomTabPanel value={tabValue} index={1}>
+                            <EntryList entry={displayEntry}/>
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={2}>
+                            <AnnotationFilter
+                              entry={displayEntry}
+                              onFilteredEntryChange={setFilteredEntry}
+                              sx={{}}
+                              onCollapseAll={handleAnnotationCollapseAll}
+                              onExpandAll={handleAnnotationExpandAll}
+                            />
+                            {annotationTab}
+                        </CustomTabPanel>
+                        <CustomTabPanel value={tabValue} index={3}>
+                            {lineageTab}
                         </CustomTabPanel>
                       </>
                     ) : glossaryType === 'glossary' || glossaryType === 'category' ? (

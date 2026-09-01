@@ -711,7 +711,7 @@ const SearchTableView: React.FC<SearchTableViewProps> = ({
                         textOverflow: 'ellipsis',
                         minWidth: 0
                       }}>
-                        {(entry.entrySource?.location || '-').charAt(0).toUpperCase() + (entry.entrySource?.location || '').slice(1)}
+                        {entry.entrySource?.location || '-'}
                       </Typography>
                     </Box>
                   </OverflowTooltip>

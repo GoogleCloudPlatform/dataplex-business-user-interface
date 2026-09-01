@@ -708,7 +708,7 @@ const { date: updateDate, time: updateTime } = (entryType && entryType=='data-pr
                                     fontSize: '13px',
                                     fontWeight: 600,
                                     color: '#027E4C',
-                                    lineHeight: 1,
+                                    lineHeight: 'normal',
                                 }}>
                                     {(entry.entrySource?.location || '-')}
                                 </Typography>

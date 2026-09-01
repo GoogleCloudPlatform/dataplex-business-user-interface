@@ -136,7 +136,7 @@ const Schema: React.FC<SchemaProps> = ({ entry, isPreview = false, sx }) => {
   };
 
   const number = entry.entryType.split('/')[1];
-  const schema = entry.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
+  const schema = entry.aspects?.[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
   const rows: SchemaRow[] = schema.map((field: any, index: number) => ({
     id: index + 1,
     name: field.structValue.fields.name.stringValue,

@@ -86,7 +86,7 @@ const SubmitAccess: React.FC<SubmitAccessProps> = ({ isOpen, onClose, assetName,
     const number = entryData.entryType?.split('/')[1];
     if (!number) return [];
 
-    return isLookup ? entryData.aspects[`${number}.global.contacts`]?.data.identities : (entryData.aspects[`${number}.global.contacts`]?.data.fields.identities.listValue.values || []);
+    return isLookup ? (entryData.aspects[`${number}.global.contacts`]?.data?.identities || []) : (entryData.aspects[`${number}.global.contacts`]?.data?.fields?.identities?.listValue?.values || []);
   };
 
   const extractContactEmails = (entryData: any): string[] => {

@@ -82,21 +82,51 @@ Open the `.env` file and replace the placeholder with your actual Client ID:
 // .env
 VITE_GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // <-- PASTE YOUR ID HERE
 ```
-#### Step 4: Run the Application
-Start the Vite development server.
+#### Step 4: Configure Environment Variables
+The application needs **two** environment files — one for the frontend (project root) and one for the backend. Replace every `****` below with your own values.
 
+**Frontend** — create a `.env` file in the **project root**:
+```shell
+# .env  (project root — consumed by Vite)
+VITE_API_URL="http://localhost:3000/api"
+VITE_API_VERSION="v1"
+VITE_ADMIN_EMAIL="****"
+VITE_GOOGLE_PROJECT_ID="****"
+VITE_GOOGLE_CLIENT_ID="****"
+VITE_GOOGLE_CLIENT_SECRET="****"
+VITE_GOOGLE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
+```
+
+**Backend** — create a `.env.test` file inside the **`backend/`** folder (it is loaded automatically by `npm start`):
+```shell
+# backend/.env.test
+GOOGLE_CLOUD_PROJECT_ID="****"
+GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/callback/google"
+GCP_LOCATION=global
+GCP_REGION=global
+IS_SERVICE_ACCOUNT=false
+PORT=3000
+```
+
+Notes:
+- `VITE_API_URL` must point at the backend's port. The backend uses `PORT=3000` above, so keep them in sync — if you change `PORT`, update `VITE_API_URL` accordingly.
+- `IS_SERVICE_ACCOUNT=false` authenticates every Google Cloud call with the signed-in user's OAuth token. Set it to `true` to use the machine's Application Default Credentials (service account) instead — in that case run `gcloud auth application-default login` first.
+
+#### Step 5: Run the Backend
+Open a terminal in the `backend/` folder, install dependencies, and start the server.
+```shell
+cd backend
+npm install
+npm start
+```
+The API will be available at http://localhost:3000/api. (See `backend/README.md` for more details.)
+
+#### Step 6: Run the Frontend
+In a **separate** terminal at the **project root**, start the Vite development server.
+```shell
 npm run dev
-
+```
 Open your browser to http://localhost:5173 to see the application running.
-
-Deployment Guide: **Google Cloud Run**
-This guide covers deploying the static frontend to **Google Cloud Run**.
-
-**Note: This deploys the frontend only, which relies on the mockApi. For a full production application, you must also deploy a secure backend to handle the token exchange logic.**
-
-For backend deployment in local you should check the readme file in backend folder
-and set the VITE_API_URL="http://localhost:8080/api" in the .env file for frontend
-if you are running your backend on other port make sure to set the api url accordingly 
 
 ## Cloud Run Deployment Steps for production
 
@@ -371,7 +401,11 @@ Feature Enhancements:
   - Project attribute in configData.json is added to control/restrict the search results and projects visible to user in filters.
   - Shareable links for every routes in BUI. Now users can share the assets they are viewing to others who have access to it via links
   - UI Modification browse by aspect page to remove Documentation section as in GCP we don't have option of documentation for aspects.
+  - Data Quality generation from aspects data-quality-scorecards
+  - Data Products list view change flow from only data-quality list to search available data-products
+  - Readme modification to add more details for local setup requested in github issues.
 
 Bug Fixes:
 
-  - Bugs related to Ui View Detail button enable in preview sectrion because of lazy loading.
+  - Bugs related to Ui View Detail button enable in preview section because of lazy loading.
+  - Bugs reported for Ui tag for US camel casing fixed to remove manual casing 

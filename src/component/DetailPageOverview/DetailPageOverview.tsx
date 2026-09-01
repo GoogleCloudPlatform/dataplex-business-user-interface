@@ -844,7 +844,7 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                             <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Location</Typography>
                             <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#F5FEF8', border: '1px solid #C4E9D8', borderRadius: '12px', padding: '0px 8px', height: '24px', justifySelf: isAnnotation ? "end" : undefined }}>
                                 <LocationOnOutlined sx={{ fontSize: '14px', color: '#027E4C', flexShrink: 0 }} />
-                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontSize: '13px', fontWeight: 600, color: '#027E4C', lineHeight: 1 }}>
+                                <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontSize: '13px', fontWeight: 600, color: '#027E4C', lineHeight: 'normal' }}>
                                     {(entry.entrySource?.location || '-')}
                                 </Typography>
                             </Box>
@@ -912,8 +912,8 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                                     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
                                         <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Avg Exec Time</Typography>
                                         {(() => {
-                                            const executionTimeValue = usage.metrics?.listValue?.values?.find((v:any) => v.structValue.fields.name.stringValue === 'execution_time');
-                                            const latestMs = executionTimeValue?.structValue.fields.timeSeries.listValue.values.slice(-1)[0]?.structValue.fields.value.numberValue;
+                                            const executionTimeValue = usage.metrics?.listValue?.values?.find((v:any) => v?.structValue?.fields?.name?.stringValue === 'execution_time');
+                                            const latestMs = executionTimeValue?.structValue?.fields?.timeSeries?.listValue?.values?.slice(-1)[0]?.structValue?.fields?.value?.numberValue;
                                             if (!latestMs) return <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "2rem", color: "#1F1F1F" }}>-</Typography>;
                                             return (
                                                 <Tooltip title={`${latestMs} ms`} arrow>
@@ -932,8 +932,8 @@ const { date: updateDateShort, time: updateTimeShort } = formatTimeNoSeconds(ent
                                         <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>Total Queries</Typography>
                                         <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "2rem", lineHeight: "1.2", color: "#1F1F1F" }}>
                                             {(() => {
-                                                const tqValue = usage.metrics?.listValue?.values?.find((v:any) => v.structValue.fields.name.stringValue === 'total_queries');
-                                                return tqValue?.structValue.fields.timeSeries.listValue.values.slice(-1)[0]?.structValue.fields.value.numberValue || '-';
+                                                const tqValue = usage.metrics?.listValue?.values?.find((v:any) => v?.structValue?.fields?.name?.stringValue === 'total_queries');
+                                                return tqValue?.structValue?.fields?.timeSeries?.listValue?.values?.slice(-1)[0]?.structValue?.fields?.value?.numberValue || '-';
                                             })()}
                                         </Typography>
                                         <Typography sx={{ fontFamily: '"Google Sans", sans-serif', fontWeight: 500, fontSize: "14px", color: "#7D7D7D" }}>all time</Typography>

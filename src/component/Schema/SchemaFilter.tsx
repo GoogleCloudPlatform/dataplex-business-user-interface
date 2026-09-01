@@ -149,7 +149,7 @@ const SchemaFilter: React.FC<SchemaFilterProps> = ({
       return entry;
     }
 
-    const originalFields = entry.aspects[`${number}.global.schema`].data.fields.fields.listValue.values;
+    const originalFields = entry.aspects[`${number}.global.schema`]?.data?.fields?.fields?.listValue?.values || [];
     const filteredFields = originalFields.filter((field: any) => {
       const fieldData = {
         name: field.structValue.fields.name?.stringValue || '',
@@ -177,13 +177,13 @@ const SchemaFilter: React.FC<SchemaFilterProps> = ({
         [`${number}.global.schema`]: {
           ...entry.aspects[`${number}.global.schema`],
           data: {
-            ...entry.aspects[`${number}.global.schema`].data,
+            ...entry.aspects[`${number}.global.schema`]?.data,
             fields: {
-              ...entry.aspects[`${number}.global.schema`].data.fields,
+              ...entry.aspects[`${number}.global.schema`]?.data?.fields,
               fields: {
-                ...entry.aspects[`${number}.global.schema`].data.fields.fields,
+                ...entry.aspects[`${number}.global.schema`]?.data?.fields?.fields,
                 listValue: {
-                  ...entry.aspects[`${number}.global.schema`].data.fields.fields.listValue,
+                  ...entry.aspects[`${number}.global.schema`]?.data?.fields?.fields?.listValue,
                   values: filteredFields
                 }
               }

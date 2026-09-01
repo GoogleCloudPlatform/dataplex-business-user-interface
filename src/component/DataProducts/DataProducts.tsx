@@ -298,10 +298,10 @@ const DataProductCard = React.memo(({
                   fontSize: '13px',
                   fontWeight: 600,
                   color: '#027E4C',
-                  lineHeight: 1,
+                  lineHeight: 'normal',
                   whiteSpace: 'nowrap',
                 }}>
-                  {location.charAt(0).toUpperCase() + location.slice(1)}
+                  {location}
                 </Typography>
               </Box>
               <Tooltip title={`Last modified: ${dateStr}`} arrow placement='top'>

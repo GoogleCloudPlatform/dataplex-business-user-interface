@@ -1276,7 +1276,7 @@ describe("SearchTableView", () => {
       render(
         <SearchTableView {...defaultProps} resources={resourceWithLocation} />
       );
-      expect(screen.getByText("Europe-west1")).toBeInTheDocument();
+      expect(screen.getByText("europe-west1")).toBeInTheDocument();
     });
 
     it("renders '-' when location is missing", () => {
